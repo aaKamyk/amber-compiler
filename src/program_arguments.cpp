@@ -4,10 +4,8 @@
 #include <fstream>
 #include <memory>
 
-Arguments parseArguments(const std::span<const char*> args){
-    if (args.size() < 2) {
-        throw std::runtime_error("[Arguments Parser] Usage: kcp <input_path>");
-    }
+Arguments parseArguments(const std::span<const char*> args) {
+    if (args.size() < 2) { throw std::runtime_error("[Arguments Parser] Usage: kcp <input_path>"); }
     Arguments parsed_args = {
         .input_path = fs::path(args[1]),
     };
@@ -18,9 +16,7 @@ Arguments parseArguments(const std::span<const char*> args){
         if (strcmp(args[2], "-o") != 0) {
             throw std::runtime_error("[Arguments Parser] Unknown option: expected \'-o\'");
         }
-        if (args.size() < 4) {
-            throw std::runtime_error("[Arguments Parser] Must provide output path after \'-o\'");
-        }
+        if (args.size() < 4) { throw std::runtime_error("[Arguments Parser] Must provide output path after \'-o\'"); }
         parsed_args.output_path = fs::path(args[3]);
     }
     return parsed_args;
@@ -28,8 +24,6 @@ Arguments parseArguments(const std::span<const char*> args){
 
 std::unique_ptr<std::istream> getInputFromFile(const Arguments& args) {
     auto file = std::make_unique<std::ifstream>(args.input_path, std::ios::in);
-    if (file->is_open()) {
-        throw std::runtime_error("Could not open input file: " + args.input_path.string());
-    }
+    if (!file->is_open()) { throw std::runtime_error("Could not open input file: " + args.input_path.string()); }
     return file;
 }
