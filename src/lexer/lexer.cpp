@@ -1,7 +1,3 @@
-//
-// Created by Kamyk on 22/04/2026.
-//
-
 #include "lexer.hpp"
 
 #include <cassert>

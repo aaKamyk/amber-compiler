@@ -8,7 +8,6 @@ void runCompiler(const int argc, const char** argv) {
     const auto input = getInputFromFile(args);
     Lexer lexer(*input);
     const auto tokens = lexer.lex();
-    Lexer::pretty_print_tokens(tokens);
 }
 
 int main(const int argc, const char** argv) {

@@ -8,4 +8,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(kcp
         src/main.cpp
         src/program_arguments.cpp
-        src/lexer/lexer.cpp)
+        src/lexer/lexer.cpp
+        src/parser/parser.cpp
+        src/parser/parser.hpp
+)
+
+target_include_directories(kcp PRIVATE
+        src/
+)
