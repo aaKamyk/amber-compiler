@@ -18,6 +18,7 @@ std::vector<Token> Lexer::lex() {
             case '\n': {
                 m_column = 0;
                 m_line++;
+                m_buffer.consume(1);
                 break;
             }
             // --- simple braces & punctuation ---
@@ -160,6 +161,54 @@ std::vector<Token> Lexer::lex() {
     return std::move(m_tokens);
 }
 
+void Lexer::pretty_print_tokens(const std::vector<Token>& tokens) {
+    static const std::map<TokenType, const char*> token_strings = {
+        {TokenType::TOKEN_EOF, "EOF"},
+        {TokenType::NONE, "none"},
+        {TokenType::IF, "if"},
+        {TokenType::ELSE, "else"},
+        {TokenType::WHILE, "while"},
+        {TokenType::FN, "fn"},
+        {TokenType::RETURN, "return"},
+        {TokenType::INT, "int"},
+        {TokenType::VOID, "void"},
+        {TokenType::CURLY_BRACE_START, "{"},
+        {TokenType::CURLY_BRACE_END, "}"},
+        {TokenType::PAREN_START, "("},
+        {TokenType::PAREN_END, ")"},
+        {TokenType::SEMICOLON, ";"},
+        {TokenType::COLON, ":"},
+        {TokenType::DOT, "."},
+        {TokenType::COMMA, ","},
+        {TokenType::ARROW, "->"},
+        {TokenType::PLUS, "+"},
+        {TokenType::MINUS, "-"},
+        {TokenType::MULTIPLY, "*"},
+        {TokenType::DIVIDE, "/"},
+        {TokenType::EQUALS, "="},
+        {TokenType::EQUALS_EQUALS, "=="},
+        {TokenType::NOT_EQUALS, "!="},
+        {TokenType::GREATER_THAN, ">"},
+        {TokenType::LESS_THAN, "<"},
+        {TokenType::GREATER_EQUAL_THAN, ">="},
+        {TokenType::LESS_EQUAL_THAN, "<="},
+        {TokenType::BIT_AND, "&"},
+        {TokenType::BIT_OR, "|"},
+        {TokenType::BIT_XOR, "^"},
+        {TokenType::BIT_NOT, "~"},
+        {TokenType::LOGICAL_AND, "&&"},
+        {TokenType::LOGICAL_OR, "||"},
+        {TokenType::LOGICAL_NOT, "!"}
+    };
+    for (const auto& token : tokens) {
+        if (token_strings.contains(token.type)) {
+            std::cout << token_strings.at(token.type) << "\n";
+        } else {
+            std::cout << std::get<std::string>(token.data) << "\n";
+        }
+    }
+}
+
 std::string_view Lexer::PeekBuffer::get_view(const size_t n) {
     if (const size_t chars_left = count - current_pos; n > chars_left) {
         throw std::runtime_error("Attempted to get view past end of buffer");
@@ -229,59 +278,11 @@ size_t Lexer::get_identifier_len() const {
     while (is_identifier_char(m_buffer.peek(identifier_len))) { identifier_len++; }
     return identifier_len;
 }
-
 TokenType Lexer::get_keyword(const std::string_view name) {
     static const std::map<std::string_view, TokenType> keywords = {
-        {"if", TokenType::IF}, {"else", TokenType::ELSE},     {"while", TokenType::WHILE},
-        {"fn", TokenType::FN}, {"return", TokenType::RETURN},
+        {"if", TokenType::IF},         {"else", TokenType::ELSE}, {"while", TokenType::WHILE}, {"fn", TokenType::FN},
+        {"return", TokenType::RETURN}, {"int", TokenType::INT},   {"void", TokenType::VOID}
     };
     if (!keywords.contains(name)) { return TokenType::IDENTIFIER; }
     return keywords.at(name);
-}
-void Lexer::pretty_print_tokens(const std::vector<Token>& tokens) {
-    static const std::map<TokenType, const char*> token_strings = {
-        {TokenType::TOKEN_EOF, "EOF"},
-        {TokenType::NONE, "none"},
-        {TokenType::IF, "if"},
-        {TokenType::ELSE, "else"},
-        {TokenType::WHILE, "while"},
-        {TokenType::FN, "fn"},
-        {TokenType::RETURN, "return"},
-        {TokenType::INT, "int"},
-        {TokenType::VOID, "void"},
-        {TokenType::CURLY_BRACE_START, "{"},
-        {TokenType::CURLY_BRACE_END, "}"},
-        {TokenType::PAREN_START, "("},
-        {TokenType::PAREN_END, ")"},
-        {TokenType::SEMICOLON, ";"},
-        {TokenType::COLON, ":"},
-        {TokenType::DOT, "."},
-        {TokenType::COMMA, ","},
-        {TokenType::ARROW, "->"},
-        {TokenType::PLUS, "+"},
-        {TokenType::MINUS, "-"},
-        {TokenType::MULTIPLY, "*"},
-        {TokenType::DIVIDE, "/"},
-        {TokenType::EQUALS, "="},
-        {TokenType::EQUALS_EQUALS, "=="},
-        {TokenType::NOT_EQUALS, "!="},
-        {TokenType::GREATER_THAN, ">"},
-        {TokenType::LESS_THAN, "<"},
-        {TokenType::GREATER_EQUAL_THAN, ">="},
-        {TokenType::LESS_EQUAL_THAN, "<="},
-        {TokenType::BIT_AND, "&"},
-        {TokenType::BIT_OR, "|"},
-        {TokenType::BIT_XOR, "^"},
-        {TokenType::BIT_NOT, "~"},
-        {TokenType::LOGICAL_AND, "&&"},
-        {TokenType::LOGICAL_OR, "||"},
-        {TokenType::LOGICAL_NOT, "!"}
-    };
-    for (const auto& token : tokens) {
-        if (token_strings.contains(token.type)) {
-            std::cout << token_strings.at(token.type) << "\n";
-        } else {
-            std::cout << std::get<std::string>(token.data) << "\n";
-        }
-    }
 }

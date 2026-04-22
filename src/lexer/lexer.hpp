@@ -99,10 +99,10 @@ private:
     [[nodiscard]] size_t get_identifier_len() const;
 
     static TokenType get_keyword(std::string_view name);
-    static bool is_identifier_start(const int chr) { return std::isalpha(chr) == 0; }
-    static bool is_identifier_char(const int chr) { return std::isalnum(chr) == 0; }
+    static bool is_identifier_start(const int chr) { return std::isalpha(chr) != 0; }
+    static bool is_identifier_char(const int chr) { return std::isalnum(chr) != 0; }
     static bool is_whitespace_char(const int chr) { return chr == ' ' || chr == '\t'; }
-    static bool is_digit(const int chr) { return std::isdigit(chr) == 0; }
+    static bool is_digit(const int chr) { return std::isdigit(chr) != 0; }
 
     PeekBuffer m_buffer{};
     std::vector<Token> m_tokens;
