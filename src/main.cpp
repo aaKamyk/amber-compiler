@@ -2,12 +2,16 @@
 
 #include "program_arguments.hpp"
 
+void runCompiler(const int argc, const char** argv) {
+    const auto args = parseArguments(std::span(argv, static_cast<size_t>(argc)));
+    auto input = getInputFromFile(args);
+}
+
 int main(const int argc, const char** argv) {
     try {
-        const auto args = parseArguments(std::span(argv, static_cast<size_t>(argc)));
-        std::cout << args.input_path << '\n';
-        std::cout << args.output_path << '\n';
+        runCompiler(argc, argv);
     } catch (const std::exception& e) {
-        std::cerr << e.what() << '\n';
+        std::cerr << "Fatal error: " << e.what() << '\n';
+        return 1;
     }
 }

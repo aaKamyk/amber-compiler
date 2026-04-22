@@ -11,3 +11,4 @@ struct Arguments {
 };
 
 Arguments parseArguments(std::span<const char*> args);
+std::unique_ptr<std::istream> getInputFromFile(const Arguments& args);
