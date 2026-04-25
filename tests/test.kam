@@ -1,3 +1,4 @@
-int a = 123;
-a, b, c, d;
-a + b == c;
+int a;
+int func(int x) {
+    int b;
+}
