@@ -152,7 +152,6 @@ std::vector<Token> Lexer::lex() {
                 }
             }
         }
-        m_column++;
     }
     return std::move(m_tokens);
 }
@@ -276,8 +275,9 @@ size_t Lexer::get_identifier_len() const {
 }
 TokenType Lexer::get_keyword(const std::string_view name) {
     static const std::map<std::string_view, TokenType> keywords = {
-        {"if", TokenType::IF},         {"else", TokenType::ELSE}, {"while", TokenType::WHILE}, {"fn", TokenType::FN},
-        {"return", TokenType::RETURN}, {"int", TokenType::INT},   {"void", TokenType::VOID}
+        {"if", TokenType::IF},    {"else", TokenType::ELSE},     {"while", TokenType::WHILE},
+        {"fn", TokenType::FN},    {"return", TokenType::RETURN}, {"int", TokenType::INT},
+        {"void", TokenType::VOID}
     };
     if (!keywords.contains(name)) { return TokenType::IDENTIFIER; }
     return keywords.at(name);
