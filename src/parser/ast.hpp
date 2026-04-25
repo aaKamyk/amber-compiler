@@ -70,7 +70,7 @@ struct ASTIfStatement {
     std::unique_ptr<ASTExpression> condition;
     std::unique_ptr<ASTBlockStatement> true_case;
     std::unique_ptr<ASTBlockStatement> false_case;
-    bool has_false_case;
+    [[nodiscard]] bool has_false_case() const { return false_case != nullptr; };
 };
 
 struct ASTWhileStatement {
@@ -88,10 +88,6 @@ struct ASTStatement {
         std::unique_ptr<ASTIfStatement>, std::unique_ptr<ASTWhileStatement>,
         std::unique_ptr<ASTReturnStatement>>;
     Statement statement;
-};
-
-struct ASTType {
-    Type type;
 };
 
 struct ASTVariableDeclaration {

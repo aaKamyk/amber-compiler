@@ -55,7 +55,7 @@ struct ASTNodePrinter {
         depth++;
         this->operator()(if_statement->condition);
         this->operator()(if_statement->true_case);
-        if (if_statement->has_false_case) { this->operator()(if_statement->false_case); }
+        if (if_statement->has_false_case()) { this->operator()(if_statement->false_case); }
         depth--;
     }
 
