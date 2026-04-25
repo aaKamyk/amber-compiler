@@ -10,7 +10,7 @@ add_executable(kcp
         src/program_arguments.cpp
         src/lexer/lexer.cpp
         src/parser/parser.cpp
-        src/parser/parser.hpp
+        src/parser/ast.cpp
 )
 
 target_include_directories(kcp PRIVATE

@@ -103,6 +103,7 @@ struct ASTFunctionArgument {
 
 struct ASTFunctionDeclaration {
     std::unique_ptr<ASTType> return_type;
+    std::unique_ptr<ASTIdentifier> name;
     std::vector<std::unique_ptr<ASTFunctionArgument>> arguments;
     std::unique_ptr<ASTBlockStatement> body;
 };
@@ -116,3 +117,5 @@ struct ASTProgram {
 std::ostream& operator<<(std::ostream& os, Type type);
 std::ostream& operator<<(std::ostream& os, BinaryOperator op);
 std::ostream& operator<<(std::ostream& os, UnaryOperator op);
+
+void print_program(const ASTProgram& program);
