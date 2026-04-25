@@ -55,8 +55,7 @@ struct ASTNodePrinter {
 
     void operator()(const std::unique_ptr<ASTFunctionDeclaration>& func) const {
         std::cout << "- Function\n";
-        std::cout << "| " << func->type << "\n";
-        std::cout << "| " << func->returnType << "\n";
+        this->operator()(func->return_type);
         for (const auto& arg : func->arguments) { this->operator()(arg); }
         this->operator()(func->body);
     }
@@ -69,8 +68,9 @@ struct ASTNodePrinter {
 
     void operator()(const std::unique_ptr<ASTVariableDeclaration>& var) const {
         std::cout << "- Variable\n";
-        std::cout << "| " << var->name << "\n";
-        std::cout << "| " << var->type << "\n";
+        this->operator()(var->type);
+        this->operator()(var->name);
+        if (var->value) { this->operator()(var->value); }
     }
 
     void operator()(const std::unique_ptr<ASTIdentifier>& ident) const {
@@ -107,7 +107,7 @@ struct ASTNodePrinter {
     }
 };
 
-std::ostream& operator<<(std::ostream& os, Type type) {
+std::ostream& operator<<(std::ostream& os, const Type type) {
     static const std::unordered_map<Type, const char*> type_strings = {
         {Type::INT, "int"}, {Type::VOID, "void"}
     };
@@ -126,7 +126,7 @@ std::ostream& operator<<(std::ostream& os, const BinaryOperator op) {
     return os << bin_op_strings.at(op);
 }
 
-std::ostream& operator<<(std::ostream& os, UnaryOperator op) {
+std::ostream& operator<<(std::ostream& os, const UnaryOperator op) {
     static const std::unordered_map<UnaryOperator, const char*> un_op_strings = {
         {UnaryOperator::MINUS, "-"}
     };

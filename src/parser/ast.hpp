@@ -91,8 +91,9 @@ struct ASTType {
 };
 
 struct ASTVariableDeclaration {
-    Type type;
-    std::string name;
+    std::unique_ptr<ASTType> type;
+    std::unique_ptr<ASTIdentifier> name;
+    std::unique_ptr<ASTAssignmentStatement> value;
 };
 
 struct ASTFunctionArgument {
@@ -101,8 +102,7 @@ struct ASTFunctionArgument {
 };
 
 struct ASTFunctionDeclaration {
-    Type type{};
-    Type returnType{};
+    std::unique_ptr<ASTType> return_type;
     std::vector<std::unique_ptr<ASTFunctionArgument>> arguments;
     std::unique_ptr<ASTBlockStatement> body;
 };
