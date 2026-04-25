@@ -19,6 +19,10 @@ struct ASTStatement;
 struct ASTBinaryExpression;
 struct ASTUnaryExpression;
 
+struct ASTType {
+    Type type;
+};
+
 struct ASTIdentifier {
     std::string name;
 };

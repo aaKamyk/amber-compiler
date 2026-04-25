@@ -60,16 +60,6 @@ struct ASTParser<ASTType> {
 };
 
 template <>
-struct ASTParser<ASTIntegerLiteral> {
-    static std::optional<std::unique_ptr<ASTIntegerLiteral>> parse(Parser& ctx) {
-        const auto token = ctx.peek();
-        if (token.type != TokenType::INTEGER_LITERAL) { return std::nullopt; }
-        ctx.consume(1);
-        return std::make_unique<ASTIntegerLiteral>(std::stol(std::get<std::string>(token.data)));
-    }
-};
-
-template <>
 struct ASTParser<ASTIdentifier> {
     static std::optional<std::unique_ptr<ASTIdentifier>> parse(Parser& ctx) {
         auto token = ctx.peek();
@@ -80,20 +70,12 @@ struct ASTParser<ASTIdentifier> {
 };
 
 template <>
-struct ASTParser<ASTAssignmentStatement> {
-    static std::optional<std::unique_ptr<ASTAssignmentStatement>> parse(Parser& ctx) {
-        ASTAssignmentStatement assignment_statement;
-        if (auto ident = ctx.try_parse<ASTIdentifier>()) {
-            assignment_statement.identifier = std::move(*ident);
-        } else {
-            return std::nullopt;
-        }
-        if (auto expr = ctx.try_parse<ASTExpression>()) {
-            assignment_statement.expression = std::move(*expr);
-        } else {
-            return std::nullopt;
-        }
-        return std::make_unique<ASTAssignmentStatement>(std::move(assignment_statement));
+struct ASTParser<ASTIntegerLiteral> {
+    static std::optional<std::unique_ptr<ASTIntegerLiteral>> parse(Parser& ctx) {
+        const auto token = ctx.peek();
+        if (token.type != TokenType::INTEGER_LITERAL) { return std::nullopt; }
+        ctx.consume(1);
+        return std::make_unique<ASTIntegerLiteral>(std::stol(std::get<std::string>(token.data)));
     }
 };
 
@@ -119,6 +101,60 @@ struct ASTParser<ASTBlockStatement> {
         } catch (...) { return std::nullopt; }
 
         return std::make_unique<ASTBlockStatement>(std::move(block_statement));
+    }
+};
+
+template <>
+struct ASTParser<ASTAssignmentStatement> {
+    static std::optional<std::unique_ptr<ASTAssignmentStatement>> parse(Parser& ctx) {
+        ASTAssignmentStatement assignment_statement;
+        if (auto ident = ctx.try_parse<ASTIdentifier>()) {
+            assignment_statement.identifier = std::move(*ident);
+        } else {
+            return std::nullopt;
+        }
+        if (auto expr = ctx.try_parse<ASTExpression>()) {
+            assignment_statement.expression = std::move(*expr);
+        } else {
+            return std::nullopt;
+        }
+        return std::make_unique<ASTAssignmentStatement>(std::move(assignment_statement));
+    }
+};
+
+template <>
+struct ASTParser<ASTIfStatement> {
+    static std::optional<std::unique_ptr<ASTIfStatement>> parse(Parser& ctx) {
+        ASTIfStatement if_statement{};
+        try {
+            ctx.expect(TokenType::IF);
+            ctx.expect(TokenType::PAREN_START);
+        } catch (...) { return std::nullopt; }
+        if (auto condition = ctx.try_parse<ASTExpression>()) {
+            if_statement.condition = std::move(*condition);
+        } else {
+            return std::nullopt;
+        }
+        try {
+            ctx.expect(TokenType::PAREN_END);
+        } catch (...) { return std::nullopt; }
+        if (auto true_case = ctx.try_parse<ASTBlockStatement>()) {
+            if_statement.true_case = std::move(*true_case);
+        } else {
+            return std::nullopt;
+        }
+        if (ctx.peek().type != TokenType::ELSE) {
+            if_statement.false_case = nullptr;
+            return std::make_unique<ASTIfStatement>(std::move(if_statement));
+        }
+        // Next token is necessarily an else
+        ctx.consume(1);
+        if (auto false_case = ctx.try_parse<ASTBlockStatement>()) {
+            if_statement.false_case = std::move(*false_case);
+        } else {
+            return std::nullopt;
+        }
+        return std::make_unique<ASTIfStatement>(std::move(if_statement));
     }
 };
 
@@ -191,6 +227,7 @@ struct ASTParser<ASTFunctionDeclaration> {
                 return std::nullopt;
             }
 
+            /// TODO clean this up
             if (ctx.peek().type == TokenType::COMMA) {
                 ctx.consume(1);
                 if (ctx.peek().type == TokenType::PAREN_END) { return std::nullopt; }
