@@ -64,7 +64,7 @@ std::vector<Token> Lexer::lex() {
                 break;
             }
             case '*': {
-                emit_token(TokenType::MULTIPLY);
+                emit_token(TokenType::ASTERISK);
                 break;
             }
             case '/': {
@@ -183,7 +183,7 @@ void Lexer::pretty_print_tokens(const std::vector<Token>& tokens) {
         {TokenType::ARROW, "->"},
         {TokenType::PLUS, "+"},
         {TokenType::MINUS, "-"},
-        {TokenType::MULTIPLY, "*"},
+        {TokenType::ASTERISK, "*"},
         {TokenType::DIVIDE, "/"},
         {TokenType::EQUALS, "="},
         {TokenType::EQUALS_EQUALS, "=="},

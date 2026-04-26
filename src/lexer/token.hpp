@@ -31,7 +31,7 @@ enum class TokenType : uint8_t {
     // --- operators ---
     PLUS,
     MINUS,
-    MULTIPLY,
+    ASTERISK,
     DIVIDE,
     EQUALS,
     EQUALS_EQUALS,
