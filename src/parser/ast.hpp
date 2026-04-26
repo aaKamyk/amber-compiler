@@ -16,11 +16,23 @@ enum class UnaryOperator : std::uint8_t { MINUS };
 struct ASTFunctionDeclaration;
 struct ASTVariableDeclaration;
 struct ASTStatement;
+struct ASTPrimaryExpression;
 struct ASTBinaryExpression;
 struct ASTUnaryExpression;
+struct ASTParenExpression;
 
 struct ASTType {
     Type type;
+};
+
+struct ASTBinaryOperator {
+    BinaryOperator op;
+    [[nodiscard]] int get_precedence() const;
+};
+
+struct ASTUnaryOperator {
+    UnaryOperator op;
+    [[nodiscard]] int get_precedence() const;
 };
 
 struct ASTIdentifier {
@@ -34,19 +46,30 @@ struct ASTIntegerLiteral {
 struct ASTExpression {
     using ExpressionEntry = std::variant<
         std::unique_ptr<ASTBinaryExpression>, std::unique_ptr<ASTUnaryExpression>,
-        std::unique_ptr<ASTIdentifier>, std::unique_ptr<ASTIntegerLiteral>>;
+        std::unique_ptr<ASTPrimaryExpression>>;
     ExpressionEntry expression;
 };
 
+struct ASTPrimaryExpression {
+    using PrimaryExpression = std::variant<
+        std::unique_ptr<ASTIdentifier>, std::unique_ptr<ASTIntegerLiteral>,
+        std::unique_ptr<ASTParenExpression>>;
+    PrimaryExpression expression;
+};
+
+struct ASTParenExpression {
+    std::unique_ptr<ASTExpression> expression;
+};
+
 struct ASTBinaryExpression {
-    BinaryOperator op;
+    std::unique_ptr<ASTBinaryOperator> op;
     std::unique_ptr<ASTExpression> left;
     std::unique_ptr<ASTExpression> right;
 };
 
 struct ASTUnaryExpression {
-    UnaryOperator op;
-    std::unique_ptr<ASTExpression> expression;
+    std::unique_ptr<ASTUnaryOperator> op;
+    std::unique_ptr<ASTPrimaryExpression> expression;
 };
 
 struct ASTDeclaration {
@@ -93,7 +116,7 @@ struct ASTStatement {
 struct ASTVariableDeclaration {
     std::unique_ptr<ASTType> type;
     std::unique_ptr<ASTIdentifier> name;
-    std::unique_ptr<ASTAssignmentStatement> value;
+    std::unique_ptr<ASTExpression> value;
 };
 
 struct ASTFunctionArgument {

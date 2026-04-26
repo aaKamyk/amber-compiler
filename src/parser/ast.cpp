@@ -157,6 +157,24 @@ struct ASTNodePrinter {
         depth--;
     }
 
+    void operator()(const std::unique_ptr<ASTPrimaryExpression>& expr) {
+        print_indent();
+        std::cout << "- Primary expression\n";
+
+        depth++;
+        std::visit(*this, expr->expression);
+        depth--;
+    }
+
+    void operator()(const std::unique_ptr<ASTParenExpression>& expr) {
+        print_indent();
+        std::cout << "- Paren expression\n";
+
+        depth++;
+        this->operator()(expr->expression);
+        depth--;
+    }
+
     void operator()(const std::unique_ptr<ASTBinaryExpression>& bin_expression) {
         print_indent();
         std::cout << "- Binary expression\n";
@@ -180,6 +198,21 @@ struct ASTNodePrinter {
         depth--;
     }
 };
+
+int ASTBinaryOperator::get_precedence() const {
+    static const std::unordered_map<BinaryOperator, int> precedences = {
+        {BinaryOperator::PLUS, 1},
+        {BinaryOperator::MINUS, 1},
+        {BinaryOperator::TIMES, 2},
+        {BinaryOperator::DIVIDE, 2},
+    };
+    return precedences.at(this->op);
+}
+
+int ASTUnaryOperator::get_precedence() const {
+    static const std::unordered_map<UnaryOperator, int> precedences = {{UnaryOperator::MINUS, 1}};
+    return precedences.at(this->op);
+}
 
 std::ostream& operator<<(std::ostream& os, const Type type) {
     static const std::unordered_map<Type, const char*> type_strings = {

@@ -18,7 +18,7 @@
   `return_statement     |`
   <br><br>
 - `assignment_statement` \
-  `TYPE? IDENT = expression;`
+  `IDENT = expression;`
   <br><br>
 - `if_statement =>` \
   `IF (CONDITION) block_statement`
@@ -33,7 +33,20 @@
   `RETURN expression;`
   <br><br>
 - `expression =>` \
-  `expression (* | /) expression` \
-  `expression (+ | -) expression` \
+  `binary_expression` \
+  `unary_expression` \
+  `primary_expression`
+  <br><br>
+- `primary_expression =>` \
+  `paren_expression` \
   `IDENT` \
   `INTEGER_LITERAL`
+  <br><br>
+- `paren_expression =>` \
+  `( expression )`
+  <br><br>
+- `binary_expression =>` \
+  `expression (binary operator) expression`
+  <br><br>
+- `unary_expression` => \
+  `(unary operator) primary_expression`
