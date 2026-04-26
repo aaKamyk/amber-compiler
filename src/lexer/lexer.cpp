@@ -48,6 +48,7 @@ std::vector<Token> Lexer::lex() {
             }
             case ',': {
                 emit_token(TokenType::COMMA);
+                break;
             }
             // --- operators ---
             case '+': {
