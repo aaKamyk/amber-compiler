@@ -150,7 +150,11 @@ std::vector<Token> Lexer::lex() {
                 if (is_whitespace_char(cur)) {
                     const auto whitespace_len = get_whitespace_len();
                     m_buffer.consume(whitespace_len);
+                    break;
                 }
+                std::cerr << "Encountered unknown lexeme";
+                m_buffer.consume(1);
+                break;
             }
         }
     }
