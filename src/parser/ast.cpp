@@ -91,6 +91,7 @@ struct ASTNodePrinter {
         std::cout << "- Function\n";
 
         depth++;
+        this->operator()(func->name);
         this->operator()(func->return_type);
         for (const auto& arg : func->arguments) { this->operator()(arg); }
         this->operator()(func->body);

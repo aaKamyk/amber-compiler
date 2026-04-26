@@ -206,11 +206,10 @@ template <>
 struct ASTParser<ASTFunctionDeclaration> {
     static std::optional<std::unique_ptr<ASTFunctionDeclaration>> parse(Parser& ctx) {
         ASTFunctionDeclaration func_declaration;
-        if (auto return_type = ctx.try_parse<ASTType>()) {
-            func_declaration.return_type = std::move(*return_type);
-        } else {
-            return std::nullopt;
-        }
+        try {
+            ctx.expect(TokenType::FN);
+        } catch (...) { return std::nullopt; }
+
         if (auto func_name = ctx.try_parse<ASTIdentifier>()) {
             func_declaration.name = std::move(*func_name);
         } else {
@@ -227,18 +226,28 @@ struct ASTParser<ASTFunctionDeclaration> {
                 return std::nullopt;
             }
 
-            /// TODO clean this up
-            if (ctx.peek().type == TokenType::COMMA) {
-                ctx.consume(1);
-                if (ctx.peek().type == TokenType::PAREN_END) { return std::nullopt; }
-            } else if (ctx.peek().type != TokenType::PAREN_END) {
-                return std::nullopt;
-            }
+            if (ctx.peek().type != TokenType::COMMA) { break; }
+            ctx.consume(1);
+            // closing parenthesis after a comma - invalid
+            if (ctx.peek().type == TokenType::PAREN_END) { return std::nullopt; }
         }
 
         try {
             ctx.expect(TokenType::PAREN_END);
         } catch (...) { return std::nullopt; }
+
+        if (ctx.peek().type == TokenType::ARROW) {
+            ctx.consume(1);
+            if (auto return_type = ctx.try_parse<ASTType>()) {
+                func_declaration.return_type = std::move(*return_type);
+            } else {
+                return std::nullopt;
+            }
+        } else {
+            // implicit void return type
+            func_declaration.return_type = std::make_unique<ASTType>(Type::VOID);
+        }
+
         if (auto body = ctx.try_parse<ASTBlockStatement>()) {
             func_declaration.body = std::move(*body);
             return std::make_unique<ASTFunctionDeclaration>(std::move(func_declaration));
