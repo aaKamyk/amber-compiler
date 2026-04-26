@@ -13,13 +13,18 @@ enum class Type : std::uint8_t {
 enum class BinaryOperator : std::uint8_t { PLUS, MINUS, TIMES, DIVIDE };
 enum class UnaryOperator : std::uint8_t { MINUS };
 
-struct ASTFunctionDeclaration;
-struct ASTVariableDeclaration;
-struct ASTStatement;
+struct ASTBlockStatement;
 struct ASTPrimaryExpression;
 struct ASTBinaryExpression;
 struct ASTUnaryExpression;
 struct ASTParenExpression;
+struct ASTFunctionDeclaration;
+struct ASTVariableDeclaration;
+struct ASTStatement;
+struct ASTAssignmentStatement;
+struct ASTWhileStatement;
+struct ASTReturnStatement;
+struct ASTIfStatement;
 
 struct ASTType {
     Type type;
@@ -77,6 +82,32 @@ struct ASTDeclaration {
     Declaration declaration;
 };
 
+struct ASTVariableDeclaration {
+    std::unique_ptr<ASTType> type;
+    std::unique_ptr<ASTIdentifier> name;
+    std::unique_ptr<ASTExpression> value;
+};
+
+struct ASTFunctionArgument {
+    std::unique_ptr<ASTType> type;
+    std::unique_ptr<ASTIdentifier> name;
+};
+
+struct ASTFunctionDeclaration {
+    std::unique_ptr<ASTType> return_type;
+    std::unique_ptr<ASTIdentifier> name;
+    std::vector<std::unique_ptr<ASTFunctionArgument>> arguments;
+    std::unique_ptr<ASTBlockStatement> body;
+};
+
+struct ASTStatement {
+    using Statement = std::variant<
+        std::unique_ptr<ASTBlockStatement>, std::unique_ptr<ASTAssignmentStatement>,
+        std::unique_ptr<ASTIfStatement>, std::unique_ptr<ASTWhileStatement>,
+        std::unique_ptr<ASTReturnStatement>>;
+    Statement statement;
+};
+
 struct ASTBlockStatement {
     using StatementEntry =
         std::variant<std::unique_ptr<ASTDeclaration>, std::unique_ptr<ASTStatement>>;
@@ -102,32 +133,6 @@ struct ASTWhileStatement {
 
 struct ASTReturnStatement {
     std::unique_ptr<ASTExpression> expression;
-};
-
-struct ASTStatement {
-    using Statement = std::variant<
-        std::unique_ptr<ASTBlockStatement>, std::unique_ptr<ASTAssignmentStatement>,
-        std::unique_ptr<ASTIfStatement>, std::unique_ptr<ASTWhileStatement>,
-        std::unique_ptr<ASTReturnStatement>>;
-    Statement statement;
-};
-
-struct ASTVariableDeclaration {
-    std::unique_ptr<ASTType> type;
-    std::unique_ptr<ASTIdentifier> name;
-    std::unique_ptr<ASTExpression> value;
-};
-
-struct ASTFunctionArgument {
-    std::unique_ptr<ASTType> type;
-    std::unique_ptr<ASTIdentifier> name;
-};
-
-struct ASTFunctionDeclaration {
-    std::unique_ptr<ASTType> return_type;
-    std::unique_ptr<ASTIdentifier> name;
-    std::vector<std::unique_ptr<ASTFunctionArgument>> arguments;
-    std::unique_ptr<ASTBlockStatement> body;
 };
 
 struct ASTProgram {

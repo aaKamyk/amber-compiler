@@ -4,198 +4,189 @@
 #include <unordered_map>
 
 struct ASTNodePrinter {
-    int depth{};
-    void print_indent() const {
-        for (int i = 0; i < depth; i++) { std::cout << "  "; }
-    }
-
-    void operator()(const ASTProgram& program) {
-        print_indent();
+    static void print_tree(const ASTProgram& program) {
         std::cout << "Program\n";
-
-        depth++;
-        for (const auto& child : program.children) { std::visit(*this, child); }
-        depth--;
-    }
-
-    void operator()(const std::unique_ptr<ASTStatement>& statement) {
-        print_indent();
-        std::cout << "- Statement\n";
-
-        depth++;
-        std::visit(*this, statement->statement);
-        depth--;
-    }
-
-    void operator()(const std::unique_ptr<ASTBlockStatement>& statement) {
-        print_indent();
-        std::cout << "- Block\n";
-
-        depth++;
-        for (const auto& child_statement : statement->statements) {
-            std::visit(*this, child_statement);
+        const size_t size = program.children.size();
+        for (size_t i = 0; i < size; i++) {
+            const bool is_last = i == size - 1;
+            print_node(program.children[i], "", is_last);
         }
-        depth--;
     }
 
-    void operator()(const std::unique_ptr<ASTAssignmentStatement>& assignment) {
-        print_indent();
-        std::cout << "- Assignment\n";
-
-        depth++;
-        this->operator()(assignment->identifier);
-        this->operator()(assignment->expression);
-        depth--;
+    template <typename Node>
+    static void print_node(
+        const std::unique_ptr<Node>& node, const std::string& prefix, const bool is_last
+    ) {
+        std::cout << prefix << (is_last ? "\\- " : "|- ");
+        auto next_prefix = prefix + (is_last ? "   " : "|  ");
+        ASTNodePrinter::visit_node(node, next_prefix);
     }
 
-    void operator()(const std::unique_ptr<ASTIfStatement>& if_statement) {
-        print_indent();
-        std::cout << "- If\n";
-
-        depth++;
-        this->operator()(if_statement->condition);
-        this->operator()(if_statement->true_case);
-        if (if_statement->has_false_case()) { this->operator()(if_statement->false_case); }
-        depth--;
+    template <typename... Nodes>
+    static void print_node(
+        const std::variant<Nodes...>& node, const std::string& prefix, const bool is_last
+    ) {
+        std::cout << prefix << (is_last ? "\\- " : "|- ");
+        auto next_prefix = prefix + (is_last ? "   " : "|  ");
+        std::visit([&](auto&& arg) { ASTNodePrinter::visit_node(arg, next_prefix); }, node);
     }
 
-    void operator()(const std::unique_ptr<ASTWhileStatement>& while_statement) {
-        print_indent();
-        std::cout << "- While\n";
-
-        depth++;
-        this->operator()(while_statement->condition);
-        this->operator()(while_statement->block);
-        depth--;
+    static void visit_node(const std::unique_ptr<ASTType>& type, const std::string& prefix) {
+        std::cout << "Type: " << type->type << '\n';
     }
 
-    void operator()(const std::unique_ptr<ASTReturnStatement>& return_statement) {
-        print_indent();
-        std::cout << "- Return\n";
-
-        depth++;
-        this->operator()(return_statement->expression);
-        depth--;
-    }
-    void operator()(const std::unique_ptr<ASTDeclaration>& decl) {
-        print_indent();
-        std::cout << "- Declaration\n";
-
-        depth++;
-        std::visit(*this, decl->declaration);
-        depth--;
+    static void visit_node(const std::unique_ptr<ASTIdentifier>& ident, const std::string& prefix) {
+        std::cout << "Identifier: " << ident->name << '\n';
     }
 
-    void operator()(const std::unique_ptr<ASTFunctionDeclaration>& func) {
-        print_indent();
-        std::cout << "- Function\n";
-
-        depth++;
-        this->operator()(func->name);
-        this->operator()(func->return_type);
-        for (const auto& arg : func->arguments) { this->operator()(arg); }
-        this->operator()(func->body);
-        depth--;
+    static void visit_node(
+        const std::unique_ptr<ASTIntegerLiteral>& int_literal, const std::string& prefix
+    ) {
+        std::cout << "Integer literal: " << int_literal->value << '\n';
     }
 
-    void operator()(const std::unique_ptr<ASTFunctionArgument>& arg) {
-        print_indent();
-        std::cout << "- Function arg\n";
-
-        depth++;
-        this->operator()(arg->type);
-        this->operator()(arg->name);
-        depth--;
+    static void visit_node(
+        const std::unique_ptr<ASTBinaryOperator>& bin_op, const std::string& prefix
+    ) {
+        std::cout << "Binary operator: " << bin_op->op << '\n';
     }
 
-    void operator()(const std::unique_ptr<ASTVariableDeclaration>& var) {
-        print_indent();
-        std::cout << "- Variable\n";
-
-        depth++;
-        this->operator()(var->type);
-        this->operator()(var->name);
-        if (var->value) { this->operator()(var->value); }
-        depth--;
+    static void visit_node(
+        const std::unique_ptr<ASTUnaryOperator>& unary_op, const std::string& prefix
+    ) {
+        std::cout << "Unary operator: " << unary_op->op << '\n';
     }
 
-    void operator()(const std::unique_ptr<ASTIdentifier>& ident) {
-        print_indent();
-        std::cout << "- Identifier\n";
-        depth++;
-        print_indent();
-        std::cout << "| " << ident->name << "\n";
-        depth--;
+    static void visit_node(const std::unique_ptr<ASTExpression>& expr, const std::string& prefix) {
+        std::cout << "Expression\n";
+
+        print_node(expr->expression, prefix, true);
     }
 
-    void operator()(const std::unique_ptr<ASTIntegerLiteral>& int_literal) {
-        print_indent();
-        std::cout << "- Literal\n";
+    static void visit_node(
+        const std::unique_ptr<ASTPrimaryExpression>& expr, const std::string& prefix
+    ) {
+        std::cout << "Primary expression\n";
 
-        depth++;
-        print_indent();
-        std::cout << "| " << int_literal->value << "\n";
-        depth--;
+        print_node(expr->expression, prefix, true);
     }
 
-    void operator()(const std::unique_ptr<ASTType>& type) {
-        print_indent();
-        std::cout << "- Type\n";
+    static void visit_node(
+        const std::unique_ptr<ASTParenExpression>& expr, const std::string& prefix
+    ) {
+        std::cout << "Paren expression\n";
 
-        depth++;
-        print_indent();
-        std::cout << "| " << type->type << "\n";
-        depth--;
+        print_node(expr->expression, prefix, true);
     }
 
-    void operator()(const std::unique_ptr<ASTExpression>& expr) {
-        print_indent();
-        std::cout << "- Expression\n";
+    static void visit_node(
+        const std::unique_ptr<ASTBinaryExpression>& bin_expression, const std::string& prefix
+    ) {
+        std::cout << "Binary expression\n";
 
-        depth++;
-        std::visit(*this, expr->expression);
-        depth--;
+        print_node(bin_expression->op, prefix, false);
+        print_node(bin_expression->left, prefix, false);
+        print_node(bin_expression->right, prefix, true);
     }
 
-    void operator()(const std::unique_ptr<ASTPrimaryExpression>& expr) {
-        print_indent();
-        std::cout << "- Primary expression\n";
+    static void visit_node(
+        const std::unique_ptr<ASTUnaryExpression>& unary_expression, const std::string& prefix
+    ) {
+        std::cout << "Unary expression\n";
 
-        depth++;
-        std::visit(*this, expr->expression);
-        depth--;
+        print_node(unary_expression->op, prefix, false);
+        print_node(unary_expression->expression, prefix, true);
     }
 
-    void operator()(const std::unique_ptr<ASTParenExpression>& expr) {
-        print_indent();
-        std::cout << "- Paren expression\n";
+    static void visit_node(const std::unique_ptr<ASTDeclaration>& decl, const std::string& prefix) {
+        std::cout << "Declaration\n";
 
-        depth++;
-        this->operator()(expr->expression);
-        depth--;
+        print_node(decl->declaration, prefix, true);
     }
 
-    void operator()(const std::unique_ptr<ASTBinaryExpression>& bin_expression) {
-        print_indent();
-        std::cout << "- Binary expression\n";
+    static void visit_node(
+        const std::unique_ptr<ASTVariableDeclaration>& var, const std::string& prefix
+    ) {
+        std::cout << "Variable\n";
 
-        depth++;
-        print_indent();
-        std::cout << "| " << bin_expression->op << "\n";
-        this->operator()(bin_expression->left);
-        this->operator()(bin_expression->right);
-        depth--;
+        print_node(var->type, prefix, false);
+        print_node(var->name, prefix, var->value == nullptr);
+        if (var->value) { print_node(var->value, prefix, true); }
     }
 
-    void operator()(const std::unique_ptr<ASTUnaryExpression>& unary_expression) {
-        print_indent();
-        std::cout << "- Unary expression\n";
+    static void visit_node(
+        const std::unique_ptr<ASTFunctionArgument>& arg, const std::string& prefix
+    ) {
+        std::cout << "Function arg\n";
 
-        depth++;
-        print_indent();
-        std::cout << "| " << unary_expression->op << "\n";
-        this->operator()(unary_expression->expression);
-        depth--;
+        print_node(arg->type, prefix, false);
+        print_node(arg->name, prefix, true);
+    }
+
+    static void visit_node(
+        const std::unique_ptr<ASTFunctionDeclaration>& func, const std::string& prefix
+    ) {
+        std::cout << "Function\n";
+
+        print_node(func->name, prefix, false);
+        print_node(func->return_type, prefix, false);
+        for (const auto& arg : func->arguments) { print_node(arg, prefix, false); }
+        print_node(func->body, prefix, true);
+    }
+
+    static void visit_node(
+        const std::unique_ptr<ASTStatement>& statement, const std::string& prefix
+    ) {
+        std::cout << "Statement\n";
+        print_node(statement->statement, prefix, true);
+    }
+
+    static void visit_node(
+        const std::unique_ptr<ASTBlockStatement>& statement, const std::string& prefix
+    ) {
+        std::cout << "Block\n";
+        const size_t size = statement->statements.size();
+        for (size_t i = 0; i < size; i++) {
+            const bool is_last = i == size - 1;
+            print_node(statement->statements[i], prefix, is_last);
+        }
+    }
+
+    static void visit_node(
+        const std::unique_ptr<ASTAssignmentStatement>& assignment, const std::string& prefix
+    ) {
+        std::cout << "Assignment\n";
+
+        print_node(assignment->identifier, prefix, false);
+        print_node(assignment->expression, prefix, true);
+    }
+
+    static void visit_node(
+        const std::unique_ptr<ASTIfStatement>& if_statement, const std::string& prefix
+    ) {
+        std::cout << "If\n";
+
+        print_node(if_statement->condition, prefix, false);
+        print_node(if_statement->true_case, prefix, !if_statement->has_false_case());
+        if (!if_statement->has_false_case()) { return; }
+        print_node(if_statement->false_case, prefix, true);
+    }
+
+    static void visit_node(
+        const std::unique_ptr<ASTWhileStatement>& while_statement, const std::string& prefix
+    ) {
+        std::cout << "While\n";
+
+        print_node(while_statement->condition, prefix, false);
+        print_node(while_statement->block, prefix, true);
+    }
+
+    static void visit_node(
+        const std::unique_ptr<ASTReturnStatement>& return_statement, const std::string& prefix
+    ) {
+        std::cout << "Return\n";
+
+        print_node(return_statement->expression, prefix, true);
     }
 };
 
@@ -243,5 +234,5 @@ std::ostream& operator<<(std::ostream& os, const UnaryOperator op) {
 
 void print_program(const ASTProgram& program) {
     ASTNodePrinter printer{};
-    printer(program);
+    printer.print_tree(program);
 }
