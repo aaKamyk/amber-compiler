@@ -13,6 +13,11 @@ struct ASTParser {
     static std::optional<std::unique_ptr<ASTNode>> parse(Parser& ctx) { return std::nullopt; }
 };
 
+template <>
+struct ASTParser<ASTExpression> {
+    static std::optional<std::unique_ptr<ASTExpression>> parse(Parser& ctx, int min_precedence = 0);
+};
+
 class Parser {
 public:
     explicit Parser(std::vector<Token>&& tokens)
@@ -36,7 +41,14 @@ private:
     template <typename T>
     std::optional<std::unique_ptr<T>> try_parse() {
         const auto start = save();
-        if (auto parse_result = ASTParser<T>::parse(*this)) { return parse_result; }
+        if (auto parse_result = ASTParser<T>::parse(*this)) { return std::move(*parse_result); }
+        restore(start);
+        return std::nullopt;
+    }
+
+    std::optional<std::unique_ptr<ASTExpression>> try_parse(const int precedence = 0) {
+        const auto start = save();
+        if (auto expr = ASTParser<ASTExpression>::parse(*this, precedence)) { return expr; }
         restore(start);
         return std::nullopt;
     }
@@ -45,7 +57,7 @@ private:
 template <>
 struct ASTParser<ASTType> {
     static std::optional<std::unique_ptr<ASTType>> parse(Parser& ctx) {
-        /// TODO make this not ugly and disgusting?
+        /// TODO make this expandable
         switch (const auto token = ctx.peek(); token.type) {
             case TokenType::INT:
                 ctx.consume(1);
@@ -76,6 +88,127 @@ struct ASTParser<ASTIntegerLiteral> {
         if (token.type != TokenType::INTEGER_LITERAL) { return std::nullopt; }
         ctx.consume(1);
         return std::make_unique<ASTIntegerLiteral>(std::stol(std::get<std::string>(token.data)));
+    }
+};
+
+template <>
+struct ASTParser<ASTBinaryOperator> {
+    static std::optional<std::unique_ptr<ASTBinaryOperator>> parse(Parser& ctx) {
+        /// TODO add the rest of the binary operators also make this expandable
+        switch (const auto token = ctx.peek(); token.type) {
+            case TokenType::PLUS:
+                ctx.consume(1);
+                return std::make_unique<ASTBinaryOperator>(BinaryOperator::PLUS);
+            case TokenType::MINUS:
+                ctx.consume(1);
+                return std::make_unique<ASTBinaryOperator>(BinaryOperator::MINUS);
+            case TokenType::ASTERISK:
+                ctx.consume(1);
+                return std::make_unique<ASTBinaryOperator>(BinaryOperator::TIMES);
+            case TokenType::DIVIDE:
+                ctx.consume(1);
+                return std::make_unique<ASTBinaryOperator>(BinaryOperator::DIVIDE);
+            default:
+                return std::nullopt;
+        }
+    }
+};
+
+template <>
+struct ASTParser<ASTUnaryOperator> {
+    static std::optional<std::unique_ptr<ASTUnaryOperator>> parse(Parser& ctx) {
+        /// TODO add the rest of the unary operators also make this expandable
+        switch (const auto token = ctx.peek(); token.type) {
+            case TokenType::MINUS:
+                ctx.consume(1);
+                return std::make_unique<ASTUnaryOperator>(UnaryOperator::MINUS);
+            default:
+                return std::nullopt;
+        }
+    }
+};
+
+template <>
+struct ASTParser<ASTPrimaryExpression> {
+    static std::optional<std::unique_ptr<ASTPrimaryExpression>> parse(Parser& ctx) {
+        if (auto ident = ctx.try_parse<ASTIdentifier>()) {
+            return std::make_unique<ASTPrimaryExpression>(std::move(*ident));
+        }
+        if (auto int_literal = ctx.try_parse<ASTIntegerLiteral>()) {
+            return std::make_unique<ASTPrimaryExpression>(std::move(*int_literal));
+        }
+        if (auto paren_expr = ctx.try_parse<ASTParenExpression>()) {
+            return std::make_unique<ASTPrimaryExpression>(std::move(*paren_expr));
+        }
+        if (auto unary_expr = ctx.try_parse<ASTUnaryExpression>()) {
+            return std::make_unique<ASTPrimaryExpression>(std::move(*unary_expr));
+        }
+        return std::nullopt;
+    }
+};
+
+template <>
+struct ASTParser<ASTParenExpression> {
+    static std::optional<std::unique_ptr<ASTParenExpression>> parse(Parser& ctx) {
+        ASTParenExpression paren_expr{};
+        try {
+            ctx.expect(TokenType::PAREN_START);
+        } catch (...) { return std::nullopt; }
+        if (auto expr = ctx.try_parse<ASTExpression>()) {
+            paren_expr.expression = std::move(*expr);
+        } else {
+            return std::nullopt;
+        }
+        try {
+            ctx.expect(TokenType::PAREN_END);
+        } catch (...) { return std::nullopt; }
+        return std::make_unique<ASTParenExpression>(std::move(paren_expr));
+    }
+};
+
+inline std::optional<std::unique_ptr<ASTExpression>> ASTParser<ASTExpression>::parse(
+    Parser& ctx, const int min_precedence
+) {
+    ASTExpression result{};
+    if (auto primary_expr = ctx.try_parse<ASTPrimaryExpression>()) {
+        result.expression = std::move(*primary_expr);
+    } else {
+        return std::nullopt;
+    }
+    while (true) {
+        const auto start = ctx.save();
+        auto bin_op = ctx.try_parse<ASTBinaryOperator>();
+        if (!bin_op || (*bin_op)->get_precedence() <= min_precedence) {
+            ctx.restore(start);
+            break;
+        }
+        auto right = ctx.try_parse((*bin_op)->get_precedence());
+        if (!right) { return std::nullopt; }
+        // result becomes the left side of the binary expression
+        auto bin_expr = std::make_unique<ASTBinaryExpression>(
+            std::move(*bin_op), std::make_unique<ASTExpression>(std::move(result)),
+            std::move(*right)
+        );
+        result.expression = std::move(bin_expr);
+    }
+    return std::make_unique<ASTExpression>(std::move(result));
+}
+
+template <>
+struct ASTParser<ASTUnaryExpression> {
+    static std::optional<std::unique_ptr<ASTUnaryExpression>> parse(Parser& ctx) {
+        ASTUnaryExpression unary_expr{};
+        if (auto unary_op = ctx.try_parse<ASTUnaryOperator>()) {
+            unary_expr.op = std::move(*unary_op);
+        } else {
+            return std::nullopt;
+        }
+        if (auto primary_expr = ctx.try_parse<ASTPrimaryExpression>()) {
+            unary_expr.expression = std::move(*primary_expr);
+        } else {
+            return std::nullopt;
+        }
+        return std::make_unique<ASTUnaryExpression>(std::move(unary_expr));
     }
 };
 
@@ -175,8 +308,16 @@ struct ASTParser<ASTVariableDeclaration> {
         if (ctx.peek().type == TokenType::SEMICOLON) {
             ctx.consume(1);
             variable_declaration.value = nullptr;
-        } else if (auto assignment_statement = ctx.try_parse<ASTAssignmentStatement>()) {
-            variable_declaration.value = std::move(*assignment_statement);
+        } else if (ctx.peek().type == TokenType::EQUALS) {
+            ctx.consume(1);
+            if (auto expr = ctx.try_parse<ASTExpression>()) {
+                variable_declaration.value = std::move(*expr);
+                try {
+                    ctx.expect(TokenType::SEMICOLON);
+                } catch (...) { return std::nullopt; }
+            } else {
+                return std::nullopt;
+            }
         } else {
             return std::nullopt;
         }

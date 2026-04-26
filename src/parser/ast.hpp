@@ -25,6 +25,14 @@ struct ASTType {
     Type type;
 };
 
+struct ASTIdentifier {
+    std::string name;
+};
+
+struct ASTIntegerLiteral {
+    int64_t value;
+};
+
 struct ASTBinaryOperator {
     BinaryOperator op;
     [[nodiscard]] int get_precedence() const;
@@ -35,25 +43,16 @@ struct ASTUnaryOperator {
     [[nodiscard]] int get_precedence() const;
 };
 
-struct ASTIdentifier {
-    std::string name;
-};
-
-struct ASTIntegerLiteral {
-    int64_t value;
-};
-
 struct ASTExpression {
-    using ExpressionEntry = std::variant<
-        std::unique_ptr<ASTBinaryExpression>, std::unique_ptr<ASTUnaryExpression>,
-        std::unique_ptr<ASTPrimaryExpression>>;
-    ExpressionEntry expression;
+    using Expression =
+        std::variant<std::unique_ptr<ASTBinaryExpression>, std::unique_ptr<ASTPrimaryExpression>>;
+    Expression expression;
 };
 
 struct ASTPrimaryExpression {
     using PrimaryExpression = std::variant<
         std::unique_ptr<ASTIdentifier>, std::unique_ptr<ASTIntegerLiteral>,
-        std::unique_ptr<ASTParenExpression>>;
+        std::unique_ptr<ASTParenExpression>, std::unique_ptr<ASTUnaryExpression>>;
     PrimaryExpression expression;
 };
 

@@ -1,6 +1,1 @@
-int a;
-
-fn a() {}
-fn b() -> int {}
-fn c(int x) -> int {}
-fn d(int x, int y) -> int {}
+int x = 10 * 2 + 5;
