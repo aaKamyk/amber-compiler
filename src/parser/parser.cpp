@@ -25,19 +25,18 @@ void Parser::consume(const size_t n) {
     m_current_token += n;
 }
 
-void Parser::expect(const TokenType type) {
+bool Parser::expect(const TokenType type) {
     if (peek().type == type) {
         consume();
-    } else {
-        const auto current_token = peek();
-        throw std::runtime_error(
-            std::format(
-                "Unexpected token type at line {}, column {}", current_token.line,
-                current_token.column
-            )
-        );
+        return true;
     }
+    return false;
 }
+
+bool Parser::match(const TokenType type) const {
+    return peek().type == type;
+}
+
 void Parser::restore(const size_t index) {
     m_current_token = index;
 }
