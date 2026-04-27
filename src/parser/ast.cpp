@@ -4,7 +4,7 @@
 #include <unordered_map>
 
 struct ASTNodePrinter {
-    static void print_tree(const ASTProgram& program) {
+    static void print_program(const ASTProgram& program) {
         std::cout << "Program\n";
         const size_t size = program.children.size();
         for (size_t i = 0; i < size; i++) {
@@ -231,8 +231,6 @@ std::ostream& operator<<(std::ostream& os, const UnaryOperator op) {
     if (!un_op_strings.contains(op)) { throw std::runtime_error("Unknown operator"); }
     return os << un_op_strings.at(op);
 }
-
 void print_program(const ASTProgram& program) {
-    ASTNodePrinter printer{};
-    printer.print_tree(program);
+    ASTNodePrinter::print_program(program);
 }

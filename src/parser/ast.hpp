@@ -5,6 +5,8 @@
 #include <variant>
 #include <vector>
 
+#include "ast.hpp"
+
 enum class Type : std::uint8_t {
     INT,
     VOID,
