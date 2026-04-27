@@ -71,7 +71,16 @@ private:
     bool parse_into(Parser& ctx, std::unique_ptr<T>& destination) {
         auto res = ctx.try_parse<T>();
         if (!res) { return false; }
-        destination = std::move(res);
+        destination = std::move(*res);
+        return true;
+    }
+
+    template <typename T, typename... Types>
+        requires(std::same_as<T, Types> || ...)
+    bool parse_into(Parser& ctx, std::variant<std::unique_ptr<Types>...>& destination) {
+        auto res = ctx.try_parse<T>();
+        if (!res) { return false; }
+        destination = std::move(*res);
         return true;
     }
 };
@@ -174,11 +183,7 @@ struct ASTParser<ASTParenExpression> {
     static std::optional<std::unique_ptr<ASTParenExpression>> parse(Parser& ctx) {
         ASTParenExpression paren_expr{};
         if (!ctx.expect(TokenType::PAREN_START)) { return std::nullopt; }
-        if (auto expr = ctx.try_parse<ASTExpression>()) {
-            paren_expr.expression = std::move(*expr);
-        } else {
-            return std::nullopt;
-        }
+        if (!ctx.parse_into<ASTExpression>(ctx, paren_expr.expression)) { return std::nullopt; }
         if (!ctx.expect(TokenType::PAREN_END)) { return std::nullopt; }
         return std::make_unique<ASTParenExpression>(std::move(paren_expr));
     }
@@ -188,11 +193,7 @@ inline std::optional<std::unique_ptr<ASTExpression>> ASTParser<ASTExpression>::p
     Parser& ctx, const int min_precedence
 ) {
     ASTExpression result{};
-    if (auto primary_expr = ctx.try_parse<ASTPrimaryExpression>()) {
-        result.expression = std::move(*primary_expr);
-    } else {
-        return std::nullopt;
-    }
+    if (!ctx.parse_into<ASTPrimaryExpression>(ctx, result.expression)) { return std::nullopt; }
     while (true) {
         const auto start = ctx.save();
         auto bin_op = ctx.try_parse<ASTBinaryOperator>();
@@ -216,14 +217,8 @@ template <>
 struct ASTParser<ASTUnaryExpression> {
     static std::optional<std::unique_ptr<ASTUnaryExpression>> parse(Parser& ctx) {
         ASTUnaryExpression unary_expr{};
-        if (auto unary_op = ctx.try_parse<ASTUnaryOperator>()) {
-            unary_expr.op = std::move(*unary_op);
-        } else {
-            return std::nullopt;
-        }
-        if (auto primary_expr = ctx.try_parse<ASTPrimaryExpression>()) {
-            unary_expr.expression = std::move(*primary_expr);
-        } else {
+        if (!ctx.parse_into<ASTUnaryOperator>(ctx, unary_expr.op)) { return std::nullopt; }
+        if (!ctx.parse_into<ASTPrimaryExpression>(ctx, unary_expr.expression)) {
             return std::nullopt;
         }
         return std::make_unique<ASTUnaryExpression>(std::move(unary_expr));
@@ -253,14 +248,10 @@ template <>
 struct ASTParser<ASTAssignmentStatement> {
     static std::optional<std::unique_ptr<ASTAssignmentStatement>> parse(Parser& ctx) {
         ASTAssignmentStatement assignment_statement;
-        if (auto ident = ctx.try_parse<ASTIdentifier>()) {
-            assignment_statement.identifier = std::move(*ident);
-        } else {
+        if (!ctx.parse_into<ASTIdentifier>(ctx, assignment_statement.identifier)) {
             return std::nullopt;
         }
-        if (auto expr = ctx.try_parse<ASTExpression>()) {
-            assignment_statement.expression = std::move(*expr);
-        } else {
+        if (!ctx.parse_into<ASTExpression>(ctx, assignment_statement.expression)) {
             return std::nullopt;
         }
         return std::make_unique<ASTAssignmentStatement>(std::move(assignment_statement));
@@ -273,20 +264,15 @@ struct ASTParser<ASTIfStatement> {
         ASTIfStatement if_statement{};
         if (!ctx.expect(TokenType::IF, TokenType::PAREN_START)) { return std::nullopt; }
 
-        auto condition = ctx.try_parse<ASTExpression>();
-        if (!condition) { return std::nullopt; }
-        if_statement.condition = std::move(*condition);
-
+        if (!ctx.parse_into<ASTExpression>(ctx, if_statement.condition)) { return std::nullopt; }
         if (!ctx.expect(TokenType::PAREN_END)) { return std::nullopt; }
-
-        auto true_case = ctx.try_parse<ASTBlockStatement>();
-        if (!true_case) { return std::nullopt; }
-        if_statement.true_case = std::move(*true_case);
-
+        if (!ctx.parse_into<ASTBlockStatement>(ctx, if_statement.true_case)) {
+            return std::nullopt;
+        }
         if (ctx.expect(TokenType::ELSE)) {
-            auto false_case = ctx.try_parse<ASTBlockStatement>();
-            if (!false_case) { return std::nullopt; }
-            if_statement.false_case = std::move(*false_case);
+            if (!ctx.parse_into<ASTBlockStatement>(ctx, if_statement.false_case)) {
+                return std::nullopt;
+            }
             return std::make_unique<ASTIfStatement>(std::move(if_statement));
         }
         if_statement.false_case = nullptr;
@@ -298,22 +284,16 @@ template <>
 struct ASTParser<ASTVariableDeclaration> {
     static std::optional<std::unique_ptr<ASTVariableDeclaration>> parse(Parser& ctx) {
         ASTVariableDeclaration variable_declaration;
-        // Type
-        auto type = ctx.try_parse<ASTType>();
-        if (!type) { return std::nullopt; }
-        variable_declaration.type = std::move(*type);
-        // Identifier
-        auto ident = ctx.try_parse<ASTIdentifier>();
-        if (!ident) { return std::nullopt; }
-        variable_declaration.name = std::move(*ident);
+        if (!ctx.parse_into<ASTType>(ctx, variable_declaration.type)) { return std::nullopt; }
+        if (!ctx.parse_into<ASTIdentifier>(ctx, variable_declaration.name)) { return std::nullopt; }
         if (ctx.expect(TokenType::SEMICOLON)) {
             variable_declaration.value = nullptr;
             return std::make_unique<ASTVariableDeclaration>(std::move(variable_declaration));
         }
         if (ctx.expect(TokenType::EQUALS)) {
-            auto expr = ctx.try_parse<ASTExpression>();
-            if (!expr) { return std::nullopt; }
-            variable_declaration.value = std::move(*expr);
+            if (!ctx.parse_into<ASTExpression>(ctx, variable_declaration.value)) {
+                return std::nullopt;
+            }
             if (!ctx.expect(TokenType::SEMICOLON)) { return std::nullopt; }
             return std::make_unique<ASTVariableDeclaration>(std::move(variable_declaration));
         }
@@ -325,14 +305,8 @@ template <>
 struct ASTParser<ASTFunctionArgument> {
     static std::optional<std::unique_ptr<ASTFunctionArgument>> parse(Parser& ctx) {
         ASTFunctionArgument arg{};
-        // Type
-        auto type = ctx.try_parse<ASTType>();
-        if (!type) { return std::nullopt; }
-        arg.type = std::move(*type);
-        // Identifier
-        auto ident = ctx.try_parse<ASTIdentifier>();
-        if (!ident) { return std::nullopt; }
-        arg.name = std::move(*ident);
+        if (!ctx.parse_into<ASTType>(ctx, arg.type)) { return std::nullopt; }
+        if (!ctx.parse_into<ASTIdentifier>(ctx, arg.name)) { return std::nullopt; }
         return std::make_unique<ASTFunctionArgument>(std::move(arg));
     }
 };
@@ -343,16 +317,13 @@ struct ASTParser<ASTFunctionDeclaration> {
         ASTFunctionDeclaration func_declaration;
         if (!ctx.expect(TokenType::FN)) { return std::nullopt; }
 
-        auto func_name = ctx.try_parse<ASTIdentifier>();
-        if (!func_name) { return std::nullopt; }
-        func_declaration.name = std::move(*func_name);
-
+        if (!ctx.parse_into<ASTIdentifier>(ctx, func_declaration.name)) { return std::nullopt; }
         if (ctx.expect(TokenType::PAREN_START)) { return std::nullopt; }
 
         // Function parameters
         while (ctx.peek().type != TokenType::PAREN_END) {
             if (auto arg = ctx.try_parse<ASTFunctionArgument>()) {
-                func_declaration.arguments.push_back(std::move(*arg));
+                func_declaration.arguments.emplace_back(std::move(*arg));
             } else {
                 return std::nullopt;
             }
@@ -364,17 +335,15 @@ struct ASTParser<ASTFunctionDeclaration> {
 
         if (ctx.expect(TokenType::PAREN_END)) { return std::nullopt; }
         if (ctx.expect(TokenType::ARROW)) {
-            auto return_type = ctx.try_parse<ASTType>();
-            if (!return_type) { return std::nullopt; }
-            func_declaration.return_type = std::move(*return_type);
+            if (!ctx.parse_into<ASTType>(ctx, func_declaration.return_type)) {
+                return std::nullopt;
+            }
         } else {
             // implicit void return type
             func_declaration.return_type = std::make_unique<ASTType>(Type::VOID);
         }
 
-        auto body = ctx.try_parse<ASTBlockStatement>();
-        if (!body) { return std::nullopt; }
-        func_declaration.body = std::move(*body);
+        if (!ctx.parse_into<ASTBlockStatement>(ctx, func_declaration.body)) { return std::nullopt; }
         return std::make_unique<ASTFunctionDeclaration>(std::move(func_declaration));
     }
 };
@@ -383,9 +352,9 @@ template <>
 struct ASTParser<ASTDeclaration> {
     static std::optional<std::unique_ptr<ASTDeclaration>> parse(Parser& ctx) {
         if (ctx.match(TokenType::FN)) {
-            auto function_decl = ctx.try_parse<ASTFunctionDeclaration>();
-            if (!function_decl) { return std::nullopt; }
-            return std::make_unique<ASTDeclaration>(std::move(*function_decl));
+            if (auto func_declaration = ctx.try_parse<ASTFunctionDeclaration>()) {
+                return std::make_unique<ASTDeclaration>(std::move(*func_declaration));
+            }
         }
         if (auto variable_decl = ctx.try_parse<ASTVariableDeclaration>()) {
             return std::make_unique<ASTDeclaration>(std::move(*variable_decl));
