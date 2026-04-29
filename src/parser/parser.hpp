@@ -288,6 +288,7 @@ struct ASTParser<ASTVariableDeclaration> {
         if (!ctx.parse_into<ASTIdentifier>(ctx, variable_declaration.name)) { return std::nullopt; }
         if (ctx.expect(TokenType::SEMICOLON)) {
             variable_declaration.value = nullptr;
+            ctx.m_symbol_table->add_symbol(variable_declaration.name->name);
             return std::make_unique<ASTVariableDeclaration>(std::move(variable_declaration));
         }
         if (ctx.expect(TokenType::EQUALS)) {
@@ -344,6 +345,7 @@ struct ASTParser<ASTFunctionDeclaration> {
         }
 
         if (!ctx.parse_into<ASTBlockStatement>(ctx, func_declaration.body)) { return std::nullopt; }
+        ctx.m_symbol_table->add_symbol(func_declaration.name->name);
         return std::make_unique<ASTFunctionDeclaration>(std::move(func_declaration));
     }
 };

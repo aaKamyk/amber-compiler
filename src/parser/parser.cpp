@@ -15,6 +15,7 @@ ASTProgram Parser::parse() {
         }
         throw std::runtime_error("Expected statement or declaration");
     }
+    program.symbol_table = std::move(m_symbol_table);
     return program;
 }
 

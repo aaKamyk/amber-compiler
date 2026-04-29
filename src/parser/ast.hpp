@@ -7,6 +7,8 @@
 
 #include "ast.hpp"
 
+class SymbolTable;
+
 enum class Type : std::uint8_t {
     INT,
     VOID,
@@ -141,6 +143,7 @@ struct ASTProgram {
     using ProgramEntry =
         std::variant<std::unique_ptr<ASTDeclaration>, std::unique_ptr<ASTStatement>>;
     std::vector<ProgramEntry> children;
+    std::unique_ptr<SymbolTable> symbol_table;
 };
 
 std::ostream& operator<<(std::ostream& os, Type type);
