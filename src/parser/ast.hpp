@@ -103,7 +103,7 @@ struct ASTStatement {
 struct ASTBlockStatement {
     using StatementEntry =
         std::variant<std::unique_ptr<ASTDeclaration>, std::unique_ptr<ASTStatement>>;
-    std::vector<StatementEntry> statements;
+    std::vector<StatementEntry> entries;
 };
 
 struct ASTAssignmentStatement {
@@ -131,7 +131,6 @@ struct ASTProgram {
     using ProgramEntry =
         std::variant<std::unique_ptr<ASTDeclaration>, std::unique_ptr<ASTStatement>>;
     std::vector<ProgramEntry> children;
-    std::unique_ptr<SymbolTable> symbol_table;
 };
 
 void print_program(const ASTProgram& program);

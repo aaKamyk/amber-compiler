@@ -148,10 +148,10 @@ struct ASTNodePrinter {
         const std::unique_ptr<ASTBlockStatement>& statement, const std::string& prefix
     ) {
         std::cout << "Block\n";
-        const size_t size = statement->statements.size();
+        const size_t size = statement->entries.size();
         for (size_t i = 0; i < size; i++) {
             const bool is_last = i == size - 1;
-            print_node(statement->statements[i], prefix, is_last);
+            print_node(statement->entries[i], prefix, is_last);
         }
     }
 
