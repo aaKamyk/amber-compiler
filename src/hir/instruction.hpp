@@ -2,16 +2,29 @@
 
 #include <memory>
 #include <variant>
+#include <vector>
 
 #include "expression.hpp"
+#include "utils/type.hpp"
 
-namespace Hir {
+namespace hir {
 
 struct InstructionDeclaration;
+struct InstructionVariableDeclaration;
+struct InstructionFunctionDeclaration;
 struct InstructionAssignment;
 struct InstructionReturn;
 struct InstructionBranch;
 struct InstructionBranchConditional;
+
+struct Argument {
+    Type type;
+    std::unique_ptr<AtomIdentifier> name;
+};
+
+struct Label {
+    std::unique_ptr<AtomIdentifier> identifier;
+};
 
 struct Instruction {
     using Instr = std::variant<
@@ -21,14 +34,42 @@ struct Instruction {
     Instr instruction;
 };
 
-struct InstructionDeclaration {};
+struct InstructionDeclaration {
+    using Decl = std::variant<
+        std::unique_ptr<InstructionVariableDeclaration>,
+        std::unique_ptr<InstructionFunctionDeclaration>>;
+    Decl decl;
+};
 
-struct InstructionAssignment {};
+struct InstructionVariableDeclaration {
+    Type type;
+    std::unique_ptr<AtomIdentifier> identifier;
+};
 
-struct InstructionReturn {};
+struct InstructionFunctionDeclaration {
+    Type return_type;
+    std::unique_ptr<AtomIdentifier> name;
+    std::vector<Argument> parameters;
+    std::vector<Instruction> instructions;
+};
 
-struct InstructionBranch {};
+struct InstructionAssignment {
+    std::unique_ptr<AtomIdentifier> identifier;
+    std::unique_ptr<Expression> value;
+};
 
-struct InstructionBranchConditional {};
+struct InstructionReturn {
+    std::unique_ptr<Atom> identifier;
+};
 
-}  // namespace Hir
+struct InstructionBranch {
+    std::unique_ptr<Label> destination;
+};
+
+struct InstructionBranchConditional {
+    std::unique_ptr<ComparisonExpression> condition;
+    std::unique_ptr<Label> true_case;
+    std::unique_ptr<Label> false_case;
+};
+
+}  // namespace hir
