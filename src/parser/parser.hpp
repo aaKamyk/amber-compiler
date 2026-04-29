@@ -5,7 +5,6 @@
 
 #include "ast.hpp"
 #include "lexer/token.hpp"
-#include "symbolTable.hpp"
 
 class Parser;
 
@@ -22,7 +21,7 @@ struct ASTParser<ASTExpression> {
 class Parser {
 public:
     explicit Parser(std::vector<Token>&& tokens)
-        : m_symbol_table(std::make_unique<SymbolTable>()), m_tokens(std::move(tokens)) {}
+        : m_tokens(std::move(tokens)) {}
 
     ASTProgram parse();
 
@@ -48,7 +47,6 @@ private:
     [[nodiscard]] size_t save() const { return m_current_token; }
     [[nodiscard]] Token peek(size_t offset = 0) const;
 
-    std::unique_ptr<SymbolTable> m_symbol_table;
     std::vector<Token> m_tokens;
     size_t m_current_token{};
 
@@ -232,9 +230,9 @@ struct ASTParser<ASTBlockStatement> {
         if (!ctx.expect(TokenType::CURLY_BRACE_START)) { return std::nullopt; }
         while (true) {
             if (auto decl = ctx.try_parse<ASTDeclaration>()) {
-                block_statement.statements.emplace_back(std::move(*decl));
+                block_statement.entries.emplace_back(std::move(*decl));
             } else if (auto statement = ctx.try_parse<ASTStatement>()) {
-                block_statement.statements.emplace_back(std::move(*statement));
+                block_statement.entries.emplace_back(std::move(*statement));
             } else {
                 break;
             }
@@ -288,7 +286,6 @@ struct ASTParser<ASTVariableDeclaration> {
         if (!ctx.parse_into<ASTIdentifier>(ctx, variable_declaration.name)) { return std::nullopt; }
         if (ctx.expect(TokenType::SEMICOLON)) {
             variable_declaration.value = nullptr;
-            ctx.m_symbol_table->add_symbol(variable_declaration.name->name);
             return std::make_unique<ASTVariableDeclaration>(std::move(variable_declaration));
         }
         if (ctx.expect(TokenType::EQUALS)) {
@@ -345,7 +342,6 @@ struct ASTParser<ASTFunctionDeclaration> {
         }
 
         if (!ctx.parse_into<ASTBlockStatement>(ctx, func_declaration.body)) { return std::nullopt; }
-        ctx.m_symbol_table->add_symbol(func_declaration.name->name);
         return std::make_unique<ASTFunctionDeclaration>(std::move(func_declaration));
     }
 };
