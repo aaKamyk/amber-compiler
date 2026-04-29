@@ -1,10 +1,10 @@
 #pragma once
 
 #include <memory>
-#include <string>
 #include <variant>
 #include <vector>
 
+#include "utils/atom.hpp"
 #include "utils/operator.hpp"
 #include "utils/type.hpp"
 
@@ -23,16 +23,11 @@ struct ASTWhileStatement;
 struct ASTReturnStatement;
 struct ASTIfStatement;
 
+using ASTIdentifier = AtomIdentifier;
+using ASTIntegerLiteral = AtomIntegerLiteral;
+
 struct ASTType {
     Type type;
-};
-
-struct ASTIdentifier {
-    std::string name;
-};
-
-struct ASTIntegerLiteral {
-    int64_t value;
 };
 
 struct ASTBinaryOperator {
