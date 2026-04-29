@@ -5,17 +5,10 @@
 #include <variant>
 #include <vector>
 
-#include "ast.hpp"
+#include "utils/operator.hpp"
+#include "utils/type.hpp"
 
 class SymbolTable;
-
-enum class Type : std::uint8_t {
-    INT,
-    VOID,
-};
-
-enum class BinaryOperator : std::uint8_t { PLUS, MINUS, TIMES, DIVIDE };
-enum class UnaryOperator : std::uint8_t { MINUS };
 
 struct ASTBlockStatement;
 struct ASTPrimaryExpression;
@@ -145,9 +138,5 @@ struct ASTProgram {
     std::vector<ProgramEntry> children;
     std::unique_ptr<SymbolTable> symbol_table;
 };
-
-std::ostream& operator<<(std::ostream& os, Type type);
-std::ostream& operator<<(std::ostream& os, BinaryOperator op);
-std::ostream& operator<<(std::ostream& os, UnaryOperator op);
 
 void print_program(const ASTProgram& program);

@@ -3,6 +3,9 @@
 #include <iostream>
 #include <unordered_map>
 
+#include "utils/operator.hpp"
+#include "utils/type.hpp"
+
 struct ASTNodePrinter {
     static void print_program(const ASTProgram& program) {
         std::cout << "Program\n";
@@ -205,32 +208,6 @@ int ASTUnaryOperator::get_precedence() const {
     return precedences.at(this->op);
 }
 
-std::ostream& operator<<(std::ostream& os, const Type type) {
-    static const std::unordered_map<Type, const char*> type_strings = {
-        {Type::INT, "int"}, {Type::VOID, "void"}
-    };
-    if (!type_strings.contains(type)) { throw std::runtime_error("Unknown type"); }
-    return os << type_strings.at(type);
-}
-
-std::ostream& operator<<(std::ostream& os, const BinaryOperator op) {
-    static const std::unordered_map<BinaryOperator, const char*> bin_op_strings = {
-        {BinaryOperator::PLUS, "+"},
-        {BinaryOperator::MINUS, "-"},
-        {BinaryOperator::TIMES, "*"},
-        {BinaryOperator::DIVIDE, "/"}
-    };
-    if (!bin_op_strings.contains(op)) { throw std::runtime_error("Unknown operator"); }
-    return os << bin_op_strings.at(op);
-}
-
-std::ostream& operator<<(std::ostream& os, const UnaryOperator op) {
-    static const std::unordered_map<UnaryOperator, const char*> un_op_strings = {
-        {UnaryOperator::MINUS, "-"}
-    };
-    if (!un_op_strings.contains(op)) { throw std::runtime_error("Unknown operator"); }
-    return os << un_op_strings.at(op);
-}
 void print_program(const ASTProgram& program) {
     ASTNodePrinter::print_program(program);
 }
