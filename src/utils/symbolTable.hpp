@@ -7,7 +7,8 @@
 class SymbolTable {
 public:
     uint64_t add_symbol(const std::string& symbol);
-    std::string_view get_symbol(uint64_t id) const;
+    std::string_view get_symbol_name(uint64_t id) const;
+    uint64_t get_symbol_id(std::string_view symbol) const;
     bool has_symbol(std::string_view symbol) const;
 
 private:
