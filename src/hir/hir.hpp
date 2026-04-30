@@ -45,6 +45,7 @@ private:
     void translate(std::unique_ptr<ASTWhileStatement> stmt);
     void translate(std::unique_ptr<ASTReturnStatement> stmt);
 
+    std::unique_ptr<AtomIdentifier> create_temporary(std::string_view name);
     std::optional<uint64_t> resolve_scope(const AtomIdentifier* atom) const;
     const Scope& current_scope() const;
     Scope& current_scope();
@@ -53,7 +54,12 @@ private:
 
     void set_active_function(std::vector<Instruction>&);
     void unset_active_function();
+    void append_to_active_func(Instruction);
     void append_to_program(InstructionDeclaration);
+
+    bool is_last_expr_terminal() const;
+    std::unique_ptr<TerminalExpression> get_last_terminal_expr();
+    std::unique_ptr<Expression> get_last_expression();
 
     ASTProgram m_ast_program;
     Program m_program;
@@ -62,5 +68,7 @@ private:
     std::vector<Expression> m_active_expressions;
     SymbolTable m_symbol_table{};
 };
+
+void print_program(const Program&);
 
 }  // namespace hir

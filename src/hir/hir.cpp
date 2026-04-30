@@ -1,6 +1,7 @@
 #include "hir.hpp"
 
 #include <cassert>
+#include <iostream>
 
 #include "utils/symbolTable.hpp"
 
@@ -53,9 +54,66 @@ void hir::Hir::translate(std::unique_ptr<ASTIntegerLiteral> lit) {
 void hir::Hir::translate(std::unique_ptr<ASTParenExpression> expr) {
     this->translate(std::move(expr->expression));
 }
+
 void hir::Hir::translate(std::unique_ptr<ASTUnaryExpression> expr) {
     this->translate(std::move(expr->expression));
-    auto unary_expr = std::make_unique<UnaryExpression>();
+    if (this->is_last_expr_terminal()) {
+        std::unique_ptr<Atom> atom = std::move(this->get_last_terminal_expr()->value);
+        auto result = std::make_unique<UnaryExpression>(expr->op->op, std::move(atom));
+        m_active_expressions.emplace_back(std::move(result));
+        return;
+    }
+    auto temp_var = this->create_temporary("v");
+    auto last_expr = this->get_last_expression();
+    auto assign = std::make_unique<InstructionAssignment>(temp_var->clone(), std::move(last_expr));
+    this->append_to_active_func({std::move(assign)});
+    auto term_expr =
+        std::make_unique<TerminalExpression>(std::make_unique<Atom>(std::move(temp_var)));
+    m_active_expressions.emplace_back(std::move(term_expr));
+}
+
+void hir::Hir::translate(std::unique_ptr<ASTBinaryExpression> expr) {
+    using TerminalExprPtr = std::unique_ptr<TerminalExpression>;
+    this->translate(std::move(expr->left));
+    auto left = this->get_last_expression();
+    this->translate(std::move(expr->right));
+    auto right = this->get_last_expression();
+
+    std::unique_ptr<AtomIdentifier> temp_left;
+    std::unique_ptr<AtomIdentifier> temp_right;
+    if (!std::holds_alternative<TerminalExprPtr>(left->expression)) {
+        temp_left = this->create_temporary("v");
+        auto assign = std::make_unique<InstructionAssignment>(temp_left->clone(), std::move(left));
+        m_active_function->emplace_back(std::move(assign));
+    }
+    if (!std::holds_alternative<TerminalExprPtr>(right->expression)) {
+        temp_right = this->create_temporary("v");
+        auto assign =
+            std::make_unique<InstructionAssignment>(temp_right->clone(), std::move(right));
+        m_active_function->emplace_back(std::move(assign));
+    }
+    if (left && right) {
+        auto [left_atom] = std::move(*std::move(std::get<TerminalExprPtr>(left->expression)));
+        auto [right_atom] = std::move(*std::move(std::get<TerminalExprPtr>(right->expression)));
+        auto result = std::make_unique<BinaryExpression>(
+            expr->op->op, std::move(left_atom), std::move(right_atom)
+        );
+        m_active_expressions.emplace_back(std::move(result));
+    }
+    if (left && !right) {
+        auto [atom] = std::move(*std::move(std::get<TerminalExprPtr>(left->expression)));
+        auto result = std::make_unique<BinaryExpression>(
+            expr->op->op, std::move(atom), std::make_unique<Atom>(std::move(temp_right))
+        );
+        m_active_expressions.emplace_back(std::move(result));
+    }
+    if (!left && right) {
+        auto [atom] = std::move(*std::move(std::get<TerminalExprPtr>(right->expression)));
+        auto result = std::make_unique<BinaryExpression>(
+            expr->op->op, std::make_unique<Atom>(std::move(temp_left)), std::move(atom)
+        );
+        m_active_expressions.emplace_back(std::move(result));
+    }
 }
 
 void hir::Hir::translate(std::unique_ptr<ASTDeclaration> decl) {
@@ -66,16 +124,34 @@ void hir::Hir::translate(std::unique_ptr<ASTDeclaration> decl) {
 }
 
 void hir::Hir::translate(std::unique_ptr<ASTVariableDeclaration> decl) {
-    const std::string_view decl_name = decl->name->name;
-    if (m_symbol_table.has_symbol(decl_name)) {
+    std::unique_ptr<AtomIdentifier> atom = std::move(decl->name);
+    if (m_symbol_table.has_symbol(atom->name)) {
         /// TODO allow for redeclaration in more nested scope
         return;
     }
-    const auto id = m_symbol_table.add_symbol(decl_name.data());
+    const auto id = m_symbol_table.add_symbol(atom->name);
     this->current_scope().add(id);
     auto var_decl =
-        std::make_unique<InstructionVariableDeclaration>(decl->type->type, std::move(decl->name));
-    this->append_to_program({std::move(var_decl)});
+        std::make_unique<InstructionVariableDeclaration>(decl->type->type, atom->clone());
+    if (m_active_function) {
+        auto instruction_decl = std::make_unique<InstructionDeclaration>(std::move(var_decl));
+        m_active_function->emplace_back(std::move(instruction_decl));
+    } else {
+        this->append_to_program({std::move(var_decl)});
+    }
+    /// Assignment
+    if (decl->value) {
+        this->translate(std::move(decl->value));
+        if (m_active_function) {
+            auto instr_assign = std::make_unique<InstructionAssignment>(
+                std::move(atom), this->get_last_expression()
+            );
+            m_active_function->emplace_back(std::move(instr_assign));
+            return;
+        } else {
+            /// TODO global scope assignment
+        }
+    }
 }
 
 void hir::Hir::translate(std::unique_ptr<ASTFunctionDeclaration> decl) {
@@ -92,10 +168,9 @@ void hir::Hir::translate(std::unique_ptr<ASTFunctionDeclaration> decl) {
         func_decl->parameters.emplace_back(type->type, std::move(name));
     }
     this->set_active_function(func_decl->instructions);
+    this->append_to_program({std::move(func_decl)});
     this->translate(std::move(decl->body));
     this->unset_active_function();
-
-    this->append_to_program({std::move(func_decl)});
 }
 
 void hir::Hir::translate(std::unique_ptr<ASTStatement> stmt) {
@@ -118,6 +193,22 @@ void hir::Hir::translate(std::unique_ptr<ASTBlockStatement> stmt) {
 
 void hir::Hir::translate(std::unique_ptr<ASTAssignmentStatement> stmt) {
     this->translate(std::move(stmt->expression));
+}
+
+void hir::Hir::translate(std::unique_ptr<ASTIfStatement> stmt) {}
+
+void hir::Hir::translate(std::unique_ptr<ASTWhileStatement> stmt) {}
+
+void hir::Hir::translate(std::unique_ptr<ASTReturnStatement> stmt) {}
+
+std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string_view name) {
+    auto atom = std::make_unique<AtomIdentifier>(name.data());
+    const auto id = m_symbol_table.add_symbol(atom->name);
+    this->current_scope().add(id);
+    auto temp_decl = std::make_unique<InstructionVariableDeclaration>(Type::INT, atom->clone());
+    auto instr_decl = std::make_unique<InstructionDeclaration>(std::move(temp_decl));
+    m_active_function->emplace_back(std::move(instr_decl));
+    return atom;
 }
 
 std::optional<uint64_t> hir::Hir::resolve_scope(const AtomIdentifier* atom) const {
@@ -157,6 +248,30 @@ void hir::Hir::unset_active_function() {
     this->m_active_function = nullptr;
 }
 
+void hir::Hir::append_to_active_func(Instruction i) {
+    this->m_active_function->emplace_back(std::move(i));
+}
+
 void hir::Hir::append_to_program(InstructionDeclaration decl) {
     this->m_program.declarations.emplace_back(std::move(decl));
 }
+
+bool hir::Hir::is_last_expr_terminal() const {
+    const auto& [expression] = m_active_expressions.back();
+    return std::holds_alternative<std::unique_ptr<TerminalExpression>>(expression);
+}
+
+std::unique_ptr<hir::TerminalExpression> hir::Hir::get_last_terminal_expr() {
+    if (!is_last_expr_terminal()) { return nullptr; }
+    auto [expression] = std::move(m_active_expressions.back());
+    m_active_expressions.pop_back();
+    return std::move(std::get<std::unique_ptr<TerminalExpression>>(expression));
+}
+
+std::unique_ptr<hir::Expression> hir::Hir::get_last_expression() {
+    if (m_active_expressions.empty()) { return nullptr; }
+    auto expression = std::move(m_active_expressions.back());
+    m_active_expressions.pop_back();
+    return std::make_unique<Expression>(std::move(expression));
+}
+
