@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "hir/hir.hpp"
 #include "lexer/lexer.hpp"
 #include "parser/ast.hpp"
 #include "parser/parser.hpp"
@@ -11,8 +12,11 @@ void runCompiler(const int argc, const char** argv) {
     Lexer lexer(*input);
     auto tokens = lexer.lex();
     Parser parser(std::move(tokens));
-    const auto ast = parser.parse();
+    auto ast = parser.parse();
     print_program(ast);
+    hir::Hir translator(std::move(ast));
+    auto hir = translator.translate();
+    hir::print_program(hir);
 }
 
 int main(const int argc, const char** argv) {

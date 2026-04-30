@@ -275,3 +275,84 @@ std::unique_ptr<hir::Expression> hir::Hir::get_last_expression() {
     return std::make_unique<Expression>(std::move(expression));
 }
 
+struct HirPrinter {
+    static void print(const hir::Program& program) {
+        for (const auto& [decl] : program.declarations) {
+            std::visit([](auto&& d) -> void { HirPrinter::print(*d); }, decl);
+        }
+    }
+
+    static void print(const hir::Instruction& instr) {
+        std::visit([](auto&& i) -> void { HirPrinter::print(*i); }, instr.instruction);
+    }
+
+    static void print(const hir::InstructionAssignment& assignment) {
+        std::cout << assignment.identifier->name << " = ";
+        std::visit([](auto&& v) -> void { HirPrinter::print(*v); }, assignment.value->expression);
+        std::cout << ";\n";
+    }
+
+    static void print(const hir::InstructionDeclaration& declaration) {
+        if (auto* var_decl =
+                std::get_if<std::unique_ptr<hir::InstructionVariableDeclaration>>(&declaration.decl
+                )) {
+            print(**var_decl);
+        } else {
+            throw std::runtime_error("Unexpected function declaration");
+        }
+    }
+
+    static void print(const hir::InstructionReturn& assignment) {}
+
+    static void print(const hir::InstructionBranch& assignment) {}
+
+    static void print(const hir::InstructionBranchConditional& assignment) {}
+
+    static void print(const hir::InstructionVariableDeclaration& decl) {
+        std::cout << decl.type << ' ';
+        std::cout << decl.identifier->name << ";\n";
+    }
+
+    static void print(const hir::InstructionFunctionDeclaration& decl) {
+        std::cout << "fn ";
+        std::cout << decl.name->name;
+        std::cout << '(';
+        for (const auto& [type, name] : decl.parameters) {
+            std::cout << type << ' ';
+            std::cout << name->name << ", ";
+        }
+        std::cout << ") -> ";
+        std::cout << decl.return_type << '\n';
+        for (const auto& instr : decl.instructions) {
+            std::cout << "  ";
+            print(instr);
+        }
+    }
+
+    static void print(const hir::TerminalExpression& expr) { print(*expr.value); }
+
+    static void print(const hir::UnaryExpression& expr) {
+        std::cout << expr.op;
+        print(*expr.operand);
+    }
+
+    static void print(const hir::BinaryExpression& expr) {
+        print(*expr.left);
+        std::cout << ' ' << expr.op << ' ';
+        print(*expr.right);
+    }
+
+    static void print(const Atom& at) {
+        if (const auto* ident = std::get_if<std::unique_ptr<AtomIdentifier>>(&at.atom)) {
+            std::cout << (*ident)->name;
+            return;
+        }
+        if (const auto* lit = std::get_if<std::unique_ptr<AtomIntegerLiteral>>(&at.atom)) {
+            std::cout << (*lit)->value;
+        }
+    }
+};
+
+void hir::print_program(const Program& program) {
+    HirPrinter::print(program);
+}
