@@ -316,7 +316,7 @@ struct ASTParser<ASTFunctionDeclaration> {
         if (!ctx.expect(TokenType::FN)) { return std::nullopt; }
 
         if (!ctx.parse_into<ASTIdentifier>(ctx, func_declaration.name)) { return std::nullopt; }
-        if (ctx.expect(TokenType::PAREN_START)) { return std::nullopt; }
+        if (!ctx.expect(TokenType::PAREN_START)) { return std::nullopt; }
 
         // Function parameters
         while (ctx.peek().type != TokenType::PAREN_END) {
@@ -331,7 +331,7 @@ struct ASTParser<ASTFunctionDeclaration> {
             if (!ctx.match(TokenType::PAREN_END)) { return std::nullopt; }
         }
 
-        if (ctx.expect(TokenType::PAREN_END)) { return std::nullopt; }
+        if (!ctx.expect(TokenType::PAREN_END)) { return std::nullopt; }
         if (ctx.expect(TokenType::ARROW)) {
             if (!ctx.parse_into<ASTType>(ctx, func_declaration.return_type)) {
                 return std::nullopt;
