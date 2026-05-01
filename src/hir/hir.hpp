@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <optional>
 #include <unordered_set>
 
@@ -45,7 +46,7 @@ private:
     void translate(std::unique_ptr<ASTWhileStatement> stmt);
     void translate(std::unique_ptr<ASTReturnStatement> stmt);
 
-    std::unique_ptr<AtomIdentifier> create_temporary(std::string_view name);
+    std::unique_ptr<AtomIdentifier> create_temporary(const std::string& name);
     std::optional<uint64_t> resolve_scope(const AtomIdentifier* atom) const;
     const Scope& current_scope() const;
     Scope& current_scope();
@@ -67,6 +68,7 @@ private:
     std::vector<Instruction>* m_active_function;
     std::vector<Expression> m_active_expressions;
     SymbolTable m_symbol_table{};
+    std::map<std::string, uint64_t> m_temporary_counts;
 };
 
 void print_program(const Program&);

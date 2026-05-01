@@ -201,8 +201,10 @@ void hir::Hir::translate(std::unique_ptr<ASTWhileStatement> stmt) {}
 
 void hir::Hir::translate(std::unique_ptr<ASTReturnStatement> stmt) {}
 
-std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string_view name) {
-    auto atom = std::make_unique<AtomIdentifier>(name.data());
+std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string& name) {
+    const uint64_t count = m_temporary_counts[name]++;
+    std::string real_name = "__" + name + std::to_string(count);
+    auto atom = std::make_unique<AtomIdentifier>(std::move(real_name));
     const auto id = m_symbol_table.add_symbol(atom->name);
     this->current_scope().add(id);
     auto temp_decl = std::make_unique<InstructionVariableDeclaration>(Type::INT, atom->clone());
