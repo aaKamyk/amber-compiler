@@ -1,6 +1,7 @@
 target_sources(kcp
         PRIVATE
-        operator.cpp
+        atom.cpp
         type.cpp
+        operator.cpp
         symbolTable.cpp
 )
