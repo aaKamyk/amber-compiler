@@ -34,7 +34,10 @@ void hir::Hir::visit(ast::AssignmentStatement* assignment_statement) {
 }
 
 void hir::Hir::visit(ast::ReturnStatement* return_statement) {
-    /// TODO
+    this->translate(std::move(return_statement->expression));
+    auto return_instruction =
+        std::make_unique<InstructionReturn>(this->get_last_expression());
+    m_active_function->emplace_back(std::move(return_instruction));
 }
 
 void hir::Hir::visit(ast::IfStatement* if_statement) {
@@ -57,11 +60,9 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
         variable_declaration->type, atom->clone()
     );
     if (m_active_function) {
-        auto instruction_decl =
-            std::make_unique<InstructionDeclaration>(std::move(var_decl));
-        m_active_function->emplace_back(std::move(instruction_decl));
+        m_active_function->emplace_back(std::move(var_decl));
     } else {
-        this->append_to_program({std::move(var_decl)});
+        this->append_to_program(std::move(var_decl));
     }
     /// Assignment
     if (variable_declaration->value) {
@@ -85,16 +86,16 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
         /// TODO can only declare a function at global scope
         return;
     }
-    auto func_decl = std::make_unique<InstructionFunctionDeclaration>(
-        function_declaration->return_type, std::move(function_declaration->name)
-    );
+    auto func_decl = std::make_unique<InstructionFunctionDeclaration>();
+    func_decl->return_type = function_declaration->return_type;
+    func_decl->name = std::move(function_declaration->name);
     for (const auto& param : function_declaration->arguments) {
         assert(param);
         auto& [type, name] = *param;
         func_decl->parameters.emplace_back(type, std::move(name));
     }
     this->set_active_function(func_decl->instructions);
-    this->append_to_program({std::move(func_decl)});
+    this->append_to_program(std::move(func_decl));
     this->translate(std::move(function_declaration->body));
     this->unset_active_function();
 }
@@ -163,8 +164,7 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string& na
     this->current_scope().add(id);
     auto temp_decl =
         std::make_unique<InstructionVariableDeclaration>(Type::INT, atom->clone());
-    auto instr_decl = std::make_unique<InstructionDeclaration>(std::move(temp_decl));
-    m_active_function->emplace_back(std::move(instr_decl));
+    m_active_function->emplace_back(std::move(temp_decl));
     return atom;
 }
 
@@ -197,7 +197,7 @@ void hir::Hir::pop_scope() {
     m_active_scopes.pop_back();
 }
 
-void hir::Hir::set_active_function(std::vector<Instruction>& func_body) {
+void hir::Hir::set_active_function(std::vector<std::unique_ptr<Instruction>>& func_body) {
     this->m_active_function = &func_body;
 }
 
@@ -205,11 +205,11 @@ void hir::Hir::unset_active_function() {
     this->m_active_function = nullptr;
 }
 
-void hir::Hir::append_to_active_func(Instruction i) const {
+void hir::Hir::append_to_active_func(std::unique_ptr<Instruction> i) const {
     this->m_active_function->emplace_back(std::move(i));
 }
 
-void hir::Hir::append_to_program(InstructionDeclaration decl) {
+void hir::Hir::append_to_program(std::unique_ptr<InstructionDeclaration> decl) {
     this->m_program.declarations.emplace_back(std::move(decl));
 }
 
@@ -220,58 +220,55 @@ std::unique_ptr<hir::Expression> hir::Hir::get_last_expression() {
     return expression;
 }
 
-struct HirPrinter final : hir::ExpressionVisitor {
+struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     void print(const hir::Program& program) {
-        for (const auto& [decl] : program.declarations) {
-            std::visit([this](auto&& d) -> void { this->print(*d); }, decl);
+        for (const auto& declaration : program.declarations) {
+            declaration->accept(this);
         }
     }
 
-    void print(const hir::Instruction& instr) {
-        std::visit([this](auto&& i) -> void { this->print(*i); }, instr.instruction);
-    }
+    void visit(hir::Label* label) override {
+        std::cout << label->identifier->name << ";\n";
+    };
 
-    void print(const hir::InstructionAssignment& assignment) {
-        std::cout << assignment.identifier->name << " = ";
-        assignment.value->accept(this);
+    void visit(hir::InstructionAssignment* instruction_assignment) override {
+        std::cout << instruction_assignment->identifier->name << " = ";
+        instruction_assignment->value->accept(this);
         std::cout << ";\n";
     }
 
-    static void print(const hir::InstructionDeclaration& declaration) {
-        if (auto* var_decl =
-                std::get_if<std::unique_ptr<hir::InstructionVariableDeclaration>>(
-                    &declaration.decl
-                )) {
-            print(**var_decl);
-        } else {
-            throw std::runtime_error("Unexpected function declaration");
-        }
+    void visit(hir::InstructionReturn* instruction_return) override {
+        std::cout << "return ";
+        instruction_return->value->accept(this);
+        std::cout << ";\n";
     }
 
-    static void print(const hir::InstructionReturn& assignment) {}
-
-    static void print(const hir::InstructionBranch& assignment) {}
-
-    static void print(const hir::InstructionBranchConditional& assignment) {}
-
-    static void print(const hir::InstructionVariableDeclaration& decl) {
-        std::cout << decl.type << ' ';
-        std::cout << decl.identifier->name << ";\n";
+    void visit(hir::InstructionBranch*) override {
+        /// TODO
     }
 
-    void print(const hir::InstructionFunctionDeclaration& decl) {
+    void visit(hir::InstructionBranchConditional*) override {
+        /// TODO
+    }
+
+    void visit(hir::InstructionVariableDeclaration* instruction_declaration) override {
+        std::cout << instruction_declaration->type << ' ';
+        std::cout << instruction_declaration->identifier->name << ";\n";
+    }
+
+    void visit(hir::InstructionFunctionDeclaration* instruction_declaration) override {
         std::cout << "fn ";
-        std::cout << decl.name->name;
+        std::cout << instruction_declaration->name->name;
         std::cout << '(';
-        for (const auto& [type, name] : decl.parameters) {
+        for (const auto& [type, name] : instruction_declaration->parameters) {
             std::cout << type << ' ';
             std::cout << name->name << ", ";
         }
         std::cout << ") -> ";
-        std::cout << decl.return_type << '\n';
-        for (const auto& instr : decl.instructions) {
+        std::cout << instruction_declaration->return_type << '\n';
+        for (const auto& instr : instruction_declaration->instructions) {
             std::cout << "  ";
-            this->print(instr);
+            instr->accept(this);
         }
     }
 

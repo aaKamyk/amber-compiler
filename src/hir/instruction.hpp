@@ -1,75 +1,109 @@
 #pragma once
 
 #include <memory>
-#include <variant>
 #include <vector>
 
 #include "expression.hpp"
+#include "instruction.hpp"
 #include "utils/type.hpp"
 
 namespace hir {
 
-struct InstructionDeclaration;
-struct InstructionVariableDeclaration;
-struct InstructionFunctionDeclaration;
-struct InstructionAssignment;
-struct InstructionReturn;
-struct InstructionBranch;
-struct InstructionBranchConditional;
+class InstructionVisitor;
 
 struct Argument {
     Type type;
     std::unique_ptr<AtomIdentifier> name;
 };
 
-struct Label {
-    std::unique_ptr<AtomIdentifier> identifier;
-};
-
 struct Instruction {
-    using Instr = std::variant<
-        std::unique_ptr<InstructionAssignment>, std::unique_ptr<InstructionDeclaration>,
-        std::unique_ptr<InstructionReturn>, std::unique_ptr<InstructionBranch>,
-        std::unique_ptr<InstructionBranchConditional>>;
-    Instr instruction;
+    virtual void accept(InstructionVisitor*) = 0;
+    virtual ~Instruction() = default;
 };
 
-struct InstructionDeclaration {
-    using Decl = std::variant<
-        std::unique_ptr<InstructionVariableDeclaration>,
-        std::unique_ptr<InstructionFunctionDeclaration>>;
-    Decl decl;
+struct Label final : Instruction {
+    std::unique_ptr<AtomIdentifier> identifier{nullptr};
+
+    explicit Label(std::unique_ptr<AtomIdentifier> identifier);
+    void accept(InstructionVisitor*) override;
 };
 
-struct InstructionVariableDeclaration {
-    Type type;
-    std::unique_ptr<AtomIdentifier> identifier;
+struct InstructionAssignment final : Instruction {
+    std::unique_ptr<AtomIdentifier> identifier{nullptr};
+    std::unique_ptr<Expression> value{nullptr};
+
+    explicit InstructionAssignment(
+        std::unique_ptr<AtomIdentifier> identifier, std::unique_ptr<Expression> value
+    );
+    void accept(InstructionVisitor*) override;
 };
 
-struct InstructionFunctionDeclaration {
-    Type return_type;
-    std::unique_ptr<AtomIdentifier> name;
-    std::vector<Argument> parameters;
-    std::vector<Instruction> instructions;
+struct InstructionReturn final : Instruction {
+    std::unique_ptr<Expression> value{nullptr};
+
+    explicit InstructionReturn(std::unique_ptr<Expression> value);
+    void accept(InstructionVisitor*) override;
 };
 
-struct InstructionAssignment {
-    std::unique_ptr<AtomIdentifier> identifier;
-    std::unique_ptr<Expression> value;
+struct InstructionBranch final : Instruction {
+    std::unique_ptr<Label> destination{nullptr};
+
+    explicit InstructionBranch(std::unique_ptr<Label> destination);
+    void accept(InstructionVisitor*) override;
 };
 
-struct InstructionReturn {
-    std::unique_ptr<Atom> identifier;
+struct InstructionBranchConditional final : Instruction {
+    std::unique_ptr<ComparisonExpression> condition{nullptr};
+    std::unique_ptr<Label> true_case{nullptr};
+    std::unique_ptr<Label> false_case{nullptr};
+
+    explicit InstructionBranchConditional(
+        std::unique_ptr<ComparisonExpression> condition, std::unique_ptr<Label> true_case,
+        std::unique_ptr<Label> false_case
+    );
+    void accept(InstructionVisitor*) override;
 };
 
-struct InstructionBranch {
-    std::unique_ptr<Label> destination;
+struct InstructionDeclaration : Instruction {};
+
+struct InstructionVariableDeclaration final : InstructionDeclaration {
+    Type type{};
+    std::unique_ptr<AtomIdentifier> identifier{nullptr};
+
+    explicit InstructionVariableDeclaration(
+        Type type, std::unique_ptr<AtomIdentifier> identifier
+    );
+    void accept(InstructionVisitor*) override;
 };
 
-struct InstructionBranchConditional {
-    std::unique_ptr<ComparisonExpression> condition;
-    std::unique_ptr<Label> true_case;
-    std::unique_ptr<Label> false_case;
+struct InstructionFunctionDeclaration final : InstructionDeclaration {
+    Type return_type{};
+    std::unique_ptr<AtomIdentifier> name{nullptr};
+    std::vector<Argument> parameters{};
+    std::vector<std::unique_ptr<Instruction>> instructions{};
+
+    explicit InstructionFunctionDeclaration();
+    explicit InstructionFunctionDeclaration(
+        Type return_type, std::unique_ptr<AtomIdentifier> name,
+        std::vector<Argument> parameters,
+        std::vector<std::unique_ptr<Instruction>> instructions
+    );
+    void accept(InstructionVisitor*) override;
+};
+
+class InstructionVisitor {
+public:
+    virtual void visit(Label*) = 0;
+
+    virtual void visit(InstructionAssignment*) = 0;
+    virtual void visit(InstructionReturn*) = 0;
+    virtual void visit(InstructionBranch*) = 0;
+    virtual void visit(InstructionBranchConditional*) = 0;
+
+    virtual void visit(InstructionVariableDeclaration*) = 0;
+    virtual void visit(InstructionFunctionDeclaration*) = 0;
+
+    virtual ~InstructionVisitor() = default;
 };
 
 }  // namespace hir

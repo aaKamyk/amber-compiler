@@ -11,7 +11,7 @@
 namespace hir {
 
 struct Program {
-    std::vector<InstructionDeclaration> declarations;
+    std::vector<std::unique_ptr<InstructionDeclaration>> declarations;
 };
 
 struct Scope {
@@ -49,10 +49,6 @@ private:
     void visit(ast::BinaryExpression* binary_expression) override;
     void visit(ast::UnaryExpression* unary_expression) override;
 
-    void translate(std::unique_ptr<ast::IfStatement> stmt);
-    void translate(std::unique_ptr<ast::WhileStatement> stmt);
-    void translate(std::unique_ptr<ast::ReturnStatement> stmt);
-
     std::unique_ptr<AtomIdentifier> create_temporary(const std::string& name);
     std::optional<uint64_t> resolve_scope(const AtomIdentifier* atom) const;
     const Scope& current_scope() const;
@@ -60,15 +56,15 @@ private:
     void push_scope();
     void pop_scope();
 
-    void set_active_function(std::vector<Instruction>&);
+    void set_active_function(std::vector<std::unique_ptr<Instruction>>&);
     void unset_active_function();
-    void append_to_active_func(Instruction) const;
-    void append_to_program(InstructionDeclaration);
+    void append_to_active_func(std::unique_ptr<Instruction>) const;
+    void append_to_program(std::unique_ptr<InstructionDeclaration>);
 
     std::unique_ptr<Expression> get_last_expression();
 
     std::vector<Scope> m_active_scopes;
-    std::vector<Instruction>* m_active_function;
+    std::vector<std::unique_ptr<Instruction>>* m_active_function;
     std::vector<std::unique_ptr<Expression>> m_active_expressions;
     std::map<std::string, uint64_t> m_temporary_counts;
     ast::Program m_ast_program;
