@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 #include "instruction.hpp"
-#include "parser/ast.hpp"
+#include "parser/node.hpp"
 #include "utils/symbolTable.hpp"
 
 namespace hir {
@@ -22,29 +22,36 @@ struct Scope {
     void add(uint64_t symbol);
 };
 
-class Hir {
+class Hir final : ast::NodeVisitor, ast::ExpressionVisitor {
 public:
-    explicit Hir(ASTProgram program);
+    explicit Hir(ast::Program program);
 
     Program translate();
 
 private:
-    void translate(std::unique_ptr<ASTExpression> expr);
-    void translate(std::unique_ptr<ASTPrimaryExpression> expr);
-    void translate(std::unique_ptr<ASTIdentifier> ident);
-    void translate(std::unique_ptr<ASTIntegerLiteral> lit);
-    void translate(std::unique_ptr<ASTParenExpression> expr);
-    void translate(std::unique_ptr<ASTUnaryExpression> expr);
-    void translate(std::unique_ptr<ASTBinaryExpression> expr);
-    void translate(std::unique_ptr<ASTDeclaration> decl);
-    void translate(std::unique_ptr<ASTVariableDeclaration> decl);
-    void translate(std::unique_ptr<ASTFunctionDeclaration> decl);
-    void translate(std::unique_ptr<ASTStatement> stmt);
-    void translate(std::unique_ptr<ASTBlockStatement> stmt);
-    void translate(std::unique_ptr<ASTAssignmentStatement> stmt);
-    void translate(std::unique_ptr<ASTIfStatement> stmt);
-    void translate(std::unique_ptr<ASTWhileStatement> stmt);
-    void translate(std::unique_ptr<ASTReturnStatement> stmt);
+    template <typename Node>
+    void translate(std::unique_ptr<Node> node) {
+        node->accept(this);
+    }
+
+    void visit(ast::BlockStatement* block_statement) override;
+    void visit(ast::AssignmentStatement* assignment_statement) override;
+    void visit(ast::ReturnStatement* return_statement) override;
+    void visit(ast::IfStatement* if_statement) override;
+    void visit(ast::WhileStatement* while_statement) override;
+
+    void visit(ast::VariableDeclaration* variable_declaration) override;
+    void visit(ast::FunctionArgument* function_argument) override;
+    void visit(ast::FunctionDeclaration* function_declaration) override;
+
+    void visit(ast::AtomExpression* atom_expression) override;
+    void visit(ast::ParenExpression* paren_expression) override;
+    void visit(ast::BinaryExpression* binary_expression) override;
+    void visit(ast::UnaryExpression* unary_expression) override;
+
+    void translate(std::unique_ptr<ast::IfStatement> stmt);
+    void translate(std::unique_ptr<ast::WhileStatement> stmt);
+    void translate(std::unique_ptr<ast::ReturnStatement> stmt);
 
     std::unique_ptr<AtomIdentifier> create_temporary(const std::string& name);
     std::optional<uint64_t> resolve_scope(const AtomIdentifier* atom) const;
@@ -55,20 +62,18 @@ private:
 
     void set_active_function(std::vector<Instruction>&);
     void unset_active_function();
-    void append_to_active_func(Instruction);
+    void append_to_active_func(Instruction) const;
     void append_to_program(InstructionDeclaration);
 
-    bool is_last_expr_terminal() const;
-    std::unique_ptr<TerminalExpression> get_last_terminal_expr();
     std::unique_ptr<Expression> get_last_expression();
 
-    ASTProgram m_ast_program;
-    Program m_program;
     std::vector<Scope> m_active_scopes;
     std::vector<Instruction>* m_active_function;
-    std::vector<Expression> m_active_expressions;
-    SymbolTable m_symbol_table{};
+    std::vector<std::unique_ptr<Expression>> m_active_expressions;
     std::map<std::string, uint64_t> m_temporary_counts;
+    ast::Program m_ast_program;
+    Program m_program;
+    SymbolTable m_symbol_table{};
 };
 
 void print_program(const Program&);
