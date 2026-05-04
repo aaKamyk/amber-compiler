@@ -2,7 +2,7 @@
 
 #include "hir/hir.hpp"
 #include "lexer/lexer.hpp"
-#include "parser/ast.hpp"
+#include "parser/node.hpp"
 #include "parser/parser.hpp"
 #include "program_arguments.hpp"
 

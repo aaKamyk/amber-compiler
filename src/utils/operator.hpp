@@ -14,5 +14,8 @@ enum class ComparisonOperator : std::uint8_t {
     GREATER_EQUAL
 };
 
+int get_precedence(BinaryOperator op);
+int get_precedence(UnaryOperator op);
+
 std::ostream& operator<<(std::ostream& os, BinaryOperator op);
 std::ostream& operator<<(std::ostream& os, UnaryOperator op);

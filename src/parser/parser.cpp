@@ -2,15 +2,15 @@
 
 #include <format>
 
-ASTProgram Parser::parse() {
-    ASTProgram program{};
+ast::Program Parser::parse() {
+    ast::Program program{};
     while (peek().type != TokenType::TOKEN_EOF) {
-        if (auto decl = try_parse<ASTDeclaration>()) {
-            program.children.emplace_back(std::move(*decl));
+        if (auto decl = try_parse<ast::Declaration>()) {
+            program.children.emplace_back(std::move(decl));
             continue;
         }
-        if (auto statement = try_parse<ASTStatement>()) {
-            program.children.emplace_back(std::move(*statement));
+        if (auto statement = try_parse<ast::Statement>()) {
+            program.children.emplace_back(std::move(statement));
             continue;
         }
         throw std::runtime_error("Expected statement or declaration");

@@ -8,7 +8,8 @@ struct AtomIdentifier;
 struct AtomIntegerLiteral;
 
 struct Atom {
-    using At = std::variant<std::unique_ptr<AtomIdentifier>, std::unique_ptr<AtomIntegerLiteral>>;
+    using At = std::variant<
+        std::unique_ptr<AtomIdentifier>, std::unique_ptr<AtomIntegerLiteral>>;
     At atom;
 
     [[nodiscard]] std::unique_ptr<Atom> clone() const;

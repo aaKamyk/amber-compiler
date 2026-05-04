@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+#include <variant>
 
 enum class TokenType : uint8_t {
     // --- special ---
