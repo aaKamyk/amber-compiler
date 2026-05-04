@@ -316,6 +316,35 @@ struct ASTParser<ast::IfStatement> {
 };
 
 template <>
+struct ASTParser<ast::WhileStatement> {
+    static std::unique_ptr<ast::WhileStatement> parse(Parser& ctx) {
+        auto while_statement = std::make_unique<ast::WhileStatement>();
+        if (!ctx.expect(TokenType::WHILE, TokenType::PAREN_START)) { return nullptr; }
+        if (!ctx.parse_into<ast::Expression>(ctx, while_statement->condition)) {
+            return nullptr;
+        }
+        if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
+        if (!ctx.parse_into<ast::BlockStatement>(ctx, while_statement->block)) {
+            return nullptr;
+        }
+        return while_statement;
+    }
+};
+
+template <>
+struct ASTParser<ast::ReturnStatement> {
+    static std::unique_ptr<ast::ReturnStatement> parse(Parser& ctx) {
+        auto return_statement = std::make_unique<ast::ReturnStatement>();
+        if (!ctx.expect(TokenType::RETURN)) { return nullptr; }
+        if (!ctx.parse_into<ast::Expression>(ctx, return_statement->expression)) {
+            return nullptr;
+        }
+        if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
+        return return_statement;
+    }
+};
+
+template <>
 struct ASTParser<ast::VariableDeclaration> {
     static std::unique_ptr<ast::VariableDeclaration> parse(Parser& ctx) {
         auto variable_declaration = std::make_unique<ast::VariableDeclaration>();
