@@ -16,10 +16,11 @@ struct Program {
 
 struct Scope {
     uint64_t depth;
-    std::unordered_set<uint64_t> symbols;
+    std::unordered_map<NameID, SymbolID> symbols;
 
-    bool contains(uint64_t symbol) const;
-    void add(uint64_t symbol);
+    bool contains(NameID nid) const;
+    SymbolID get_sid(NameID nid) const;
+    void set(NameID nid, SymbolID sid);
 };
 
 class Hir final : ast::NodeVisitor, ast::ExpressionVisitor {

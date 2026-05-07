@@ -2,14 +2,20 @@
 
 #include <cassert>
 #include <iostream>
+#include <ranges>
 
 #include "utils/symbolTable.hpp"
 
-bool hir::Scope::contains(const uint64_t symbol) const {
-    return symbols.contains(symbol);
+bool hir::Scope::contains(const NameID nid) const {
+    return symbols.contains(nid);
 }
-void hir::Scope::add(const uint64_t symbol) {
-    symbols.insert(symbol);
+
+SymbolID hir::Scope::get_sid(const NameID nid) const {
+    return symbols.at(nid);
+}
+
+void hir::Scope::set(const NameID nid, const SymbolID sid) {
+    symbols[nid] = sid;
 }
 
 hir::Hir::Hir(ast::Program program)
@@ -50,12 +56,15 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
 
 void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     std::unique_ptr<AtomIdentifier> atom = std::move(variable_declaration->name);
-    if (m_symbol_table.has_symbol(atom->name)) {
-        /// TODO allow for redeclaration in more nested scope
-        return;
-    }
-    const auto id = m_symbol_table.add_symbol(atom->name);
-    this->current_scope().add(id);
+    /// adds name to symbol table if didnt exist before
+    const auto nid = m_symbol_table.add_name(atom->name);
+    const auto sid = m_symbol_table.add_symbol(
+        {.type = variable_declaration->type,
+         .nid = nid,
+         .depth = this->current_scope().depth}
+    );
+    /// add or shadow a new variable in the current scope
+    this->current_scope().set(nid, sid);
     auto var_decl = std::make_unique<InstructionVariableDeclaration>(
         variable_declaration->type, atom->clone()
     );
@@ -160,8 +169,12 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string& na
     const uint64_t count = m_temporary_counts[name]++;
     std::string real_name = "__" + name + std::to_string(count);
     auto atom = std::make_unique<AtomIdentifier>(std::move(real_name));
-    const auto id = m_symbol_table.add_symbol(atom->name);
-    this->current_scope().add(id);
+    const auto nid = m_symbol_table.add_name(atom->name);
+    /// TODO get a proper type checking in place
+    const auto sid = m_symbol_table.add_symbol(
+        {.type = Type::VOID, .nid = nid, .depth = this->current_scope().depth}
+    );
+    this->current_scope().set(nid, sid);
     auto temp_decl =
         std::make_unique<InstructionVariableDeclaration>(Type::INT, atom->clone());
     m_active_function->emplace_back(std::move(temp_decl));
@@ -169,10 +182,10 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string& na
 }
 
 std::optional<uint64_t> hir::Hir::resolve_scope(const AtomIdentifier* atom) const {
-    if (m_symbol_table.has_symbol(atom->name)) {
-        const auto id = m_symbol_table.get_symbol_id(atom->name);
-        if (const auto& cur_scope = this->current_scope(); cur_scope.contains(id)) {
-            return cur_scope.depth;
+    if (m_symbol_table.has_name(atom->name)) {
+        const auto nid = m_symbol_table.get_name_id(atom->name);
+        for (const auto& scope : std::views::reverse(m_active_scopes)) {
+            if (scope.contains(nid)) { return scope.depth; }
         }
     }
     return std::nullopt;

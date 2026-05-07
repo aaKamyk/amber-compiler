@@ -1,25 +1,38 @@
 #include "symbolTable.hpp"
 
-#include <limits>
+#include <algorithm>
+#include <ranges>
 
-uint64_t SymbolTable::add_symbol(const std::string& symbol) {
-    if (const auto it = symbol_to_id.find(symbol); it != symbol_to_id.end()) { return it->second; }
-    symbol_to_id[symbol] = last_id;
-    id_to_symbol[last_id++] = symbol;
-    return last_id;
-}
-
-std::string_view SymbolTable::get_symbol_name(const uint64_t id) const {
-    if (const auto it = id_to_symbol.find(id); it != id_to_symbol.end()) { return it->second; }
-    return {};
-}
-uint64_t SymbolTable::get_symbol_id(const std::string_view symbol) const {
-    if (const auto it = symbol_to_id.find(symbol.data()); it != symbol_to_id.end()) {
+NameID SymbolTable::get_name_id(const std::string_view symbol) const {
+    if (const auto it = name_to_nid.find(symbol.data()); it != name_to_nid.end()) {
         return it->second;
     }
-    return std::numeric_limits<uint64_t>::max();
+    std::abort();
 }
 
-bool SymbolTable::has_symbol(const std::string_view symbol) const {
-    return symbol_to_id.contains(symbol.data());
+NameID SymbolTable::add_name(const std::string& symbol) {
+    auto [it, _] = name_to_nid.try_emplace(symbol, NameID::next());
+    return it->second;
+}
+
+bool SymbolTable::has_name(const std::string_view symbol) const {
+    return name_to_nid.contains(symbol.data());
+}
+
+SymbolMetadata SymbolTable::get_metadata(const SymbolID sid) const {
+    if (const auto it = id_to_info.find(sid); it != id_to_info.end()) {
+        return it->second;
+    }
+    std::abort();
+}
+
+SymbolID SymbolTable::add_symbol(const SymbolMetadata& data) {
+    auto [it, _] = id_to_info.try_emplace(SymbolID::next(), data);
+    return it->first;
+}
+
+bool SymbolTable::has_symbol(const SymbolMetadata& data) const {
+    return std::ranges::any_of(id_to_info, [data](auto&& entry) -> bool {
+        return entry.second == data;
+    });
 }

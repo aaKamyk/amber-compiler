@@ -4,15 +4,61 @@
 #include <string>
 #include <unordered_map>
 
+#include "type.hpp"
+
+struct SymbolID {
+    uint64_t id{};
+
+    static SymbolID next() {
+        static uint64_t last_id{0};
+        return {last_id++};
+    }
+
+    constexpr bool operator==(const SymbolID& other) const noexcept = default;
+};
+
+struct NameID {
+    uint64_t id{};
+
+    static NameID next() {
+        static uint64_t last_id{0};
+        return {last_id++};
+    }
+    constexpr bool operator==(const NameID& nid) const noexcept = default;
+};
+
+template <>
+struct std::hash<SymbolID> {
+    size_t operator()(const SymbolID& sym_id) const noexcept {
+        return std::hash<uint64_t>{}(sym_id.id);
+    }
+};
+
+template <>
+struct std::hash<NameID> {
+    size_t operator()(const NameID& name_id) const noexcept {
+        return std::hash<uint64_t>{}(name_id.id);
+    }
+};
+
+struct SymbolMetadata {
+    Type type{};
+    NameID nid{};
+    uint64_t depth{};
+
+    constexpr bool operator==(const SymbolMetadata& other) const noexcept = default;
+};
+
 class SymbolTable {
 public:
-    uint64_t add_symbol(const std::string& symbol);
-    std::string_view get_symbol_name(uint64_t id) const;
-    uint64_t get_symbol_id(std::string_view symbol) const;
-    bool has_symbol(std::string_view symbol) const;
+    NameID get_name_id(std::string_view symbol) const;
+    NameID add_name(const std::string& symbol);
+    bool has_name(std::string_view symbol) const;
+    SymbolMetadata get_metadata(SymbolID sid) const;
+    SymbolID add_symbol(const SymbolMetadata& data);
+    bool has_symbol(const SymbolMetadata& data) const;
 
 private:
-    uint64_t last_id{};
-    std::unordered_map<uint64_t, std::string> id_to_symbol;
-    std::unordered_map<std::string, uint64_t> symbol_to_id;
+    std::unordered_map<std::string, NameID> name_to_nid;
+    std::unordered_map<SymbolID, SymbolMetadata> id_to_info;
 };
