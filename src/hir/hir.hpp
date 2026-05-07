@@ -2,7 +2,6 @@
 
 #include <map>
 #include <optional>
-#include <unordered_set>
 
 #include "instruction.hpp"
 #include "parser/node.hpp"
@@ -59,13 +58,15 @@ private:
 
     void set_active_function(std::vector<std::unique_ptr<Instruction>>&);
     void unset_active_function();
-    void append_to_active_func(std::unique_ptr<Instruction>) const;
+    void append_to_active_func(std::unique_ptr<Instruction>);
     void append_to_program(std::unique_ptr<InstructionDeclaration>);
+    void append_global_init_to_program();
 
     std::unique_ptr<Expression> get_last_expression();
 
     std::vector<Scope> m_active_scopes;
     std::vector<std::unique_ptr<Instruction>>* m_active_function;
+    std::vector<std::unique_ptr<Instruction>> m_global_init;
     std::vector<std::unique_ptr<Expression>> m_active_expressions;
     std::map<std::string, uint64_t> m_temporary_counts;
     ast::Program m_ast_program;

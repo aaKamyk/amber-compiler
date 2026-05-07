@@ -25,6 +25,7 @@ hir::Hir::Hir(ast::Program program)
 
 hir::Program hir::Hir::translate() {
     for (auto& child : m_ast_program.children) { this->translate(std::move(child)); }
+    if (!m_global_init.empty()) { this->append_global_init_to_program(); }
     return std::move(m_program);
 }
 
@@ -55,7 +56,7 @@ void hir::Hir::visit(ast::ReturnStatement* return_statement) {
     this->translate(std::move(return_statement->expression));
     auto return_instruction =
         std::make_unique<InstructionReturn>(this->get_last_expression());
-    m_active_function->emplace_back(std::move(return_instruction));
+    this->append_to_active_func(std::move(return_instruction));
 }
 
 void hir::Hir::visit(ast::IfStatement* if_statement) {
@@ -80,23 +81,14 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     auto var_decl = std::make_unique<InstructionVariableDeclaration>(
         variable_declaration->type, atom->clone()
     );
-    if (m_active_function) {
-        m_active_function->emplace_back(std::move(var_decl));
-    } else {
-        this->append_to_program(std::move(var_decl));
-    }
-    /// Assignment
+    this->append_to_active_func(std::move(var_decl));
+    /// assignment
     if (variable_declaration->value) {
         this->translate(std::move(variable_declaration->value));
-        if (m_active_function) {
-            auto instr_assign = std::make_unique<InstructionAssignment>(
-                std::move(atom), this->get_last_expression()
-            );
-            m_active_function->emplace_back(std::move(instr_assign));
-            return;
-        } else {
-            /// TODO global scope assignment
-        }
+        auto instr_assign = std::make_unique<InstructionAssignment>(
+            std::move(atom), this->get_last_expression()
+        );
+        this->append_to_active_func(std::move(instr_assign));
     }
 }
 
@@ -145,7 +137,7 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
         auto temp = this->create_temporary("v");
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
-        m_active_function->emplace_back(std::move(assignment));
+        this->append_to_active_func(std::move(assignment));
         return std::make_unique<Atom>(std::move(temp));
     };
 
@@ -168,7 +160,7 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
         auto temp = this->create_temporary("v");
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
-        m_active_function->emplace_back(std::move(assignment));
+        this->append_to_active_func(std::move(assignment));
         return std::make_unique<Atom>(std::move(temp));
     };
 
@@ -190,7 +182,7 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string& na
     this->current_scope().set(nid, sid);
     auto temp_decl =
         std::make_unique<InstructionVariableDeclaration>(Type::INT, atom->clone());
-    m_active_function->emplace_back(std::move(temp_decl));
+    this->append_to_active_func(std::move(temp_decl));
     return atom;
 }
 
@@ -231,12 +223,24 @@ void hir::Hir::unset_active_function() {
     this->m_active_function = nullptr;
 }
 
-void hir::Hir::append_to_active_func(std::unique_ptr<Instruction> i) const {
-    this->m_active_function->emplace_back(std::move(i));
+void hir::Hir::append_to_active_func(std::unique_ptr<Instruction> i) {
+    if (m_active_function) {
+        this->m_active_function->emplace_back(std::move(i));
+    } else {
+        this->m_global_init.emplace_back(std::move(i));
+    }
 }
 
 void hir::Hir::append_to_program(std::unique_ptr<InstructionDeclaration> decl) {
     this->m_program.declarations.emplace_back(std::move(decl));
+}
+
+void hir::Hir::append_global_init_to_program() {
+    auto ident = std::make_unique<AtomIdentifier>("global_init");
+    auto global_init = std::make_unique<InstructionFunctionDeclaration>(
+        Type::VOID, std::move(ident), std::vector<Argument>{}, std::move(m_global_init)
+    );
+    this->append_to_program(std::move(global_init));
 }
 
 std::unique_ptr<hir::Expression> hir::Hir::get_last_expression() {
