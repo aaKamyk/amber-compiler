@@ -133,7 +133,9 @@ std::vector<Token> Lexer::lex() {
                 if (is_digit(cur)) {
                     const auto digit_len = get_digit_len();
                     const auto digit_string = m_buffer.get_view(digit_len);
-                    emit_token(TokenType::INTEGER_LITERAL, digit_len, std::string(digit_string));
+                    emit_token(
+                        TokenType::INTEGER_LITERAL, digit_len, std::string(digit_string)
+                    );
                     break;
                 }
                 if (is_identifier_start(cur)) {
@@ -141,7 +143,9 @@ std::vector<Token> Lexer::lex() {
                     const auto ident_name = m_buffer.get_view(ident_len);
                     const auto type = get_keyword(ident_name);
                     if (type == TokenType::IDENTIFIER) {
-                        emit_token(TokenType::IDENTIFIER, ident_len, std::string(ident_name));
+                        emit_token(
+                            TokenType::IDENTIFIER, ident_len, std::string(ident_name)
+                        );
                         break;
                     }
                     emit_token(type, ident_len);
@@ -152,7 +156,7 @@ std::vector<Token> Lexer::lex() {
                     m_buffer.consume(whitespace_len);
                     break;
                 }
-                std::cerr << "Encountered unknown lexeme";
+                std::cerr << "Encountered unknown lexeme\n";
                 m_buffer.consume(1);
                 break;
             }
@@ -241,7 +245,9 @@ void Lexer::PeekBuffer::read_from(std::istream& input) {
     empty = (count == 0);
 }
 
-void Lexer::emit_token(const TokenType type, const std::optional<int> size, const TokenData& data) {
+void Lexer::emit_token(
+    const TokenType type, const std::optional<int> size, const TokenData& data
+) {
     m_tokens.emplace_back(data, type, m_line, m_column);
     if (size.has_value()) {
         m_column += *size;
@@ -280,8 +286,9 @@ size_t Lexer::get_identifier_len() const {
 }
 TokenType Lexer::get_keyword(const std::string_view name) {
     static const std::map<std::string_view, TokenType> keywords = {
-        {"if", TokenType::IF},    {"else", TokenType::ELSE},     {"while", TokenType::WHILE},
-        {"fn", TokenType::FN},    {"return", TokenType::RETURN}, {"int", TokenType::INT},
+        {"if", TokenType::IF},         {"else", TokenType::ELSE},
+        {"while", TokenType::WHILE},   {"fn", TokenType::FN},
+        {"return", TokenType::RETURN}, {"int", TokenType::INT},
         {"void", TokenType::VOID}
     };
     if (!keywords.contains(name)) { return TokenType::IDENTIFIER; }

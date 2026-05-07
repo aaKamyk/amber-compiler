@@ -32,7 +32,10 @@ private:
         void read_from(std::istream& input);
     };
 
-    void emit_token(TokenType type, std::optional<int> size = std::nullopt, const TokenData& data = std::monostate{});
+    void emit_token(
+        TokenType type, std::optional<int> size = std::nullopt,
+        const TokenData& data = std::monostate{}
+    );
     int peek(size_t offset = 0);
 
     [[nodiscard]] size_t get_digit_len() const;
@@ -41,7 +44,9 @@ private:
 
     static TokenType get_keyword(std::string_view name);
     static bool is_identifier_start(const int chr) { return std::isalpha(chr) != 0; }
-    static bool is_identifier_char(const int chr) { return std::isalnum(chr) != 0; }
+    static bool is_identifier_char(const int chr) {
+        return std::isalnum(chr) != 0 || chr == '_';
+    }
     static bool is_whitespace_char(const int chr) { return chr == ' ' || chr == '\t'; }
     static bool is_digit(const int chr) { return std::isdigit(chr) != 0; }
 
