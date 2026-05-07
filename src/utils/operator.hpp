@@ -19,3 +19,4 @@ int get_precedence(UnaryOperator op);
 
 std::ostream& operator<<(std::ostream& os, BinaryOperator op);
 std::ostream& operator<<(std::ostream& os, UnaryOperator op);
+std::ostream& operator<<(std::ostream& os, ComparisonOperator op);

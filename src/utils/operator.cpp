@@ -11,7 +11,9 @@ std::ostream& operator<<(std::ostream& os, const BinaryOperator op) {
         {BinaryOperator::TIMES, "*"},
         {BinaryOperator::DIVIDE, "/"}
     };
-    if (!bin_op_strings.contains(op)) { throw std::runtime_error("Unknown operator"); }
+    if (!bin_op_strings.contains(op)) {
+        throw std::runtime_error("Unknown binary operator");
+    }
     return os << bin_op_strings.at(op);
 }
 
@@ -19,8 +21,22 @@ std::ostream& operator<<(std::ostream& os, const UnaryOperator op) {
     static const std::unordered_map<UnaryOperator, const char*> un_op_strings = {
         {UnaryOperator::MINUS, "-"}
     };
-    if (!un_op_strings.contains(op)) { throw std::runtime_error("Unknown operator"); }
+    if (!un_op_strings.contains(op)) {
+        throw std::runtime_error("Unknown unary operator");
+    }
     return os << un_op_strings.at(op);
+}
+
+std::ostream& operator<<(std::ostream& os, ComparisonOperator op) {
+    static const std::unordered_map<ComparisonOperator, const char*> comp_op_strings = {
+        {ComparisonOperator::EQUAL, "=="},         {ComparisonOperator::GREATER, ">"},
+        {ComparisonOperator::GREATER_EQUAL, ">="}, {ComparisonOperator::LESS, "<"},
+        {ComparisonOperator::LESS_EQUAL, "<="},
+    };
+    if (!comp_op_strings.contains(op)) {
+        throw std::runtime_error("Unknown comparison operator");
+    }
+    return os << comp_op_strings.at(op);
 }
 
 int get_precedence(const BinaryOperator op) {

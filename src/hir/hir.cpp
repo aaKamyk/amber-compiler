@@ -284,7 +284,9 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     }
 
     void visit(hir::ComparisonExpression* comparison_expression) override {
-        /// TODO
+        print(*comparison_expression->left);
+        std::cout << ' ' << comparison_expression->op << ' ';
+        print(*comparison_expression->right);
     }
 
     void visit(hir::TerminalExpression* terminal_expression) override {
