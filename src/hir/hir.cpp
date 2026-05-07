@@ -116,6 +116,7 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
         func_decl->parameters.emplace_back(type, std::move(name));
     }
     this->set_active_function(func_decl->instructions);
+    this->append_to_active_func(std::make_unique<Label>(func_decl->name->clone()));
     this->append_to_program(std::move(func_decl));
     this->translate(std::move(function_declaration->body));
     this->unset_active_function();
@@ -253,7 +254,7 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     }
 
     void visit(hir::Label* label) override {
-        std::cout << label->identifier->name << ";\n";
+        std::cout << label->identifier->name << ":\n";
     };
 
     void visit(hir::InstructionAssignment* instruction_assignment) override {
@@ -292,7 +293,7 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         std::cout << ") -> ";
         std::cout << instruction_declaration->return_type << '\n';
         for (const auto& instr : instruction_declaration->instructions) {
-            std::cout << "  ";
+            if (!dynamic_cast<hir::Label*>(instr.get())) { std::cout << "  "; }
             instr->accept(this);
         }
     }
