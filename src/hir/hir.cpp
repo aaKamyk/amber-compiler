@@ -35,8 +35,20 @@ void hir::Hir::visit(ast::BlockStatement* block_statement) {
 }
 
 void hir::Hir::visit(ast::AssignmentStatement* assignment_statement) {
-    /// TODO
+    const auto scope_id = this->resolve_scope(assignment_statement->identifier.get());
+    if (!scope_id) {
+        /// TODO usage of undeclared variable
+        return;
+    }
+    // const auto nid =
+    //     this->m_symbol_table.get_name_id(assignment_statement->identifier->name);
+    // const auto sid = this->m_active_scopes[*scope_id].get_sid(nid);
+    // const auto info = this->m_symbol_table.get_metadata(sid);
     this->translate(std::move(assignment_statement->expression));
+    auto instruction_assignment = std::make_unique<InstructionAssignment>(
+        std::move(assignment_statement->identifier), this->get_last_expression()
+    );
+    this->append_to_active_func(std::move(instruction_assignment));
 }
 
 void hir::Hir::visit(ast::ReturnStatement* return_statement) {
