@@ -198,12 +198,10 @@ template <>
 struct ASTParser<ast::AtomExpression> {
     static std::unique_ptr<ast::AtomExpression> parse(Parser& ctx) {
         if (auto ident = ctx.try_parse<AtomIdentifier>()) {
-            auto atom = std::make_unique<Atom>(std::move(ident));
-            return std::make_unique<ast::AtomExpression>(std::move(atom));
+            return std::make_unique<ast::AtomExpression>(std::move(ident));
         }
         if (auto int_literal = ctx.try_parse<AtomIntegerLiteral>()) {
-            auto atom = std::make_unique<Atom>(std::move(int_literal));
-            return std::make_unique<ast::AtomExpression>(std::move(atom));
+            return std::make_unique<ast::AtomExpression>(std::move(int_literal));
         }
         return nullptr;
     }

@@ -56,9 +56,11 @@ private:
     }
 
     void print_node(Atom* atom, const bool is_last) const {
-        std::visit(
-            [=, this](auto&& at) { this->print_node(at.get(), is_last); }, atom->atom
-        );
+        if (auto* ident = dynamic_cast<AtomIdentifier*>(atom)) {
+            this->print_node(ident, is_last);
+        } else if (auto* lit = dynamic_cast<AtomIntegerLiteral*>(atom)) {
+            this->print_node(lit, is_last);
+        }
     }
 
     void visit(AtomExpression* atom) override {

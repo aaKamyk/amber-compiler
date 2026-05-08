@@ -1,14 +1,14 @@
 #include "atom.hpp"
 
-std::unique_ptr<Atom> Atom::clone() const {
-    return std::visit(
-        [](auto&& child) { return std::make_unique<Atom>(child->clone()); }, this->atom
-    );
-}
+AtomIdentifier::AtomIdentifier(std::string name)
+    : name(std::move(name)) {}
 
 std::unique_ptr<AtomIdentifier> AtomIdentifier::clone() const {
     return std::make_unique<AtomIdentifier>(*this);
 }
+
+AtomIntegerLiteral::AtomIntegerLiteral(const uint64_t value)
+    : value(value) {}
 
 std::unique_ptr<AtomIntegerLiteral> AtomIntegerLiteral::clone() const {
     return std::make_unique<AtomIntegerLiteral>(*this);

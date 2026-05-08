@@ -138,7 +138,7 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
         this->append_to_active_func(std::move(assignment));
-        return std::make_unique<Atom>(std::move(temp));
+        return temp;
     };
 
     auto left_atom = ensure_atom(left);
@@ -161,7 +161,7 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
         this->append_to_active_func(std::move(assignment));
-        return std::make_unique<Atom>(std::move(temp));
+        return temp;
     };
 
     auto atom = ensure_atom(last_expr);
@@ -319,34 +319,32 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     }
 
     void visit(hir::BinaryExpression* binary_expression) override {
-        print(*binary_expression->left);
+        print(binary_expression->left.get());
         std::cout << ' ' << binary_expression->op << ' ';
-        print(*binary_expression->right);
+        print(binary_expression->right.get());
     }
 
     void visit(hir::UnaryExpression* unary_expression) override {
         std::cout << unary_expression->op;
-        print(*unary_expression->operand);
+        print(unary_expression->operand.get());
     }
 
     void visit(hir::ComparisonExpression* comparison_expression) override {
-        print(*comparison_expression->left);
+        print(comparison_expression->left.get());
         std::cout << ' ' << comparison_expression->op << ' ';
-        print(*comparison_expression->right);
+        print(comparison_expression->right.get());
     }
 
     void visit(hir::TerminalExpression* terminal_expression) override {
-        print(*terminal_expression->value);
+        print(terminal_expression->value.get());
     }
 
-    static void print(const Atom& at) {
-        if (const auto* ident = std::get_if<std::unique_ptr<AtomIdentifier>>(&at.atom)) {
-            std::cout << (*ident)->name;
-            return;
+    static void print(const Atom* at) {
+        if (const auto* ident = dynamic_cast<const AtomIdentifier*>(at)) {
+            std::cout << ident->name;
         }
-        if (const auto* lit =
-                std::get_if<std::unique_ptr<AtomIntegerLiteral>>(&at.atom)) {
-            std::cout << (*lit)->value;
+        if (const auto* lit = dynamic_cast<const AtomIntegerLiteral*>(at)) {
+            std::cout << lit->value;
         }
     }
 };

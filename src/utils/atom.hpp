@@ -2,27 +2,21 @@
 
 #include <memory>
 #include <string>
-#include <variant>
-
-struct AtomIdentifier;
-struct AtomIntegerLiteral;
 
 struct Atom {
-    using At = std::variant<
-        std::unique_ptr<AtomIdentifier>, std::unique_ptr<AtomIntegerLiteral>>;
-    At atom;
-
-    [[nodiscard]] std::unique_ptr<Atom> clone() const;
+    virtual ~Atom() = default;
 };
 
-struct AtomIdentifier {
+struct AtomIdentifier final : Atom {
     std::string name;
 
+    explicit AtomIdentifier(std::string name);
     [[nodiscard]] std::unique_ptr<AtomIdentifier> clone() const;
 };
 
-struct AtomIntegerLiteral {
+struct AtomIntegerLiteral final : Atom {
     uint64_t value;
 
+    explicit AtomIntegerLiteral(uint64_t value);
     [[nodiscard]] std::unique_ptr<AtomIntegerLiteral> clone() const;
 };
