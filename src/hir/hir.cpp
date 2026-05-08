@@ -134,7 +134,7 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
         if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
             return std::move(terminal->value);
         }
-        auto temp = this->create_temporary("v");
+        auto temp = this->create_temporary_identifier("v");
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
         this->append_to_active_func(std::move(assignment));
@@ -157,7 +157,7 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
         if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
             return std::move(terminal->value);
         }
-        auto temp = this->create_temporary("v");
+        auto temp = this->create_temporary_identifier("v");
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
         this->append_to_active_func(std::move(assignment));
@@ -170,12 +170,19 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
     m_active_expressions.emplace_back(std::move(result));
 }
 
-std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string& name) {
+std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_identifier(
+    const std::string& name
+) {
     const uint64_t count = m_temporary_counts[name]++;
     std::string real_name = "__" + name + std::to_string(count);
-    auto atom = std::make_unique<AtomIdentifier>(std::move(real_name));
+    return std::make_unique<AtomIdentifier>(std::move(real_name));
+}
+
+std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_declaration(
+    const std::string& name
+) {
+    auto atom = this->create_temporary_identifier(name);
     const auto nid = m_symbol_table.add_name(atom->name);
-    /// TODO get a proper type checking in place
     const auto sid = m_symbol_table.add_symbol(
         {.type = Type::VOID, .nid = nid, .depth = this->current_scope().depth}
     );
@@ -183,6 +190,15 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary(const std::string& na
     auto temp_decl =
         std::make_unique<InstructionVariableDeclaration>(Type::INT, atom->clone());
     this->append_to_active_func(std::move(temp_decl));
+    return atom;
+}
+
+std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_label(
+    const std::string& name
+) {
+    auto atom = this->create_temporary_identifier(name);
+    auto temp_label = std::make_unique<Label>(atom->clone());
+    this->append_to_active_func(std::move(temp_label));
     return atom;
 }
 
