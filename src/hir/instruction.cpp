@@ -23,7 +23,7 @@ void hir::InstructionReturn::accept(InstructionVisitor* v) {
     v->visit(this);
 }
 
-hir::InstructionBranch::InstructionBranch(std::unique_ptr<Label> destination)
+hir::InstructionBranch::InstructionBranch(std::unique_ptr<AtomIdentifier> destination)
     : destination(std::move(destination)) {}
 
 void hir::InstructionBranch::accept(InstructionVisitor* v) {
@@ -31,8 +31,8 @@ void hir::InstructionBranch::accept(InstructionVisitor* v) {
 }
 
 hir::InstructionBranchConditional::InstructionBranchConditional(
-    std::unique_ptr<ComparisonExpression> condition, std::unique_ptr<Label> true_case,
-    std::unique_ptr<Label> false_case
+    std::unique_ptr<ComparisonExpression> condition,
+    std::unique_ptr<AtomIdentifier> true_case, std::unique_ptr<AtomIdentifier> false_case
 )
     : condition(std::move(condition)),
       true_case(std::move(true_case)),

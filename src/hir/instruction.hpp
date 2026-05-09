@@ -46,20 +46,22 @@ struct InstructionReturn final : Instruction {
 };
 
 struct InstructionBranch final : Instruction {
-    std::unique_ptr<Label> destination{nullptr};
+    std::unique_ptr<AtomIdentifier> destination{nullptr};
 
-    explicit InstructionBranch(std::unique_ptr<Label> destination);
+    explicit InstructionBranch(std::unique_ptr<AtomIdentifier> destination);
     void accept(InstructionVisitor*) override;
 };
 
 struct InstructionBranchConditional final : Instruction {
     std::unique_ptr<ComparisonExpression> condition{nullptr};
-    std::unique_ptr<Label> true_case{nullptr};
-    std::unique_ptr<Label> false_case{nullptr};
+    std::unique_ptr<AtomIdentifier> true_case{nullptr};
+    std::unique_ptr<AtomIdentifier> false_case{nullptr};
 
+    explicit InstructionBranchConditional() = default;
     explicit InstructionBranchConditional(
-        std::unique_ptr<ComparisonExpression> condition, std::unique_ptr<Label> true_case,
-        std::unique_ptr<Label> false_case
+        std::unique_ptr<ComparisonExpression> condition,
+        std::unique_ptr<AtomIdentifier> true_case,
+        std::unique_ptr<AtomIdentifier> false_case
     );
     void accept(InstructionVisitor*) override;
 };
