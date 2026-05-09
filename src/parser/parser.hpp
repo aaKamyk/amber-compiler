@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -59,8 +60,8 @@ private:
     }
 
     template <typename T>
-        requires std::same_as<T, BinaryOperator> || std::same_as<T, UnaryOperator> ||
-                 std::same_as<T, Type>
+        requires std::same_as<T, ast::BinaryOperator> ||
+                 std::same_as<T, ast::UnaryOperator> || std::same_as<T, Type>
     std::optional<T> try_parse() {
         const auto start = save();
         if (auto parse_result = ASTParser<T>::parse(*this)) { return parse_result; }
@@ -144,36 +145,38 @@ struct ASTParser<AtomIntegerLiteral> {
 };
 
 template <>
-struct ASTParser<BinaryOperator> {
-    static std::optional<BinaryOperator> parse(Parser& ctx) {
+struct ASTParser<ast::BinaryOperator> {
+    static std::optional<ast::BinaryOperator> parse(Parser& ctx) {
         /// TODO add the rest of the binary operators also make this expandable
-        switch (const auto token = ctx.peek(); token.type) {
-            case TokenType::PLUS:
-                ctx.consume(1);
-                return BinaryOperator::PLUS;
-            case TokenType::MINUS:
-                ctx.consume(1);
-                return BinaryOperator::MINUS;
-            case TokenType::ASTERISK:
-                ctx.consume(1);
-                return BinaryOperator::TIMES;
-            case TokenType::DIVIDE:
-                ctx.consume(1);
-                return BinaryOperator::DIVIDE;
-            default:
-                return std::nullopt;
+        static const std::map<TokenType, ast::BinaryOperator> mapping = {
+            {TokenType::PLUS, ast::BinaryOperator::PLUS},
+            {TokenType::MINUS, ast::BinaryOperator::MINUS},
+            {TokenType::ASTERISK, ast::BinaryOperator::TIMES},
+            {TokenType::DIVIDE, ast::BinaryOperator::DIVIDE},
+            {TokenType::EQUALS_EQUALS, ast::BinaryOperator::EQUAL},
+            {TokenType::NOT_EQUALS, ast::BinaryOperator::NOT_EQUAL},
+            {TokenType::LESS_THAN, ast::BinaryOperator::LESS},
+            {TokenType::LESS_EQUAL_THAN, ast::BinaryOperator::LESS_EQUAL},
+            {TokenType::GREATER_THAN, ast::BinaryOperator::GREATER},
+            {TokenType::GREATER_EQUAL_THAN, ast::BinaryOperator::GREATER_EQUAL}
+        };
+        const auto token = ctx.peek();
+        if (const auto it = mapping.find(token.type); it != mapping.end()) {
+            ctx.consume(1);
+            return it->second;
         }
+        return std::nullopt;
     }
 };
 
 template <>
-struct ASTParser<UnaryOperator> {
-    static std::optional<UnaryOperator> parse(Parser& ctx) {
+struct ASTParser<ast::UnaryOperator> {
+    static std::optional<ast::UnaryOperator> parse(Parser& ctx) {
         /// TODO add the rest of the unary operators also make this expandable
         switch (const auto token = ctx.peek(); token.type) {
             case TokenType::MINUS:
                 ctx.consume(1);
-                return UnaryOperator::MINUS;
+                return ast::UnaryOperator::MINUS;
             default:
                 return std::nullopt;
         }
@@ -224,7 +227,7 @@ template <>
 struct ASTParser<ast::UnaryExpression> {
     static std::unique_ptr<ast::UnaryExpression> parse(Parser& ctx) {
         auto unary_expr = std::make_unique<ast::UnaryExpression>();
-        if (!ctx.parse_into<UnaryOperator>(ctx, unary_expr->op)) { return nullptr; }
+        if (!ctx.parse_into<ast::UnaryOperator>(ctx, unary_expr->op)) { return nullptr; }
         if (!ctx.parse_into<ast::PrimaryExpression>(ctx, unary_expr->expression)) {
             return nullptr;
         }
@@ -240,7 +243,7 @@ inline std::unique_ptr<ast::Expression> ASTParser<ast::Expression>::parse(
 
     while (true) {
         const auto start = ctx.save();
-        auto bin_op = ctx.try_parse<BinaryOperator>();
+        auto bin_op = ctx.try_parse<ast::BinaryOperator>();
         if (!bin_op || get_precedence(*bin_op) <= min_precedence) {
             ctx.restore(start);
             break;

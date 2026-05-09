@@ -143,10 +143,36 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
 
     auto left_atom = ensure_atom(left);
     auto right_atom = ensure_atom(right);
-    auto result = std::make_unique<BinaryExpression>(
-        binary_expression->op, std::move(left_atom), std::move(right_atom)
-    );
-    m_active_expressions.emplace_back(std::move(result));
+    std::map<ast::BinaryOperator, BinaryOperator> arithmetic_operators = {
+        {ast::BinaryOperator::PLUS, BinaryOperator::PLUS},
+        {ast::BinaryOperator::MINUS, BinaryOperator::MINUS},
+        {ast::BinaryOperator::TIMES, BinaryOperator::TIMES},
+        {ast::BinaryOperator::DIVIDE, BinaryOperator::DIVIDE},
+    };
+    std::map<ast::BinaryOperator, ComparisonOperator> comparison_operators = {
+
+        {ast::BinaryOperator::EQUAL, ComparisonOperator::EQUAL},
+        {ast::BinaryOperator::NOT_EQUAL, ComparisonOperator::NOT_EQUAL},
+        {ast::BinaryOperator::LESS, ComparisonOperator::LESS},
+        {ast::BinaryOperator::LESS_EQUAL, ComparisonOperator::LESS_EQUAL},
+        {ast::BinaryOperator::GREATER, ComparisonOperator::GREATER},
+        {ast::BinaryOperator::GREATER_EQUAL, ComparisonOperator::GREATER_EQUAL}
+    };
+    if (const auto it = arithmetic_operators.find(binary_expression->op);
+        it != arithmetic_operators.end()) {
+        auto result = std::make_unique<BinaryExpression>(
+            it->second, std::move(left_atom), std::move(right_atom)
+        );
+        m_active_expressions.emplace_back(std::move(result));
+        return;
+    }
+    if (const auto it = comparison_operators.find(binary_expression->op);
+        it != comparison_operators.end()) {
+        auto result = std::make_unique<ComparisonExpression>(
+            it->second, std::move(left_atom), std::move(right_atom)
+        );
+        m_active_expressions.emplace_back(std::move(result));
+    }
 }
 
 void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
@@ -165,9 +191,14 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
     };
 
     auto atom = ensure_atom(last_expr);
-    auto result =
-        std::make_unique<UnaryExpression>(unary_expression->op, std::move(atom));
-    m_active_expressions.emplace_back(std::move(result));
+    std::map<ast::UnaryOperator, UnaryOperator> unary_operators = {
+        {ast::UnaryOperator::MINUS, UnaryOperator::MINUS},
+    };
+    if (const auto it = unary_operators.find(unary_expression->op);
+        it != unary_operators.end()) {
+        auto result = std::make_unique<UnaryExpression>(it->second, std::move(atom));
+        m_active_expressions.emplace_back(std::move(result));
+    }
 }
 
 std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_identifier(
