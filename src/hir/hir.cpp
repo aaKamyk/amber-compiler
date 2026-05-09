@@ -113,7 +113,45 @@ void hir::Hir::visit(ast::IfStatement* if_statement) {
 }
 
 void hir::Hir::visit(ast::WhileStatement* while_statement) {
-    /// TODO
+    auto while_cond = this->create_temporary_identifier("while_cond");
+    auto cond_branch = std::make_unique<InstructionBranchConditional>();
+    /// initial jump to condition
+    this->append_to_active_func(std::make_unique<InstructionBranch>(while_cond->clone()));
+    /// while body start
+    auto while_body = this->create_temporary_label("while_body");
+    this->translate(std::move(while_statement->block));
+    /// while condition start
+    this->append_to_active_func(std::make_unique<Label>(std::move(while_cond)));
+    this->translate(std::move(while_statement->condition));
+    auto condition_expression = this->get_last_expression();
+    /// handle converting into a comparison expression
+    if (auto comparison_expr =
+            dynamic_unique_cast<ComparisonExpression>(condition_expression)) {
+        cond_branch->condition = std::move(comparison_expr);
+    } else if (const auto terminal_expr =
+                   dynamic_unique_cast<TerminalExpression>(condition_expression)) {
+        cond_branch->condition = std::make_unique<ComparisonExpression>(
+            ComparisonOperator::EQUAL, std::move(terminal_expr->value),
+            std::make_unique<AtomIntegerLiteral>(0ull)
+        );
+    } else {
+        auto cond_var = this->create_temporary_declaration("cond");
+        auto instr_assign = std::make_unique<InstructionAssignment>(
+            cond_var->clone(), std::move(condition_expression)
+        );
+        this->append_to_active_func(std::move(instr_assign));
+        cond_branch->condition = std::make_unique<ComparisonExpression>(
+            ComparisonOperator::EQUAL, std::move(cond_var),
+            std::make_unique<AtomIntegerLiteral>(0ull)
+        );
+    }
+    /// append conditional branch
+    this->append_to_active_func(std::move(cond_branch));
+    auto& instr_branch =
+        static_cast<InstructionBranchConditional&>(this->get_last_instruction());
+    auto while_end = this->create_temporary_label("while_end");
+    instr_branch.true_case = std::move(while_body);
+    instr_branch.false_case = std::move(while_end);
 }
 
 void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
