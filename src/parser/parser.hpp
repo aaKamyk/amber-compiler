@@ -282,9 +282,11 @@ struct ASTParser<ast::AssignmentStatement> {
         if (!ctx.parse_into<AtomIdentifier>(ctx, assignment_statement->identifier)) {
             return nullptr;
         }
+        if (!ctx.expect(TokenType::EQUALS)) { return nullptr; }
         if (!ctx.parse_into<ast::Expression>(ctx, assignment_statement->expression)) {
             return nullptr;
         }
+        if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
         return assignment_statement;
     }
 };
