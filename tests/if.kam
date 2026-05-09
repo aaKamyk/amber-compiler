@@ -1,0 +1,8 @@
+fn main() -> void {
+    int x = 12;
+    if (x) {
+        return x;
+    } else {
+        return 2 * x;
+    }
+}

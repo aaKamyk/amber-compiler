@@ -65,6 +65,7 @@ private:
     void append_global_init_to_program();
 
     std::unique_ptr<Expression> get_last_expression();
+    Instruction& get_last_instruction() const;
 
     std::vector<Scope> m_active_scopes;
     std::vector<std::unique_ptr<Instruction>>* m_active_function;

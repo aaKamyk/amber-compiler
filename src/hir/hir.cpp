@@ -5,6 +5,7 @@
 #include <ranges>
 
 #include "utils/symbolTable.hpp"
+#include "utils/util.hpp"
 
 bool hir::Scope::contains(const NameID nid) const {
     return symbols.contains(nid);
@@ -60,7 +61,55 @@ void hir::Hir::visit(ast::ReturnStatement* return_statement) {
 }
 
 void hir::Hir::visit(ast::IfStatement* if_statement) {
-    /// TODO
+    auto cond_branch = std::make_unique<InstructionBranchConditional>();
+    this->translate(std::move(if_statement->condition));
+    auto condition_expression = this->get_last_expression();
+    /// create temporary variable before appending conditional branch instruction
+    if (auto comparison_expr =
+            dynamic_unique_cast<ComparisonExpression>(condition_expression)) {
+        cond_branch->condition = std::move(comparison_expr);
+    } else if (const auto terminal_expr =
+                   dynamic_unique_cast<TerminalExpression>(condition_expression)) {
+        cond_branch->condition = std::make_unique<ComparisonExpression>(
+            ComparisonOperator::EQUAL, std::move(terminal_expr->value),
+            std::make_unique<AtomIntegerLiteral>(0ull)
+        );
+    } else {
+        auto cond_var = this->create_temporary_declaration("cond");
+        auto instr_assign = std::make_unique<InstructionAssignment>(
+            cond_var->clone(), std::move(condition_expression)
+        );
+        this->append_to_active_func(std::move(instr_assign));
+        cond_branch->condition = std::make_unique<ComparisonExpression>(
+            ComparisonOperator::EQUAL, std::move(cond_var),
+            std::make_unique<AtomIntegerLiteral>(0ull)
+        );
+    }
+    /// append to the function and get a reference to fill in the remaining fields
+    this->append_to_active_func(std::move(cond_branch));
+    auto& instr_branch =
+        static_cast<InstructionBranchConditional&>(this->get_last_instruction());
+    /// create a label, then translate all the block instructions
+    auto true_label = this->create_temporary_label("case_true");
+    this->translate(std::move(if_statement->true_case));
+    instr_branch.true_case = std::move(true_label);
+    if (if_statement->has_false_case()) {
+        /// append a branch instruction to the end of the true block
+        auto end_ident = this->create_temporary_identifier("if_end");
+        this->append_to_active_func(
+            std::make_unique<InstructionBranch>(end_ident->clone())
+        );
+        auto false_label = this->create_temporary_label("case_false");
+        this->translate(std::move(if_statement->false_case));
+        instr_branch.false_case = std::move(false_label);
+        /// append the closing label to the end of the false block
+        auto end_label = std::make_unique<Label>(std::move(end_ident));
+        this->append_to_active_func(std::move(end_label));
+    } else {
+        auto end_label = this->create_temporary_identifier("if_end");
+        this->append_to_active_func(std::make_unique<Label>(end_label->clone()));
+        instr_branch.false_case = std::move(end_label);
+    }
 }
 
 void hir::Hir::visit(ast::WhileStatement* while_statement) {
@@ -297,6 +346,15 @@ std::unique_ptr<hir::Expression> hir::Hir::get_last_expression() {
     return expression;
 }
 
+hir::Instruction& hir::Hir::get_last_instruction() const {
+    if (m_active_function) {
+        assert(!m_active_function->empty());
+        return *m_active_function->back();
+    }
+    assert(!m_global_init.empty());
+    return *m_global_init.back();
+}
+
 struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     void print(const hir::Program& program) {
         for (const auto& declaration : program.declarations) {
@@ -320,12 +378,18 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         std::cout << ";\n";
     }
 
-    void visit(hir::InstructionBranch*) override {
-        /// TODO
+    void visit(hir::InstructionBranch* instruction_branch) override {
+        std::cout << "goto " << instruction_branch->destination->name << ";\n";
     }
 
-    void visit(hir::InstructionBranchConditional*) override {
-        /// TODO
+    void visit(
+        hir::InstructionBranchConditional* instruction_branch_conditional
+    ) override {
+        std::cout << "goto if ";
+        instruction_branch_conditional->condition->accept(this);
+        std::cout << " ";
+        std::cout << instruction_branch_conditional->true_case->name << " ";
+        std::cout << instruction_branch_conditional->false_case->name << ";\n";
     }
 
     void visit(hir::InstructionVariableDeclaration* instruction_declaration) override {
