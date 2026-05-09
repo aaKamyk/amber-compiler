@@ -7,6 +7,7 @@
 #include "lexer/token.hpp"
 #include "node.hpp"
 
+namespace ast {
 class Parser;
 
 template <typename Node>
@@ -15,16 +16,16 @@ struct ASTParser {
 };
 
 template <>
-struct ASTParser<ast::Expression> {
-    static std::unique_ptr<ast::Expression> parse(Parser& ctx, int min_precedence = 0);
+struct ASTParser<Expression> {
+    static std::unique_ptr<Expression> parse(Parser& ctx, int min_precedence = 0);
 };
 
 class Parser {
 public:
-    explicit Parser(std::vector<Token>&& tokens)
+    explicit Parser(std::vector<Token> tokens)
         : m_tokens(std::move(tokens)) {}
 
-    ast::Program parse();
+    Program parse();
 
 private:
     template <typename T>
@@ -42,7 +43,7 @@ private:
         }
         return true;
     }
-    bool match(TokenType type) const;
+    [[nodiscard]] bool match(TokenType type) const;
 
     void restore(size_t index);
     [[nodiscard]] size_t save() const { return m_current_token; }
@@ -60,8 +61,8 @@ private:
     }
 
     template <typename T>
-        requires std::same_as<T, ast::BinaryOperator> ||
-                 std::same_as<T, ast::UnaryOperator> || std::same_as<T, Type>
+        requires std::same_as<T, BinaryOperator> || std::same_as<T, UnaryOperator> ||
+                 std::same_as<T, Type>
     std::optional<T> try_parse() {
         const auto start = save();
         if (auto parse_result = ASTParser<T>::parse(*this)) { return parse_result; }
@@ -69,11 +70,9 @@ private:
         return std::nullopt;
     }
 
-    std::unique_ptr<ast::Expression> try_parse(const int precedence = 0) {
+    std::unique_ptr<Expression> try_parse(const int precedence = 0) {
         const auto start = save();
-        if (auto expr = ASTParser<ast::Expression>::parse(*this, precedence)) {
-            return expr;
-        }
+        if (auto expr = ASTParser<Expression>::parse(*this, precedence)) { return expr; }
         restore(start);
         return nullptr;
     }
@@ -104,8 +103,11 @@ private:
     }
 };
 
+Program parse(std::vector<Token> tokens);
+}  // namespace ast
+
 template <>
-struct ASTParser<Type> {
+struct ast::ASTParser<Type> {
     static std::optional<Type> parse(Parser& ctx) {
         /// TODO make this expandable
         switch (const auto token = ctx.peek(); token.type) {
@@ -122,7 +124,7 @@ struct ASTParser<Type> {
 };
 
 template <>
-struct ASTParser<AtomIdentifier> {
+struct ast::ASTParser<AtomIdentifier> {
     static std::unique_ptr<AtomIdentifier> parse(Parser& ctx) {
         auto token = ctx.peek();
         if (!ctx.expect(TokenType::IDENTIFIER)) { return nullptr; }
@@ -133,7 +135,7 @@ struct ASTParser<AtomIdentifier> {
 };
 
 template <>
-struct ASTParser<AtomIntegerLiteral> {
+struct ast::ASTParser<AtomIntegerLiteral> {
     static std::unique_ptr<AtomIntegerLiteral> parse(Parser& ctx) {
         const auto token = ctx.peek();
         if (token.type != TokenType::INTEGER_LITERAL) { return nullptr; }
@@ -145,20 +147,19 @@ struct ASTParser<AtomIntegerLiteral> {
 };
 
 template <>
-struct ASTParser<ast::BinaryOperator> {
-    static std::optional<ast::BinaryOperator> parse(Parser& ctx) {
-        /// TODO add the rest of the binary operators also make this expandable
-        static const std::map<TokenType, ast::BinaryOperator> mapping = {
-            {TokenType::PLUS, ast::BinaryOperator::PLUS},
-            {TokenType::MINUS, ast::BinaryOperator::MINUS},
-            {TokenType::ASTERISK, ast::BinaryOperator::TIMES},
-            {TokenType::DIVIDE, ast::BinaryOperator::DIVIDE},
-            {TokenType::EQUALS_EQUALS, ast::BinaryOperator::EQUAL},
-            {TokenType::NOT_EQUALS, ast::BinaryOperator::NOT_EQUAL},
-            {TokenType::LESS_THAN, ast::BinaryOperator::LESS},
-            {TokenType::LESS_EQUAL_THAN, ast::BinaryOperator::LESS_EQUAL},
-            {TokenType::GREATER_THAN, ast::BinaryOperator::GREATER},
-            {TokenType::GREATER_EQUAL_THAN, ast::BinaryOperator::GREATER_EQUAL}
+struct ast::ASTParser<ast::BinaryOperator> {
+    static std::optional<BinaryOperator> parse(Parser& ctx) {
+        static const std::map<TokenType, BinaryOperator> mapping = {
+            {TokenType::PLUS, BinaryOperator::PLUS},
+            {TokenType::MINUS, BinaryOperator::MINUS},
+            {TokenType::ASTERISK, BinaryOperator::TIMES},
+            {TokenType::DIVIDE, BinaryOperator::DIVIDE},
+            {TokenType::EQUALS_EQUALS, BinaryOperator::EQUAL},
+            {TokenType::NOT_EQUALS, BinaryOperator::NOT_EQUAL},
+            {TokenType::LESS_THAN, BinaryOperator::LESS},
+            {TokenType::LESS_EQUAL_THAN, BinaryOperator::LESS_EQUAL},
+            {TokenType::GREATER_THAN, BinaryOperator::GREATER},
+            {TokenType::GREATER_EQUAL_THAN, BinaryOperator::GREATER_EQUAL}
         };
         const auto token = ctx.peek();
         if (const auto it = mapping.find(token.type); it != mapping.end()) {
@@ -170,13 +171,13 @@ struct ASTParser<ast::BinaryOperator> {
 };
 
 template <>
-struct ASTParser<ast::UnaryOperator> {
-    static std::optional<ast::UnaryOperator> parse(Parser& ctx) {
+struct ast::ASTParser<ast::UnaryOperator> {
+    static std::optional<UnaryOperator> parse(Parser& ctx) {
         /// TODO add the rest of the unary operators also make this expandable
         switch (const auto token = ctx.peek(); token.type) {
             case TokenType::MINUS:
                 ctx.consume(1);
-                return ast::UnaryOperator::MINUS;
+                return UnaryOperator::MINUS;
             default:
                 return std::nullopt;
         }
@@ -184,66 +185,60 @@ struct ASTParser<ast::UnaryOperator> {
 };
 
 template <>
-struct ASTParser<ast::PrimaryExpression> {
-    static std::unique_ptr<ast::PrimaryExpression> parse(Parser& ctx) {
-        if (auto atom_expr = ctx.try_parse<ast::AtomExpression>()) { return atom_expr; }
-        if (auto paren_expr = ctx.try_parse<ast::ParenExpression>()) {
-            return paren_expr;
-        }
-        if (auto unary_expr = ctx.try_parse<ast::UnaryExpression>()) {
-            return unary_expr;
-        }
+struct ast::ASTParser<ast::PrimaryExpression> {
+    static std::unique_ptr<PrimaryExpression> parse(Parser& ctx) {
+        if (auto atom_expr = ctx.try_parse<AtomExpression>()) { return atom_expr; }
+        if (auto paren_expr = ctx.try_parse<ParenExpression>()) { return paren_expr; }
+        if (auto unary_expr = ctx.try_parse<UnaryExpression>()) { return unary_expr; }
         return nullptr;
     }
 };
 
 template <>
-struct ASTParser<ast::AtomExpression> {
-    static std::unique_ptr<ast::AtomExpression> parse(Parser& ctx) {
+struct ast::ASTParser<ast::AtomExpression> {
+    static std::unique_ptr<AtomExpression> parse(Parser& ctx) {
         if (auto ident = ctx.try_parse<AtomIdentifier>()) {
-            return std::make_unique<ast::AtomExpression>(std::move(ident));
+            return std::make_unique<AtomExpression>(std::move(ident));
         }
         if (auto int_literal = ctx.try_parse<AtomIntegerLiteral>()) {
-            return std::make_unique<ast::AtomExpression>(std::move(int_literal));
+            return std::make_unique<AtomExpression>(std::move(int_literal));
         }
         return nullptr;
     }
 };
 
 template <>
-struct ASTParser<ast::ParenExpression> {
-    static std::unique_ptr<ast::ParenExpression> parse(Parser& ctx) {
-        auto paren_expr = std::make_unique<ast::ParenExpression>();
+struct ast::ASTParser<ast::ParenExpression> {
+    static std::unique_ptr<ParenExpression> parse(Parser& ctx) {
+        auto paren_expr = std::make_unique<ParenExpression>();
         if (!ctx.expect(TokenType::PAREN_START)) { return nullptr; }
-        if (!ctx.parse_into<ast::Expression>(ctx, paren_expr->expression)) {
-            return nullptr;
-        }
+        if (!ctx.parse_into<Expression>(ctx, paren_expr->expression)) { return nullptr; }
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
         return paren_expr;
     }
 };
 
 template <>
-struct ASTParser<ast::UnaryExpression> {
-    static std::unique_ptr<ast::UnaryExpression> parse(Parser& ctx) {
-        auto unary_expr = std::make_unique<ast::UnaryExpression>();
-        if (!ctx.parse_into<ast::UnaryOperator>(ctx, unary_expr->op)) { return nullptr; }
-        if (!ctx.parse_into<ast::PrimaryExpression>(ctx, unary_expr->expression)) {
+struct ast::ASTParser<ast::UnaryExpression> {
+    static std::unique_ptr<UnaryExpression> parse(Parser& ctx) {
+        auto unary_expr = std::make_unique<UnaryExpression>();
+        if (!ctx.parse_into<UnaryOperator>(ctx, unary_expr->op)) { return nullptr; }
+        if (!ctx.parse_into<PrimaryExpression>(ctx, unary_expr->expression)) {
             return nullptr;
         }
         return unary_expr;
     }
 };
 
-inline std::unique_ptr<ast::Expression> ASTParser<ast::Expression>::parse(
+inline std::unique_ptr<ast::Expression> ast::ASTParser<ast::Expression>::parse(
     Parser& ctx, const int min_precedence
 ) {
-    std::unique_ptr<ast::Expression> result;
-    if (result = ctx.try_parse<ast::PrimaryExpression>(); !result) { return nullptr; }
+    std::unique_ptr<Expression> result;
+    if (result = ctx.try_parse<PrimaryExpression>(); !result) { return nullptr; }
 
     while (true) {
         const auto start = ctx.save();
-        auto bin_op = ctx.try_parse<ast::BinaryOperator>();
+        auto bin_op = ctx.try_parse<BinaryOperator>();
         if (!bin_op || get_precedence(*bin_op) <= min_precedence) {
             ctx.restore(start);
             break;
@@ -251,7 +246,7 @@ inline std::unique_ptr<ast::Expression> ASTParser<ast::Expression>::parse(
         auto right = ctx.try_parse(get_precedence(*bin_op));
         if (!right) { return nullptr; }
         // result becomes the left side of the binary expression
-        auto bin_expr = std::make_unique<ast::BinaryExpression>(
+        auto bin_expr = std::make_unique<BinaryExpression>(
             *bin_op, std::move(result), std::move(right)
         );
         result = std::move(bin_expr);
@@ -260,14 +255,14 @@ inline std::unique_ptr<ast::Expression> ASTParser<ast::Expression>::parse(
 }
 
 template <>
-struct ASTParser<ast::BlockStatement> {
-    static std::unique_ptr<ast::BlockStatement> parse(Parser& ctx) {
-        auto block_statement = std::make_unique<ast::BlockStatement>();
+struct ast::ASTParser<ast::BlockStatement> {
+    static std::unique_ptr<BlockStatement> parse(Parser& ctx) {
+        auto block_statement = std::make_unique<BlockStatement>();
         if (!ctx.expect(TokenType::CURLY_BRACE_START)) { return nullptr; }
         while (true) {
-            if (auto decl = ctx.try_parse<ast::Declaration>()) {
+            if (auto decl = ctx.try_parse<Declaration>()) {
                 block_statement->entries.emplace_back(std::move(decl));
-            } else if (auto statement = ctx.try_parse<ast::Statement>()) {
+            } else if (auto statement = ctx.try_parse<Statement>()) {
                 block_statement->entries.emplace_back(std::move(statement));
             } else {
                 break;
@@ -279,14 +274,14 @@ struct ASTParser<ast::BlockStatement> {
 };
 
 template <>
-struct ASTParser<ast::AssignmentStatement> {
-    static std::unique_ptr<ast::AssignmentStatement> parse(Parser& ctx) {
-        auto assignment_statement = std::make_unique<ast::AssignmentStatement>();
+struct ast::ASTParser<ast::AssignmentStatement> {
+    static std::unique_ptr<AssignmentStatement> parse(Parser& ctx) {
+        auto assignment_statement = std::make_unique<AssignmentStatement>();
         if (!ctx.parse_into<AtomIdentifier>(ctx, assignment_statement->identifier)) {
             return nullptr;
         }
         if (!ctx.expect(TokenType::EQUALS)) { return nullptr; }
-        if (!ctx.parse_into<ast::Expression>(ctx, assignment_statement->expression)) {
+        if (!ctx.parse_into<Expression>(ctx, assignment_statement->expression)) {
             return nullptr;
         }
         if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
@@ -295,20 +290,18 @@ struct ASTParser<ast::AssignmentStatement> {
 };
 
 template <>
-struct ASTParser<ast::IfStatement> {
-    static std::unique_ptr<ast::IfStatement> parse(Parser& ctx) {
-        auto if_statement = std::make_unique<ast::IfStatement>();
+struct ast::ASTParser<ast::IfStatement> {
+    static std::unique_ptr<IfStatement> parse(Parser& ctx) {
+        auto if_statement = std::make_unique<IfStatement>();
         if (!ctx.expect(TokenType::IF, TokenType::PAREN_START)) { return nullptr; }
 
-        if (!ctx.parse_into<ast::Expression>(ctx, if_statement->condition)) {
-            return nullptr;
-        }
+        if (!ctx.parse_into<Expression>(ctx, if_statement->condition)) { return nullptr; }
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
-        if (!ctx.parse_into<ast::BlockStatement>(ctx, if_statement->true_case)) {
+        if (!ctx.parse_into<BlockStatement>(ctx, if_statement->true_case)) {
             return nullptr;
         }
         if (ctx.expect(TokenType::ELSE)) {
-            if (!ctx.parse_into<ast::BlockStatement>(ctx, if_statement->false_case)) {
+            if (!ctx.parse_into<BlockStatement>(ctx, if_statement->false_case)) {
                 return nullptr;
             }
             return if_statement;
@@ -319,15 +312,15 @@ struct ASTParser<ast::IfStatement> {
 };
 
 template <>
-struct ASTParser<ast::WhileStatement> {
-    static std::unique_ptr<ast::WhileStatement> parse(Parser& ctx) {
-        auto while_statement = std::make_unique<ast::WhileStatement>();
+struct ast::ASTParser<ast::WhileStatement> {
+    static std::unique_ptr<WhileStatement> parse(Parser& ctx) {
+        auto while_statement = std::make_unique<WhileStatement>();
         if (!ctx.expect(TokenType::WHILE, TokenType::PAREN_START)) { return nullptr; }
-        if (!ctx.parse_into<ast::Expression>(ctx, while_statement->condition)) {
+        if (!ctx.parse_into<Expression>(ctx, while_statement->condition)) {
             return nullptr;
         }
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
-        if (!ctx.parse_into<ast::BlockStatement>(ctx, while_statement->block)) {
+        if (!ctx.parse_into<BlockStatement>(ctx, while_statement->block)) {
             return nullptr;
         }
         return while_statement;
@@ -335,11 +328,11 @@ struct ASTParser<ast::WhileStatement> {
 };
 
 template <>
-struct ASTParser<ast::ReturnStatement> {
-    static std::unique_ptr<ast::ReturnStatement> parse(Parser& ctx) {
-        auto return_statement = std::make_unique<ast::ReturnStatement>();
+struct ast::ASTParser<ast::ReturnStatement> {
+    static std::unique_ptr<ReturnStatement> parse(Parser& ctx) {
+        auto return_statement = std::make_unique<ReturnStatement>();
         if (!ctx.expect(TokenType::RETURN)) { return nullptr; }
-        if (!ctx.parse_into<ast::Expression>(ctx, return_statement->expression)) {
+        if (!ctx.parse_into<Expression>(ctx, return_statement->expression)) {
             return nullptr;
         }
         if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
@@ -348,9 +341,9 @@ struct ASTParser<ast::ReturnStatement> {
 };
 
 template <>
-struct ASTParser<ast::VariableDeclaration> {
-    static std::unique_ptr<ast::VariableDeclaration> parse(Parser& ctx) {
-        auto variable_declaration = std::make_unique<ast::VariableDeclaration>();
+struct ast::ASTParser<ast::VariableDeclaration> {
+    static std::unique_ptr<VariableDeclaration> parse(Parser& ctx) {
+        auto variable_declaration = std::make_unique<VariableDeclaration>();
         if (!ctx.parse_into<Type>(ctx, variable_declaration->type)) { return nullptr; }
         if (!ctx.parse_into<AtomIdentifier>(ctx, variable_declaration->name)) {
             return nullptr;
@@ -360,7 +353,7 @@ struct ASTParser<ast::VariableDeclaration> {
             return variable_declaration;
         }
         if (ctx.expect(TokenType::EQUALS)) {
-            if (!ctx.parse_into<ast::Expression>(ctx, variable_declaration->value)) {
+            if (!ctx.parse_into<Expression>(ctx, variable_declaration->value)) {
                 return nullptr;
             }
             if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
@@ -371,9 +364,9 @@ struct ASTParser<ast::VariableDeclaration> {
 };
 
 template <>
-struct ASTParser<ast::FunctionArgument> {
-    static std::unique_ptr<ast::FunctionArgument> parse(Parser& ctx) {
-        auto arg = std::make_unique<ast::FunctionArgument>();
+struct ast::ASTParser<ast::FunctionArgument> {
+    static std::unique_ptr<FunctionArgument> parse(Parser& ctx) {
+        auto arg = std::make_unique<FunctionArgument>();
         if (!ctx.parse_into<Type>(ctx, arg->type)) { return nullptr; }
         if (!ctx.parse_into<AtomIdentifier>(ctx, arg->name)) { return nullptr; }
         return arg;
@@ -381,8 +374,8 @@ struct ASTParser<ast::FunctionArgument> {
 };
 
 template <>
-struct ASTParser<ast::FunctionDeclaration> {
-    static std::unique_ptr<ast::FunctionDeclaration> parse(Parser& ctx) {
+struct ast::ASTParser<ast::FunctionDeclaration> {
+    static std::unique_ptr<FunctionDeclaration> parse(Parser& ctx) {
         auto func_declaration = std::make_unique<ast::FunctionDeclaration>();
         if (!ctx.expect(TokenType::FN)) { return nullptr; }
         if (!ctx.parse_into<AtomIdentifier>(ctx, func_declaration->name)) {
@@ -392,7 +385,7 @@ struct ASTParser<ast::FunctionDeclaration> {
 
         // Function parameters
         while (ctx.peek().type != TokenType::PAREN_END) {
-            if (auto arg = ctx.try_parse<ast::FunctionArgument>()) {
+            if (auto arg = ctx.try_parse<FunctionArgument>()) {
                 func_declaration->arguments.emplace_back(std::move(arg));
             } else {
                 return nullptr;
@@ -413,7 +406,7 @@ struct ASTParser<ast::FunctionDeclaration> {
             func_declaration->return_type = Type::VOID;
         }
 
-        if (!ctx.parse_into<ast::BlockStatement>(ctx, func_declaration->body)) {
+        if (!ctx.parse_into<BlockStatement>(ctx, func_declaration->body)) {
             return nullptr;
         }
         return func_declaration;
@@ -421,14 +414,14 @@ struct ASTParser<ast::FunctionDeclaration> {
 };
 
 template <>
-struct ASTParser<ast::Declaration> {
-    static std::unique_ptr<ast::Declaration> parse(Parser& ctx) {
+struct ast::ASTParser<ast::Declaration> {
+    static std::unique_ptr<Declaration> parse(Parser& ctx) {
         if (ctx.match(TokenType::FN)) {
-            if (auto func_declaration = ctx.try_parse<ast::FunctionDeclaration>()) {
+            if (auto func_declaration = ctx.try_parse<FunctionDeclaration>()) {
                 return func_declaration;
             }
         }
-        if (auto variable_decl = ctx.try_parse<ast::VariableDeclaration>()) {
+        if (auto variable_decl = ctx.try_parse<VariableDeclaration>()) {
             return variable_decl;
         }
         return nullptr;
@@ -436,27 +429,27 @@ struct ASTParser<ast::Declaration> {
 };
 
 template <>
-struct ASTParser<ast::Statement> {
-    static std::unique_ptr<ast::Statement> parse(Parser& ctx) {
+struct ast::ASTParser<ast::Statement> {
+    static std::unique_ptr<Statement> parse(Parser& ctx) {
         switch (const auto token = ctx.peek(); token.type) {
             case TokenType::IF: {
-                auto if_statement = ctx.try_parse<ast::IfStatement>();
+                auto if_statement = ctx.try_parse<IfStatement>();
                 return if_statement;
             }
             case TokenType::WHILE: {
-                auto while_statement = ctx.try_parse<ast::WhileStatement>();
+                auto while_statement = ctx.try_parse<WhileStatement>();
                 return while_statement;
             }
             case TokenType::RETURN: {
-                auto return_statement = ctx.try_parse<ast::ReturnStatement>();
+                auto return_statement = ctx.try_parse<ReturnStatement>();
                 return return_statement;
             }
             case TokenType::CURLY_BRACE_START: {
-                auto block_statement = ctx.try_parse<ast::BlockStatement>();
+                auto block_statement = ctx.try_parse<BlockStatement>();
                 return block_statement;
             }
             case TokenType::IDENTIFIER: {
-                auto assignment_statement = ctx.try_parse<ast::AssignmentStatement>();
+                auto assignment_statement = ctx.try_parse<AssignmentStatement>();
                 return assignment_statement;
             }
             default: {

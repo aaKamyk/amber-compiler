@@ -482,6 +482,11 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     }
 };
 
+hir::Program hir::translate(ast::Program program) {
+    Hir translator(std::move(program));
+    return translator.translate();
+}
+
 void hir::print_program(const Program& program) {
     HirPrinter printer{};
     printer.print(program);

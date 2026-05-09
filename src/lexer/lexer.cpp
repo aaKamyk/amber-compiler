@@ -4,7 +4,7 @@
 #include <iostream>
 #include <map>
 
-std::vector<Token> Lexer::lex() {
+std::vector<Token> lxr::Lexer::lex() {
     while (const int cur = peek()) {
         switch (cur) {
             case EOF: {
@@ -165,7 +165,7 @@ std::vector<Token> Lexer::lex() {
     return std::move(m_tokens);
 }
 
-void Lexer::pretty_print_tokens(const std::vector<Token>& tokens) {
+void lxr::Lexer::pretty_print_tokens(const std::vector<Token>& tokens) {
     static const std::map<TokenType, const char*> token_strings = {
         {TokenType::TOKEN_EOF, "EOF"},
         {TokenType::NONE, "none"},
@@ -213,21 +213,21 @@ void Lexer::pretty_print_tokens(const std::vector<Token>& tokens) {
     }
 }
 
-std::string_view Lexer::PeekBuffer::get_view(const size_t n) {
+std::string_view lxr::Lexer::PeekBuffer::get_view(const size_t n) {
     if (const size_t chars_left = count - current_pos; n > chars_left) {
         throw std::runtime_error("Attempted to get view past end of buffer");
     }
     return {&buffer[current_pos], n};
 }
 
-char Lexer::PeekBuffer::peek(const size_t offset) const {
+char lxr::Lexer::PeekBuffer::peek(const size_t offset) const {
     if (const size_t chars_left = count - current_pos; offset > chars_left) {
         throw std::runtime_error("Attempted to look past the end of buffer");
     }
     return buffer[current_pos + offset];
 }
 
-void Lexer::PeekBuffer::consume(const size_t n) {
+void lxr::Lexer::PeekBuffer::consume(const size_t n) {
     const size_t chars_left = count - current_pos;
     const size_t consume = std::min(n, chars_left);
     current_pos += consume;
@@ -238,14 +238,14 @@ void Lexer::PeekBuffer::consume(const size_t n) {
     }
 }
 
-void Lexer::PeekBuffer::read_from(std::istream& input) {
+void lxr::Lexer::PeekBuffer::read_from(std::istream& input) {
     assert(empty);
     current_pos = 0;
     count = input.read(buffer.data(), BUFFER_SIZE).gcount();
     empty = (count == 0);
 }
 
-void Lexer::emit_token(
+void lxr::Lexer::emit_token(
     const TokenType type, const std::optional<int> size, const TokenData& data
 ) {
     m_tokens.emplace_back(data, type, m_line, m_column);
@@ -258,7 +258,7 @@ void Lexer::emit_token(
     }
 }
 
-int Lexer::peek(const size_t offset) {
+int lxr::Lexer::peek(const size_t offset) {
     if (m_buffer.empty) {
         m_buffer.read_from(m_input_stream);
         if (m_buffer.empty) { return EOF; }
@@ -266,25 +266,26 @@ int Lexer::peek(const size_t offset) {
     return static_cast<unsigned char>(m_buffer.peek(offset));
 }
 
-size_t Lexer::get_digit_len() const {
+size_t lxr::Lexer::get_digit_len() const {
     size_t digit_len = 0;
     while (is_digit(m_buffer.peek(digit_len))) { digit_len++; }
     return digit_len;
 }
 
-size_t Lexer::get_whitespace_len() const {
+size_t lxr::Lexer::get_whitespace_len() const {
     size_t whitespace_len = 0;
     while (is_whitespace_char(m_buffer.peek(whitespace_len))) { whitespace_len++; }
     return whitespace_len;
 }
 
-size_t Lexer::get_identifier_len() const {
+size_t lxr::Lexer::get_identifier_len() const {
     size_t identifier_len = 0;
     if (!is_identifier_start(m_buffer.peek(identifier_len))) { return identifier_len; }
     while (is_identifier_char(m_buffer.peek(identifier_len))) { identifier_len++; }
     return identifier_len;
 }
-TokenType Lexer::get_keyword(const std::string_view name) {
+
+TokenType lxr::Lexer::get_keyword(const std::string_view name) {
     static const std::map<std::string_view, TokenType> keywords = {
         {"if", TokenType::IF},         {"else", TokenType::ELSE},
         {"while", TokenType::WHILE},   {"fn", TokenType::FN},
@@ -293,4 +294,9 @@ TokenType Lexer::get_keyword(const std::string_view name) {
     };
     if (!keywords.contains(name)) { return TokenType::IDENTIFIER; }
     return keywords.at(name);
+}
+
+std::vector<Token> lxr::lex(std::istream& input) {
+    Lexer lexer(input);
+    return lexer.lex();
 }

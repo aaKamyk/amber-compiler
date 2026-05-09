@@ -8,6 +8,7 @@
 
 #include "token.hpp"
 
+namespace lxr {
 class Lexer {
 public:
     explicit Lexer(std::istream& input)
@@ -56,3 +57,6 @@ private:
     int m_line{1};
     int m_column{0};
 };
+
+std::vector<Token> lex(std::istream& input);
+}  // namespace lxr

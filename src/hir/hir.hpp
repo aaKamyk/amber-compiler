@@ -77,6 +77,7 @@ private:
     SymbolTable m_symbol_table{};
 };
 
+Program translate(ast::Program);
 void print_program(const Program&);
 
 }  // namespace hir
