@@ -60,4 +60,6 @@ struct Token {
     TokenType type{};
     int line{};
     int column{};
+
+    [[nodiscard]] std::string to_string() const;
 };

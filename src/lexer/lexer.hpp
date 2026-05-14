@@ -1,18 +1,18 @@
 #pragma once
 
 #include <array>
-#include <istream>
 #include <optional>
 #include <variant>
 #include <vector>
 
 #include "token.hpp"
+#include "utils/context.hpp"
 
 namespace lxr {
 class Lexer {
 public:
-    explicit Lexer(std::istream& input)
-        : m_input_stream(input) {}
+    explicit Lexer(std::istream& input, CompilationContext& context)
+        : m_input_stream(input), m_ctx(context) {}
 
     std::vector<Token> lex();
     static void pretty_print_tokens(const std::vector<Token>& tokens);
@@ -23,6 +23,7 @@ private:
         std::array<char, BUFFER_SIZE> buffer{};
         size_t count{};
         size_t current_pos{};
+        size_t consumed{};
         bool empty{true};
 
         [[nodiscard]]
@@ -56,7 +57,8 @@ private:
     std::istream& m_input_stream;
     int m_line{1};
     int m_column{0};
+    CompilationContext& m_ctx;
 };
 
-std::vector<Token> lex(std::istream& input);
+std::vector<Token> lex(std::istream& input, CompilationContext& ctx);
 }  // namespace lxr

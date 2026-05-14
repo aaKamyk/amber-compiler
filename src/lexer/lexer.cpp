@@ -4,6 +4,8 @@
 #include <iostream>
 #include <map>
 
+#include "utils/context.hpp"
+
 std::vector<Token> lxr::Lexer::lex() {
     while (const int cur = peek()) {
         switch (cur) {
@@ -11,10 +13,19 @@ std::vector<Token> lxr::Lexer::lex() {
                 emit_token(TokenType::TOKEN_EOF);
                 return std::move(m_tokens);
             }
+            case '\r': {
+                m_column = 0;
+                m_line++;
+                m_buffer.consume(1);
+                if (this->peek() == '\n') { m_buffer.consume(1); }
+                m_ctx.new_line(m_buffer.consumed + 1);
+                break;
+            }
             case '\n': {
                 m_column = 0;
                 m_line++;
                 m_buffer.consume(1);
+                m_ctx.new_line(m_buffer.consumed + 1);
                 break;
             }
             // --- simple braces & punctuation ---
@@ -231,6 +242,7 @@ void lxr::Lexer::PeekBuffer::consume(const size_t n) {
     const size_t chars_left = count - current_pos;
     const size_t consume = std::min(n, chars_left);
     current_pos += consume;
+    consumed += consume;
     if (current_pos == count) {
         current_pos = 0;
         count = 0;
@@ -296,7 +308,7 @@ TokenType lxr::Lexer::get_keyword(const std::string_view name) {
     return keywords.at(name);
 }
 
-std::vector<Token> lxr::lex(std::istream& input) {
-    Lexer lexer(input);
+std::vector<Token> lxr::lex(std::istream& input, CompilationContext& ctx) {
+    Lexer lexer(input, ctx);
     return lexer.lex();
 }

@@ -8,8 +8,11 @@
 void runCompiler(const int argc, const char** argv) {
     const auto args = parseArguments(std::span(argv, static_cast<size_t>(argc)));
     const auto input = getInputFromFile(args);
-    auto tokens = lxr::lex(*input);
-    auto ast = ast::parse(std::move(tokens));
+    CompilationContext ctx;
+    ctx.set_path(args.input_path);
+    ctx.set_stream(*input);
+    auto tokens = lxr::lex(*input, ctx);
+    auto ast = ast::parse(std::move(tokens), ctx);
     auto hir = hir::translate(std::move(ast));
     hir::print_program(hir);
 }

@@ -1,19 +1,21 @@
 #include "parser.hpp"
 
 #include <format>
+#include <iostream>
 
 ast::Program ast::Parser::parse() {
-    ast::Program program{};
+    Program program{};
     while (peek().type != TokenType::TOKEN_EOF) {
-        if (auto decl = try_parse<ast::Declaration>()) {
+        if (auto decl = try_parse<Declaration>()) {
             program.children.emplace_back(std::move(decl));
             continue;
         }
-        if (auto statement = try_parse<ast::Statement>()) {
+        if (auto statement = try_parse<Statement>()) {
             program.children.emplace_back(std::move(statement));
             continue;
         }
-        throw std::runtime_error("Expected statement or declaration");
+        m_successfully_parsed = false;
+        break;
     }
     return program;
 }
@@ -33,8 +35,8 @@ bool ast::Parser::expect(const TokenType type) {
     return false;
 }
 
-bool ast::Parser::match(const TokenType type) const {
-    return peek().type == type;
+bool ast::Parser::match(const TokenType type, const size_t offset) const {
+    return peek(offset).type == type;
 }
 
 void ast::Parser::restore(const size_t index) {
@@ -48,7 +50,23 @@ Token ast::Parser::peek(const size_t offset) const {
     return m_tokens[m_current_token + offset];
 }
 
-ast::Program ast::parse(std::vector<Token> tokens) {
-    Parser parser(std::move(tokens));
-    return parser.parse();
+void ast::Parser::add_error(const std::string& message) {
+    const auto token = this->peek();
+    m_ctx.parser_errors().emplace_back(
+        token.line, token.column, message, this->m_current_token
+    );
+}
+
+ast::Program ast::parse(std::vector<Token> tokens, CompilationContext& ctx) {
+    Parser parser(std::move(tokens), ctx);
+    auto program = parser.parse();
+    if (parser.was_successful()) { return program; }
+    for (const auto& error : parser.get_errors()) {
+        std::cout << ctx.get_path() << ':';
+        error.print();
+        std::cout << ctx.get_line(error.line) << '\n';
+        std::string padding(error.column, ' ');
+        std::cout << padding << "^\n";
+    }
+    return {};
 }
