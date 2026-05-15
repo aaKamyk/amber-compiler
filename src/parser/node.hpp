@@ -14,6 +14,9 @@ class NodeVisitor;
 struct Node {
     virtual ~Node() = default;
     virtual void accept(NodeVisitor*) = 0;
+
+    int line{};
+    int column{};
 };
 
 struct Statement : Node {};

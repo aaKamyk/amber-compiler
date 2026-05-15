@@ -13,7 +13,7 @@ void runCompiler(const int argc, const char** argv) {
     ctx.set_stream(*input);
     auto tokens = lxr::lex(*input, ctx);
     auto ast = ast::parse(std::move(tokens), ctx);
-    auto hir = hir::translate(std::move(ast));
+    const auto hir = hir::translate(std::move(ast), ctx);
     hir::print_program(hir);
 }
 

@@ -5,12 +5,13 @@
 
 #include "instruction.hpp"
 #include "parser/node.hpp"
+#include "utils/context.hpp"
 #include "utils/symbolTable.hpp"
 
 namespace hir {
 
 struct Program {
-    std::vector<std::unique_ptr<InstructionDeclaration>> declarations;
+    std::vector<std::unique_ptr<InstructionFunctionDeclaration>> functions;
 };
 
 struct Scope {
@@ -24,9 +25,10 @@ struct Scope {
 
 class Hir final : ast::NodeVisitor, ast::ExpressionVisitor {
 public:
-    explicit Hir(ast::Program program);
+    explicit Hir(ast::Program program, CompilationContext& ctx);
 
     Program translate();
+    bool was_successful() const;
 
 private:
     template <typename Node>
@@ -61,8 +63,9 @@ private:
     void set_active_function(std::vector<std::unique_ptr<Instruction>>&);
     void unset_active_function();
     void append_to_active_func(std::unique_ptr<Instruction>);
-    void append_to_program(std::unique_ptr<InstructionDeclaration>);
+    void append_to_program(std::unique_ptr<InstructionFunctionDeclaration>);
     void append_global_init_to_program();
+    void add_error(const ast::Node*, const std::string& msg);
 
     std::unique_ptr<Expression> get_last_expression();
     Instruction& get_last_instruction() const;
@@ -75,9 +78,11 @@ private:
     ast::Program m_ast_program;
     Program m_program;
     SymbolTable m_symbol_table{};
+    CompilationContext& m_ctx;
+    bool m_translated_successfully{true};
 };
 
-Program translate(ast::Program);
+Program translate(ast::Program, CompilationContext& ctx);
 void print_program(const Program&);
 
 }  // namespace hir

@@ -19,8 +19,8 @@ void hir::Scope::set(const NameID nid, const SymbolID sid) {
     symbols[nid] = sid;
 }
 
-hir::Hir::Hir(ast::Program program)
-    : m_active_function(nullptr), m_ast_program(std::move(program)) {
+hir::Hir::Hir(ast::Program program, CompilationContext& ctx)
+    : m_active_function(nullptr), m_ast_program(std::move(program)), m_ctx(ctx) {
     m_active_scopes.emplace_back(0);
 }
 
@@ -28,6 +28,10 @@ hir::Program hir::Hir::translate() {
     for (auto& child : m_ast_program.children) { this->translate(std::move(child)); }
     if (!m_global_init.empty()) { this->append_global_init_to_program(); }
     return std::move(m_program);
+}
+
+bool hir::Hir::was_successful() const {
+    return m_translated_successfully;
 }
 
 void hir::Hir::visit(ast::BlockStatement* block_statement) {
@@ -39,7 +43,10 @@ void hir::Hir::visit(ast::BlockStatement* block_statement) {
 void hir::Hir::visit(ast::AssignmentStatement* assignment_statement) {
     const auto scope_id = this->resolve_scope(assignment_statement->identifier.get());
     if (!scope_id) {
-        /// TODO usage of undeclared variable
+        this->add_error(
+            assignment_statement, "Symbol has not been declared in this scope \'" +
+                                      assignment_statement->identifier->name + '\''
+        );
         return;
     }
     // const auto nid =
@@ -365,8 +372,8 @@ void hir::Hir::append_to_active_func(std::unique_ptr<Instruction> i) {
     }
 }
 
-void hir::Hir::append_to_program(std::unique_ptr<InstructionDeclaration> decl) {
-    this->m_program.declarations.emplace_back(std::move(decl));
+void hir::Hir::append_to_program(std::unique_ptr<InstructionFunctionDeclaration> decl) {
+    this->m_program.functions.emplace_back(std::move(decl));
 }
 
 void hir::Hir::append_global_init_to_program() {
@@ -375,6 +382,11 @@ void hir::Hir::append_global_init_to_program() {
         Type::VOID, std::move(ident), std::vector<Argument>{}, std::move(m_global_init)
     );
     this->append_to_program(std::move(global_init));
+}
+
+void hir::Hir::add_error(const ast::Node* error_node, const std::string& msg) {
+    m_ctx.logic_errors().emplace_back(error_node->line, error_node->column, msg);
+    m_translated_successfully = false;
 }
 
 std::unique_ptr<hir::Expression> hir::Hir::get_last_expression() {
@@ -395,9 +407,7 @@ hir::Instruction& hir::Hir::get_last_instruction() const {
 
 struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     void print(const hir::Program& program) {
-        for (const auto& declaration : program.declarations) {
-            declaration->accept(this);
-        }
+        for (const auto& declaration : program.functions) { declaration->accept(this); }
     }
 
     void visit(hir::Label* label) override {
@@ -426,7 +436,7 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         std::cout << "goto if ";
         instruction_branch_conditional->condition->accept(this);
         std::cout << " ";
-        std::cout << instruction_branch_conditional->true_case->name << " ";
+        std::cout << instruction_branch_conditional->true_case->name << " : ";
         std::cout << instruction_branch_conditional->false_case->name << ";\n";
     }
 
@@ -482,9 +492,16 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     }
 };
 
-hir::Program hir::translate(ast::Program program) {
-    Hir translator(std::move(program));
-    return translator.translate();
+hir::Program hir::translate(ast::Program program, CompilationContext& ctx) {
+    Hir translator(std::move(program), ctx);
+    auto hir = translator.translate();
+    if (!translator.was_successful()) {
+        for (const auto& err : ctx.logic_errors()) {
+            err.print(&ctx);
+            std::cout << '\n';
+        }
+    }
+    return hir;
 }
 
 void hir::print_program(const Program& program) {

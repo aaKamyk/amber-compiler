@@ -28,8 +28,8 @@ public:
 
     Program parse();
     [[nodiscard]] bool was_successful() const { return m_successfully_parsed; }
-    [[nodiscard]] const std::vector<ParserError>& get_errors() const {
-        return m_ctx.parser_errors();
+    [[nodiscard]] const std::vector<SyntaxError>& get_errors() const {
+        return m_ctx.syntax_errors();
     };
 
 private:
@@ -64,6 +64,7 @@ private:
     void restore(size_t index);
     [[nodiscard]] size_t save() const { return m_current_token; }
     [[nodiscard]] Token peek(size_t offset = 0) const;
+    [[nodiscard]] Token current_token() const;
 
     void add_error(const std::string& message);
 
@@ -73,12 +74,18 @@ private:
     CompilationContext& m_ctx;
 
     template <typename T>
+
     std::unique_ptr<T> try_parse() {
         const auto start = save();
+        const auto current_token = this->current_token();
         if (auto parse_result = NodeParser<T>::parse(*this)) {
-            if (!m_ctx.parser_errors().empty() &&
-                m_ctx.parser_errors().back().token_num < m_current_token) {
-                m_ctx.parser_errors().pop_back();
+            if constexpr (std::is_base_of_v<Node, T>) {
+                parse_result->line = current_token.line;
+                parse_result->column = current_token.column;
+            }
+            if (!m_ctx.syntax_errors().empty() &&
+                m_ctx.syntax_errors().back().token_num < m_current_token) {
+                m_ctx.syntax_errors().pop_back();
             }
             return parse_result;
         }
@@ -92,9 +99,9 @@ private:
     std::optional<T> try_parse() {
         const auto start = save();
         if (auto parse_result = NodeParser<T>::parse(*this)) {
-            if (!m_ctx.parser_errors().empty() &&
-                m_ctx.parser_errors().back().token_num < m_current_token) {
-                m_ctx.parser_errors().pop_back();
+            if (!m_ctx.syntax_errors().empty() &&
+                m_ctx.syntax_errors().back().token_num < m_current_token) {
+                m_ctx.syntax_errors().pop_back();
             }
             return parse_result;
         }
@@ -105,9 +112,9 @@ private:
     std::unique_ptr<Expression> try_parse(const int precedence = 0) {
         const auto start = save();
         if (auto expr = NodeParser<Expression>::parse(*this, precedence)) {
-            if (!m_ctx.parser_errors().empty() &&
-                m_ctx.parser_errors().back().token_num < m_current_token) {
-                m_ctx.parser_errors().pop_back();
+            if (!m_ctx.syntax_errors().empty() &&
+                m_ctx.syntax_errors().back().token_num < m_current_token) {
+                m_ctx.syntax_errors().pop_back();
             }
             return expr;
         }
