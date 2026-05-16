@@ -155,7 +155,7 @@ struct ast::NodeParser<Type> {
                 return Type::VOID;
             default:
                 const auto next_token = ctx.peek(1);
-                ctx.add_error("Expected type before " + next_token.to_string());
+                ctx.add_error("Expected type before \'" + next_token.to_string() + '\'');
                 return std::nullopt;
         }
     }
@@ -167,7 +167,9 @@ struct ast::NodeParser<AtomIdentifier> {
         auto token = ctx.peek();
         if (!ctx.expect(TokenType::IDENTIFIER)) {
             const auto next_token = ctx.peek(1);
-            ctx.add_error("Expected identifier before " + next_token.to_string());
+            ctx.add_error(
+                "Expected identifier before \'" + next_token.to_string() + '\''
+            );
             return nullptr;
         }
         return std::make_unique<AtomIdentifier>(
@@ -186,7 +188,7 @@ struct ast::NodeParser<AtomIntegerLiteral> {
                 std::stol(std::get<std::string>(token.data))
             );
         } catch (const std::out_of_range& _) {
-            ctx.add_error("Invalid integer literal: " + token.to_string());
+            ctx.add_error("Invalid integer literal: \'" + token.to_string() + '\'');
             return nullptr;
         }
     }

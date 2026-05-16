@@ -55,9 +55,9 @@ Token ast::Parser::current_token() const {
 }
 
 void ast::Parser::add_error(const std::string& message) {
-    const auto token = this->peek();
+    const auto next_token = this->peek(1);
     m_ctx.syntax_errors().emplace_back(
-        token.line, token.column, message, this->m_current_token
+        next_token.line, next_token.column, message, this->m_current_token
     );
 }
 
@@ -66,5 +66,5 @@ ast::Program ast::parse(std::vector<Token> tokens, CompilationContext& ctx) {
     auto program = parser.parse();
     if (parser.was_successful()) { return program; }
     for (const auto& error : parser.get_errors()) { error.print(&ctx); }
-    return {};
+    return program;
 }
