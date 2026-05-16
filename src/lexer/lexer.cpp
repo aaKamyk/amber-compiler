@@ -83,6 +83,7 @@ std::vector<Token> lxr::Lexer::lex() {
                     m_buffer.consume(2);
                     const auto comment_len = get_comment_len();
                     m_buffer.consume(comment_len);
+                    break;
                 }
                 emit_token(TokenType::DIVIDE);
                 break;
