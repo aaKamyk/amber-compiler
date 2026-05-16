@@ -79,6 +79,11 @@ std::vector<Token> lxr::Lexer::lex() {
                 break;
             }
             case '/': {
+                if (peek(1) == '/') {
+                    m_buffer.consume(2);
+                    const auto comment_len = get_comment_len();
+                    m_buffer.consume(comment_len);
+                }
                 emit_token(TokenType::DIVIDE);
                 break;
             }
@@ -295,6 +300,14 @@ size_t lxr::Lexer::get_identifier_len() const {
     if (!is_identifier_start(m_buffer.peek(identifier_len))) { return identifier_len; }
     while (is_identifier_char(m_buffer.peek(identifier_len))) { identifier_len++; }
     return identifier_len;
+}
+
+size_t lxr::Lexer::get_comment_len() const {
+    size_t comment_len = 0;
+    while (m_buffer.peek(comment_len) != '\r' && m_buffer.peek(comment_len) != '\n') {
+        comment_len++;
+    }
+    return comment_len;
 }
 
 TokenType lxr::Lexer::get_keyword(const std::string_view name) {

@@ -43,6 +43,7 @@ private:
     [[nodiscard]] size_t get_digit_len() const;
     [[nodiscard]] size_t get_whitespace_len() const;
     [[nodiscard]] size_t get_identifier_len() const;
+    [[nodiscard]] size_t get_comment_len() const;
 
     static TokenType get_keyword(std::string_view name);
     static bool is_identifier_start(const int chr) { return std::isalpha(chr) != 0; }
