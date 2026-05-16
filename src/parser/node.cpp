@@ -19,14 +19,14 @@ public:
     }
 
 private:
-    std::string prefix = "";
+    std::string prefix;
 
     template <typename Node>
     void print_node(std::unique_ptr<Node>& node, const bool is_last) {
         std::cout << this->prefix << (is_last ? "\\- " : "|- ");
         auto old_prefix = std::move(this->prefix);
         this->prefix = old_prefix + (is_last ? "   " : "|  ");
-        node.get()->accept(this);
+        node->accept(this);
         this->prefix = std::move(old_prefix);
     }
 
@@ -151,6 +151,12 @@ private:
 
         print_node(return_statement->expression, true);
     }
+
+    void visit(ExpressionStatement* expression_statement) override {
+        std::cout << "Expression\n";
+
+        print_node(expression_statement->expression, true);
+    }
 };
 
 void BlockStatement::accept(NodeVisitor* v) {
@@ -170,6 +176,10 @@ void WhileStatement::accept(NodeVisitor* v) {
 }
 
 void ReturnStatement::accept(NodeVisitor* v) {
+    v->visit(this);
+}
+
+void ExpressionStatement::accept(NodeVisitor* v) {
     v->visit(this);
 }
 

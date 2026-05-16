@@ -56,6 +56,12 @@ struct ReturnStatement final : Statement {
     void accept(NodeVisitor*) override;
 };
 
+struct ExpressionStatement final : Statement {
+    std::unique_ptr<Expression> expression{nullptr};
+
+    void accept(NodeVisitor*) override;
+};
+
 struct Declaration : Node {};
 
 struct VariableDeclaration final : Declaration {
@@ -90,9 +96,10 @@ class NodeVisitor {
 public:
     virtual void visit(BlockStatement*) = 0;
     virtual void visit(AssignmentStatement*) = 0;
-    virtual void visit(ReturnStatement*) = 0;
     virtual void visit(IfStatement*) = 0;
     virtual void visit(WhileStatement*) = 0;
+    virtual void visit(ReturnStatement*) = 0;
+    virtual void visit(ExpressionStatement*) = 0;
 
     virtual void visit(VariableDeclaration*) = 0;
     virtual void visit(FunctionArgument*) = 0;

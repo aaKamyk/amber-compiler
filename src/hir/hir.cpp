@@ -161,6 +161,11 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
     instr_branch.false_case = std::move(while_end);
 }
 
+void hir::Hir::visit(ast::ExpressionStatement* expression_statement) {
+    /// TODO unused result of expression unless doesnt have nodiscard
+    this->translate(std::move(expression_statement->expression));
+}
+
 void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     std::unique_ptr<AtomIdentifier> atom = std::move(variable_declaration->name);
     /// adds name to symbol table if didnt exist before

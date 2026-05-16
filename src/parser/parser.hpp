@@ -407,6 +407,18 @@ struct ast::NodeParser<ast::ReturnStatement> {
 };
 
 template <>
+struct ast::NodeParser<ast::ExpressionStatement> {
+    static std::unique_ptr<ExpressionStatement> parse(Parser& ctx) {
+        auto expression_statement = std::make_unique<ExpressionStatement>();
+        if (!ctx.parse_into<Expression>(ctx, expression_statement->expression)) {
+            return nullptr;
+        }
+        if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
+        return expression_statement;
+    }
+};
+
+template <>
 struct ast::NodeParser<ast::VariableDeclaration> {
     static std::unique_ptr<VariableDeclaration> parse(Parser& ctx) {
         auto variable_declaration = std::make_unique<VariableDeclaration>();
@@ -527,7 +539,8 @@ struct ast::NodeParser<ast::Statement> {
                 return assignment_statement;
             }
             default: {
-                return nullptr;
+                auto expression_statement = ctx.try_parse<ExpressionStatement>();
+                return expression_statement;
             }
         }
     }

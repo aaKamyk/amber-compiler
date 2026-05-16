@@ -41,6 +41,7 @@ private:
     void visit(ast::ReturnStatement* return_statement) override;
     void visit(ast::IfStatement* if_statement) override;
     void visit(ast::WhileStatement* while_statement) override;
+    void visit(ast::ExpressionStatement* expression_statement) override;
 
     void visit(ast::VariableDeclaration* variable_declaration) override;
     void visit(ast::FunctionArgument* function_argument) override;
