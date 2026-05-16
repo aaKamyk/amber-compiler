@@ -219,14 +219,16 @@ struct ast::NodeParser<ast::BinaryOperator> {
 template <>
 struct ast::NodeParser<ast::UnaryOperator> {
     static std::optional<UnaryOperator> parse(Parser& ctx) {
-        /// TODO add the rest of the unary operators also make this expandable
-        switch (const auto token = ctx.peek(); token.type) {
-            case TokenType::MINUS:
-                ctx.consume(1);
-                return UnaryOperator::MINUS;
-            default:
-                return std::nullopt;
+        static const std::map<TokenType, UnaryOperator> mapping = {
+            {TokenType::MINUS, UnaryOperator::MINUS},
+            {TokenType::LOGICAL_NOT, UnaryOperator::NOT}
+        };
+        const auto token = ctx.peek();
+        if (const auto it = mapping.find(token.type); it != mapping.end()) {
+            ctx.consume(1);
+            return it->second;
         }
+        return std::nullopt;
     }
 };
 

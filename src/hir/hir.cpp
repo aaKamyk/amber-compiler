@@ -285,12 +285,24 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
     };
 
     auto atom = ensure_atom(last_expr);
-    std::map<ast::UnaryOperator, UnaryOperator> unary_operators = {
+    std::map<ast::UnaryOperator, UnaryOperator> arithmetic_operators = {
         {ast::UnaryOperator::MINUS, UnaryOperator::MINUS},
     };
-    if (const auto it = unary_operators.find(unary_expression->op);
-        it != unary_operators.end()) {
+    std::map<ast::UnaryOperator, ComparisonOperator> logical_operators = {
+        {ast::UnaryOperator::NOT, ComparisonOperator::NOT_EQUAL},
+    };
+    if (const auto it = arithmetic_operators.find(unary_expression->op);
+        it != arithmetic_operators.end()) {
         auto result = std::make_unique<UnaryExpression>(it->second, std::move(atom));
+        m_active_expressions.emplace_back(std::move(result));
+        return;
+    }
+    if (const auto it = logical_operators.find(unary_expression->op);
+        it != logical_operators.end()) {
+        auto zero_lit = std::make_unique<AtomIntegerLiteral>(0);
+        auto result = std::make_unique<ComparisonExpression>(
+            it->second, std::move(atom), std::move(zero_lit)
+        );
         m_active_expressions.emplace_back(std::move(result));
     }
 }

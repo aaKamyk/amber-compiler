@@ -18,7 +18,7 @@ enum class BinaryOperator : std::uint8_t {
     GREATER,
     GREATER_EQUAL
 };
-enum class UnaryOperator : std::uint8_t { MINUS };
+enum class UnaryOperator : std::uint8_t { MINUS, NOT };
 }  // namespace ast
 
 namespace hir {

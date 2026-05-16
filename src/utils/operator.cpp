@@ -46,7 +46,7 @@ std::ostream& operator<<(std::ostream& os, const ast::UnaryOperator op) {
     return os << un_op_strings.at(op);
 }
 
-std::ostream& operator<<(std::ostream& os, hir::BinaryOperator op) {
+std::ostream& operator<<(std::ostream& os, const hir::BinaryOperator op) {
     static const std::unordered_map<hir::BinaryOperator, const char*> bin_op_strings = {
         {hir::BinaryOperator::PLUS, "+"},
         {hir::BinaryOperator::MINUS, "-"},
@@ -59,9 +59,9 @@ std::ostream& operator<<(std::ostream& os, hir::BinaryOperator op) {
     return os << bin_op_strings.at(op);
 }
 
-std::ostream& operator<<(std::ostream& os, hir::UnaryOperator op) {
+std::ostream& operator<<(std::ostream& os, const hir::UnaryOperator op) {
     static const std::unordered_map<hir::UnaryOperator, const char*> un_op_strings = {
-        {hir::UnaryOperator::MINUS, "-"}
+        {hir::UnaryOperator::MINUS, "-"},
     };
     if (!un_op_strings.contains(op)) {
         throw std::runtime_error("Unknown unary operator");
@@ -69,10 +69,11 @@ std::ostream& operator<<(std::ostream& os, hir::UnaryOperator op) {
     return os << un_op_strings.at(op);
 }
 
-std::ostream& operator<<(std::ostream& os, hir::ComparisonOperator op) {
+std::ostream& operator<<(std::ostream& os, const hir::ComparisonOperator op) {
     static const std::unordered_map<hir::ComparisonOperator, const char*>
         comp_op_strings = {
             {hir::ComparisonOperator::EQUAL, "=="},
+            {hir::ComparisonOperator::NOT_EQUAL, "!="},
             {hir::ComparisonOperator::GREATER, ">"},
             {hir::ComparisonOperator::GREATER_EQUAL, ">="},
             {hir::ComparisonOperator::LESS, "<"},
