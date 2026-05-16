@@ -466,9 +466,14 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         std::cout << "fn ";
         std::cout << instruction_declaration->name->name;
         std::cout << '(';
-        for (const auto& [type, name] : instruction_declaration->parameters) {
-            std::cout << type << ' ';
-            std::cout << name->name << ", ";
+        if (const auto& params = instruction_declaration->parameters; !params.empty()) {
+            for (const auto& [type, ident] :
+                 params | std::views::take(params.size() - 1)) {
+                std::cout << type << ' ';
+                std::cout << ident->name << ", ";
+            }
+            const auto& [type, ident] = params.back();
+            std::cout << type << ' ' << ident->name;
         }
         std::cout << ") -> ";
         std::cout << instruction_declaration->return_type << '\n';
@@ -476,6 +481,7 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
             if (!dynamic_cast<hir::Label*>(instr.get())) { std::cout << "  "; }
             instr->accept(this);
         }
+        std::cout << '\n';
     }
 
     void visit(hir::BinaryExpression* binary_expression) override {
