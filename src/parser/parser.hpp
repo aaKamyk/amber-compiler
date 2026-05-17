@@ -83,8 +83,8 @@ private:
                 parse_result->line = current_token.line;
                 parse_result->column = current_token.column;
             }
-            if (!m_ctx.syntax_errors().empty() &&
-                m_ctx.syntax_errors().back().token_num < m_current_token) {
+            while (!m_ctx.syntax_errors().empty() &&
+                   m_ctx.syntax_errors().back().token_num < m_current_token) {
                 m_ctx.syntax_errors().pop_back();
             }
             return parse_result;
@@ -237,6 +237,9 @@ struct ast::NodeParser<ast::UnaryOperator> {
 template <>
 struct ast::NodeParser<ast::PrimaryExpression> {
     static std::unique_ptr<PrimaryExpression> parse(Parser& ctx) {
+        if (ctx.match(TokenType::IDENTIFIER)) {
+            if (auto call_expr = ctx.try_parse<CallExpression>()) { return call_expr; }
+        }
         if (auto atom_expr = ctx.try_parse<AtomExpression>()) { return atom_expr; }
         if (ctx.match(TokenType::PAREN_START)) {
             if (auto paren_expr = ctx.try_parse<ParenExpression>()) { return paren_expr; }
@@ -287,6 +290,26 @@ struct ast::NodeParser<ast::UnaryExpression> {
             return nullptr;
         }
         return unary_expr;
+    }
+};
+
+template <>
+struct ast::NodeParser<ast::CallExpression> {
+    static std::unique_ptr<CallExpression> parse(Parser& ctx) {
+        auto call_expr = std::make_unique<CallExpression>();
+        if (!ctx.parse_into<AtomIdentifier>(ctx, call_expr->function)) { return nullptr; }
+        if (!ctx.expect(TokenType::PAREN_START)) { return nullptr; }
+        while (auto arg = ctx.try_parse<Expression>()) {
+            call_expr->arguments.push_back(std::move(arg));
+            if (!ctx.expect(TokenType::COMMA)) { break; }
+            /// closing paren after a comma - invalid
+            if (ctx.match(TokenType::PAREN_END)) {
+                ctx.add_error("Misplaced comma");
+                return nullptr;
+            }
+        }
+        if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
+        return call_expr;
     }
 };
 
@@ -475,7 +498,10 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
 
             if (!ctx.expect(TokenType::COMMA)) { break; }
             // closing parenthesis after a comma - invalid
-            if (!ctx.match(TokenType::PAREN_END)) { return nullptr; }
+            if (ctx.match(TokenType::PAREN_END)) {
+                ctx.add_error("Misplaced comma");
+                return nullptr;
+            }
         }
 
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
@@ -518,30 +544,25 @@ template <>
 struct ast::NodeParser<ast::Statement> {
     static std::unique_ptr<Statement> parse(Parser& ctx) {
         switch (const auto token = ctx.peek(); token.type) {
-            case TokenType::IF: {
-                auto if_statement = ctx.try_parse<IfStatement>();
-                return if_statement;
-            }
-            case TokenType::WHILE: {
-                auto while_statement = ctx.try_parse<WhileStatement>();
-                return while_statement;
-            }
-            case TokenType::RETURN: {
-                auto return_statement = ctx.try_parse<ReturnStatement>();
-                return return_statement;
-            }
-            case TokenType::CURLY_BRACE_START: {
-                auto block_statement = ctx.try_parse<BlockStatement>();
-                return block_statement;
-            }
-            case TokenType::IDENTIFIER: {
-                auto assignment_statement = ctx.try_parse<AssignmentStatement>();
-                return assignment_statement;
-            }
-            default: {
-                auto expression_statement = ctx.try_parse<ExpressionStatement>();
-                return expression_statement;
-            }
+            case TokenType::IF:
+                return ctx.try_parse<IfStatement>();
+
+            case TokenType::WHILE:
+                return ctx.try_parse<WhileStatement>();
+
+            case TokenType::RETURN:
+                return ctx.try_parse<ReturnStatement>();
+
+            case TokenType::CURLY_BRACE_START:
+                return ctx.try_parse<BlockStatement>();
+
+            case TokenType::IDENTIFIER:
+                if (auto assignment_statement = ctx.try_parse<AssignmentStatement>()) {
+                    return assignment_statement;
+                }
+                [[fallthrough]];
+            default:
+                return ctx.try_parse<ExpressionStatement>();
         }
     }
 };

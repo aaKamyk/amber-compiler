@@ -44,3 +44,16 @@ ast::UnaryExpression::UnaryExpression(
 void ast::UnaryExpression::accept(ExpressionVisitor* v) {
     v->visit(this);
 }
+
+ast::CallExpression::CallExpression()
+    : function(nullptr) {}
+
+ast::CallExpression::CallExpression(
+    std::unique_ptr<AtomIdentifier> function,
+    std::vector<std::unique_ptr<Expression>> arguments
+)
+    : function(std::move(function)), arguments(std::move(arguments)) {}
+
+void ast::CallExpression::accept(ExpressionVisitor* v) {
+    v->visit(this);
+}

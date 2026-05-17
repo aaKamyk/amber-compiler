@@ -90,6 +90,13 @@ private:
         print_node(unary_expression->expression, true);
     }
 
+    void visit(CallExpression* call_expression) override {
+        std::cout << "Call expression\n";
+
+        print_node(call_expression->function.get(), false);
+        for (auto& arg : call_expression->arguments) { print_node(arg, false); }
+    }
+
     void visit(VariableDeclaration* var) override {
         std::cout << "Variable\n";
 

@@ -51,6 +51,7 @@ private:
     void visit(ast::ParenExpression* paren_expression) override;
     void visit(ast::BinaryExpression* binary_expression) override;
     void visit(ast::UnaryExpression* unary_expression) override;
+    void visit(ast::CallExpression* call_expression) override;
 
     std::unique_ptr<AtomIdentifier> create_temporary_identifier(const std::string& name);
     std::unique_ptr<AtomIdentifier> create_temporary_declaration(const std::string& name);
