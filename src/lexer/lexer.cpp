@@ -182,54 +182,6 @@ std::vector<Token> lxr::Lexer::lex() {
     return std::move(m_tokens);
 }
 
-void lxr::Lexer::pretty_print_tokens(const std::vector<Token>& tokens) {
-    static const std::map<TokenType, const char*> token_strings = {
-        {TokenType::TOKEN_EOF, "EOF"},
-        {TokenType::NONE, "none"},
-        {TokenType::IF, "if"},
-        {TokenType::ELSE, "else"},
-        {TokenType::WHILE, "while"},
-        {TokenType::FN, "fn"},
-        {TokenType::RETURN, "return"},
-        {TokenType::INT, "int"},
-        {TokenType::VOID, "void"},
-        {TokenType::CURLY_BRACE_START, "{"},
-        {TokenType::CURLY_BRACE_END, "}"},
-        {TokenType::PAREN_START, "("},
-        {TokenType::PAREN_END, ")"},
-        {TokenType::SEMICOLON, ";"},
-        {TokenType::COLON, ":"},
-        {TokenType::DOT, "."},
-        {TokenType::COMMA, ","},
-        {TokenType::ARROW, "->"},
-        {TokenType::PLUS, "+"},
-        {TokenType::MINUS, "-"},
-        {TokenType::ASTERISK, "*"},
-        {TokenType::DIVIDE, "/"},
-        {TokenType::EQUALS, "="},
-        {TokenType::EQUALS_EQUALS, "=="},
-        {TokenType::NOT_EQUALS, "!="},
-        {TokenType::GREATER_THAN, ">"},
-        {TokenType::LESS_THAN, "<"},
-        {TokenType::GREATER_EQUAL_THAN, ">="},
-        {TokenType::LESS_EQUAL_THAN, "<="},
-        {TokenType::BIT_AND, "&"},
-        {TokenType::BIT_OR, "|"},
-        {TokenType::BIT_XOR, "^"},
-        {TokenType::BIT_NOT, "~"},
-        {TokenType::LOGICAL_AND, "&&"},
-        {TokenType::LOGICAL_OR, "||"},
-        {TokenType::LOGICAL_NOT, "!"}
-    };
-    for (const auto& token : tokens) {
-        if (token_strings.contains(token.type)) {
-            std::cout << token_strings.at(token.type) << "\n";
-        } else {
-            std::cout << std::get<std::string>(token.data) << "\n";
-        }
-    }
-}
-
 std::string_view lxr::Lexer::PeekBuffer::get_view(const size_t n) {
     if (const size_t chars_left = count - current_pos; n > chars_left) {
         throw std::runtime_error("Attempted to get view past end of buffer");
@@ -238,7 +190,7 @@ std::string_view lxr::Lexer::PeekBuffer::get_view(const size_t n) {
 }
 
 char lxr::Lexer::PeekBuffer::peek(const size_t offset) const {
-    if (const size_t chars_left = count - current_pos; offset > chars_left) {
+    if (const size_t chars_left = count - current_pos; offset >= chars_left) {
         throw std::runtime_error("Attempted to look past the end of buffer");
     }
     return buffer[current_pos + offset];

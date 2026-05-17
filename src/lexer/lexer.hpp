@@ -15,7 +15,6 @@ public:
         : m_input_stream(input), m_ctx(context) {}
 
     std::vector<Token> lex();
-    static void pretty_print_tokens(const std::vector<Token>& tokens);
 
 private:
     struct PeekBuffer {
