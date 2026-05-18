@@ -6,11 +6,12 @@
 ast::Program ast::Parser::parse() {
     Program program{};
     while (peek().type != TokenType::TOKEN_EOF) {
-        if (auto decl = try_parse<Declaration>()) {
-            program.children.emplace_back(std::move(decl));
-            continue;
-        }
-        if (auto statement = try_parse<Statement>()) {
+        if (match_any(TokenType::FN, TokenType::INT)) {
+            if (auto decl = try_parse<Declaration>()) {
+                program.children.emplace_back(std::move(decl));
+                continue;
+            }
+        } else if (auto statement = try_parse<Statement>()) {
             program.children.emplace_back(std::move(statement));
             continue;
         }
@@ -55,7 +56,7 @@ Token ast::Parser::current_token() const {
 }
 
 void ast::Parser::add_error(const std::string& message) {
-    const auto next_token = this->peek(1);
+    const auto next_token = this->peek();
     m_ctx.syntax_errors().emplace_back(
         next_token.line, next_token.column, message, this->m_current_token
     );

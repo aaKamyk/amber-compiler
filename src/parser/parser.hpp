@@ -349,8 +349,13 @@ struct ast::NodeParser<ast::BlockStatement> {
             return nullptr;
         }
         while (true) {
-            if (auto decl = ctx.try_parse<Declaration>()) {
-                block_statement->entries.emplace_back(std::move(decl));
+            /// match declaration starts
+            if (ctx.match_any(TokenType::FN, TokenType::INT)) {
+                if (auto decl = ctx.try_parse<Declaration>()) {
+                    block_statement->entries.emplace_back(std::move(decl));
+                } else {
+                    break;
+                }
             } else if (auto statement = ctx.try_parse<Statement>()) {
                 block_statement->entries.emplace_back(std::move(statement));
             } else {
@@ -459,11 +464,12 @@ struct ast::NodeParser<ast::VariableDeclaration> {
             }
             if (!ctx.expect(TokenType::SEMICOLON)) {
                 const auto next_token = ctx.peek();
-                ctx.add_error("Expected \':\' before " + next_token.to_string());
+                ctx.add_error(R"(Expected : before )" + next_token.to_string());
                 return nullptr;
             }
             return variable_declaration;
         }
+        ctx.add_error(R"(Expected one of '=', ';' after variable declaration)");
         return nullptr;
     }
 };
@@ -499,7 +505,7 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
             if (!ctx.expect(TokenType::COMMA)) { break; }
             // closing parenthesis after a comma - invalid
             if (ctx.match(TokenType::PAREN_END)) {
-                ctx.add_error("Misplaced comma");
+                ctx.add_error("Misplaced comma in parameter list");
                 return nullptr;
             }
         }
