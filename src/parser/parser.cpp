@@ -55,11 +55,20 @@ Token ast::Parser::current_token() const {
     return m_tokens[m_current_token];
 }
 
-void ast::Parser::add_error(const std::string& message) {
-    const auto next_token = this->peek();
-    m_ctx.syntax_errors().emplace_back(
-        next_token.line, next_token.column, message, this->m_current_token
-    );
+void ast::Parser::add_error(std::string message, const bool add_context) {
+    auto& errors = m_ctx.syntax_errors();
+    const auto token = this->peek();
+    if (!errors.empty() && errors.back().token_num == m_current_token) {
+        errors.pop_back();
+    }
+    if (add_context) {
+        if (token.type == TokenType::TOKEN_EOF) {
+            message += " at the end of input";
+        } else {
+            message += " before \'" + token.to_string() + '\'';
+        }
+    }
+    errors.emplace_back(token.line, token.column, message, this->m_current_token);
 }
 
 ast::Program ast::parse(std::vector<Token> tokens, CompilationContext& ctx) {

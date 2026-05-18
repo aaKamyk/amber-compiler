@@ -66,7 +66,7 @@ private:
     [[nodiscard]] Token peek(size_t offset = 0) const;
     [[nodiscard]] Token current_token() const;
 
-    void add_error(const std::string& message);
+    void add_error(std::string message, bool add_context = true);
 
     std::vector<Token> m_tokens;
     size_t m_current_token{};
@@ -154,8 +154,7 @@ struct ast::NodeParser<Type> {
                 ctx.consume(1);
                 return Type::VOID;
             default:
-                const auto next_token = ctx.peek(1);
-                ctx.add_error("Expected type before \'" + next_token.to_string() + '\'');
+                ctx.add_error("Expected type");
                 return std::nullopt;
         }
     }
@@ -165,13 +164,7 @@ template <>
 struct ast::NodeParser<AtomIdentifier> {
     static std::unique_ptr<AtomIdentifier> parse(Parser& ctx) {
         auto token = ctx.peek();
-        if (!ctx.expect(TokenType::IDENTIFIER)) {
-            const auto next_token = ctx.peek(1);
-            ctx.add_error(
-                "Expected identifier before \'" + next_token.to_string() + '\''
-            );
-            return nullptr;
-        }
+        if (!ctx.expect(TokenType::IDENTIFIER)) { return nullptr; }
         return std::make_unique<AtomIdentifier>(
             std::move(std::get<std::string>(token.data))
         );
@@ -188,7 +181,9 @@ struct ast::NodeParser<AtomIntegerLiteral> {
                 std::stol(std::get<std::string>(token.data))
             );
         } catch (const std::out_of_range& _) {
-            ctx.add_error("Invalid integer literal: \'" + token.to_string() + '\'');
+            ctx.add_error(
+                "Invalid integer literal: \'" + token.to_string() + '\'', false
+            );
             return nullptr;
         }
     }
@@ -237,16 +232,18 @@ struct ast::NodeParser<ast::UnaryOperator> {
 template <>
 struct ast::NodeParser<ast::PrimaryExpression> {
     static std::unique_ptr<PrimaryExpression> parse(Parser& ctx) {
-        if (ctx.match(TokenType::IDENTIFIER)) {
+        if (ctx.match(TokenType::IDENTIFIER) && ctx.match(TokenType::PAREN_START, 1)) {
             if (auto call_expr = ctx.try_parse<CallExpression>()) { return call_expr; }
         }
-        if (auto atom_expr = ctx.try_parse<AtomExpression>()) { return atom_expr; }
+        if (ctx.match_any(TokenType::IDENTIFIER, TokenType::INTEGER_LITERAL)) {
+            if (auto atom_expr = ctx.try_parse<AtomExpression>()) { return atom_expr; }
+        }
         if (ctx.match(TokenType::PAREN_START)) {
             if (auto paren_expr = ctx.try_parse<ParenExpression>()) { return paren_expr; }
             return nullptr;
         }
         if (auto unary_expr = ctx.try_parse<UnaryExpression>()) { return unary_expr; }
-        ctx.add_error("Expected primary expression");
+
         return nullptr;
     }
 };
@@ -260,6 +257,7 @@ struct ast::NodeParser<ast::AtomExpression> {
         if (auto int_literal = ctx.try_parse<AtomIntegerLiteral>()) {
             return std::make_unique<AtomExpression>(std::move(int_literal));
         }
+
         return nullptr;
     }
 };
@@ -343,9 +341,7 @@ struct ast::NodeParser<ast::BlockStatement> {
         auto block_statement = std::make_unique<BlockStatement>();
         if (!ctx.expect(TokenType::CURLY_BRACE_START)) {
             const auto next_token = ctx.peek();
-            ctx.add_error(
-                "expected opening brace before \'" + next_token.to_string() + "\'"
-            );
+            ctx.add_error("Expected opening brace");
             return nullptr;
         }
         while (true) {
@@ -376,6 +372,7 @@ struct ast::NodeParser<ast::AssignmentStatement> {
         }
         if (!ctx.expect(TokenType::EQUALS)) { return nullptr; }
         if (!ctx.parse_into<Expression>(ctx, assignment_statement->expression)) {
+            ctx.add_error("Expected expression");
             return nullptr;
         }
         if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
@@ -452,6 +449,7 @@ struct ast::NodeParser<ast::VariableDeclaration> {
         auto variable_declaration = std::make_unique<VariableDeclaration>();
         if (!ctx.parse_into<Type>(ctx, variable_declaration->type)) { return nullptr; }
         if (!ctx.parse_into<AtomIdentifier>(ctx, variable_declaration->name)) {
+            ctx.add_error("Expected identifier");
             return nullptr;
         }
         if (ctx.expect(TokenType::SEMICOLON)) {
@@ -464,12 +462,12 @@ struct ast::NodeParser<ast::VariableDeclaration> {
             }
             if (!ctx.expect(TokenType::SEMICOLON)) {
                 const auto next_token = ctx.peek();
-                ctx.add_error(R"(Expected : before )" + next_token.to_string());
+                ctx.add_error(R"(Expected ';')");
                 return nullptr;
             }
             return variable_declaration;
         }
-        ctx.add_error(R"(Expected one of '=', ';' after variable declaration)");
+        ctx.add_error(R"(Expected one of '=', ';')");
         return nullptr;
     }
 };
@@ -478,8 +476,14 @@ template <>
 struct ast::NodeParser<ast::FunctionArgument> {
     static std::unique_ptr<FunctionArgument> parse(Parser& ctx) {
         auto arg = std::make_unique<FunctionArgument>();
-        if (!ctx.parse_into<Type>(ctx, arg->type)) { return nullptr; }
-        if (!ctx.parse_into<AtomIdentifier>(ctx, arg->name)) { return nullptr; }
+        if (!ctx.parse_into<Type>(ctx, arg->type)) {
+            ctx.add_error("Expected type");
+            return nullptr;
+        }
+        if (!ctx.parse_into<AtomIdentifier>(ctx, arg->name)) {
+            ctx.add_error("Expected identifier");
+            return nullptr;
+        }
         return arg;
     }
 };
@@ -490,6 +494,7 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
         auto func_declaration = std::make_unique<FunctionDeclaration>();
         if (!ctx.expect(TokenType::FN)) { return nullptr; }
         if (!ctx.parse_into<AtomIdentifier>(ctx, func_declaration->name)) {
+            ctx.add_error("Expected identifier");
             return nullptr;
         }
         if (!ctx.expect(TokenType::PAREN_START)) { return nullptr; }
@@ -513,6 +518,7 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
         if (ctx.expect(TokenType::ARROW)) {
             if (!ctx.parse_into<Type>(ctx, func_declaration->return_type)) {
+                ctx.add_error("Expected type");
                 return nullptr;
             }
         } else {
@@ -531,14 +537,12 @@ template <>
 struct ast::NodeParser<ast::Declaration> {
     static std::unique_ptr<Declaration> parse(Parser& ctx) {
         switch (const auto token = ctx.peek(); token.type) {
-            case TokenType::FN: {
-                auto func_declaration = ctx.try_parse<FunctionDeclaration>();
-                return func_declaration;
-            }
-            case TokenType::INT: {
-                auto variable_decl = ctx.try_parse<VariableDeclaration>();
-                return variable_decl;
-            }
+            case TokenType::FN:
+                return ctx.try_parse<FunctionDeclaration>();
+
+            case TokenType::INT:
+                return ctx.try_parse<VariableDeclaration>();
+
             default: {
                 return nullptr;
             }
@@ -562,11 +566,11 @@ struct ast::NodeParser<ast::Statement> {
             case TokenType::CURLY_BRACE_START:
                 return ctx.try_parse<BlockStatement>();
 
-            case TokenType::IDENTIFIER:
-                if (auto assignment_statement = ctx.try_parse<AssignmentStatement>()) {
-                    return assignment_statement;
+            case TokenType::IDENTIFIER: {
+                if (ctx.match(TokenType::EQUALS, 1)) {
+                    return ctx.try_parse<AssignmentStatement>();
                 }
-                [[fallthrough]];
+            }
             default:
                 return ctx.try_parse<ExpressionStatement>();
         }
