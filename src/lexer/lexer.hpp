@@ -38,6 +38,7 @@ private:
         const TokenData& data = std::monostate{}
     );
     int peek(size_t offset = 0);
+    void consume(size_t n = 1);
 
     [[nodiscard]] size_t get_digit_len() const;
     [[nodiscard]] size_t get_whitespace_len() const;

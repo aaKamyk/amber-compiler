@@ -14,18 +14,18 @@ std::vector<Token> lxr::Lexer::lex() {
                 return std::move(m_tokens);
             }
             case '\r': {
+                this->consume();
+                if (this->peek() == '\n') { this->consume(); }
                 m_column = 0;
                 m_line++;
-                m_buffer.consume(1);
-                if (this->peek() == '\n') { m_buffer.consume(1); }
-                m_ctx.new_line(m_buffer.consumed + 1);
+                m_ctx.new_line(m_buffer.consumed);
                 break;
             }
             case '\n': {
+                this->consume();
                 m_column = 0;
                 m_line++;
-                m_buffer.consume(1);
-                m_ctx.new_line(m_buffer.consumed + 1);
+                m_ctx.new_line(m_buffer.consumed);
                 break;
             }
             // --- simple braces & punctuation ---
@@ -80,9 +80,9 @@ std::vector<Token> lxr::Lexer::lex() {
             }
             case '/': {
                 if (peek(1) == '/') {
-                    m_buffer.consume(2);
+                    this->consume(2);
                     const auto comment_len = get_comment_len();
-                    m_buffer.consume(comment_len);
+                    this->consume(comment_len);
                     break;
                 }
                 emit_token(TokenType::DIVIDE);
@@ -170,11 +170,11 @@ std::vector<Token> lxr::Lexer::lex() {
                 }
                 if (is_whitespace_char(cur)) {
                     const auto whitespace_len = get_whitespace_len();
-                    m_buffer.consume(whitespace_len);
+                    this->consume(whitespace_len);
                     break;
                 }
                 std::cerr << "Encountered unknown lexeme\n";
-                m_buffer.consume(1);
+                this->consume(1);
                 break;
             }
         }
@@ -220,11 +220,9 @@ void lxr::Lexer::emit_token(
 ) {
     m_tokens.emplace_back(data, type, m_line, m_column);
     if (size.has_value()) {
-        m_column += *size;
-        m_buffer.consume(*size);
+        this->consume(*size);
     } else {
-        m_column += 1;
-        m_buffer.consume(1);
+        this->consume();
     }
 }
 
@@ -234,6 +232,10 @@ int lxr::Lexer::peek(const size_t offset) {
         if (m_buffer.empty) { return EOF; }
     }
     return static_cast<unsigned char>(m_buffer.peek(offset));
+}
+void lxr::Lexer::consume(const size_t n) {
+    this->m_column += static_cast<int>(n);
+    m_buffer.consume(n);
 }
 
 size_t lxr::Lexer::get_digit_len() const {
