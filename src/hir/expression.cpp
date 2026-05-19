@@ -33,3 +33,11 @@ hir::ComparisonExpression::ComparisonExpression(
 void hir::ComparisonExpression::accept(ExpressionVisitor* v) {
     v->visit(this);
 }
+hir::CallExpression::CallExpression(
+    std::vector<std::unique_ptr<Atom>> arguments, std::unique_ptr<AtomIdentifier> callee
+)
+    : arguments(std::move(arguments)), callee(std::move(callee)) {}
+
+void hir::CallExpression::accept(ExpressionVisitor* v) {
+    v->visit(this);
+}

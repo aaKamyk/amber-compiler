@@ -66,18 +66,6 @@ struct InstructionBranchConditional final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
-struct InstructionCall final : Instruction {
-    std::vector<std::unique_ptr<Atom>> arguments{};
-    std::unique_ptr<AtomIdentifier> callee{nullptr};
-
-    explicit InstructionCall() = default;
-    explicit InstructionCall(
-        std::vector<std::unique_ptr<Atom>> arguments,
-        std::unique_ptr<AtomIdentifier> function_name
-    );
-    void accept(InstructionVisitor*) override;
-};
-
 struct InstructionDeclaration : Instruction {};
 
 struct InstructionVariableDeclaration final : InstructionDeclaration {
@@ -113,7 +101,6 @@ public:
     virtual void visit(InstructionReturn*) = 0;
     virtual void visit(InstructionBranch*) = 0;
     virtual void visit(InstructionBranchConditional*) = 0;
-    virtual void visit(InstructionCall*) = 0;
 
     virtual void visit(InstructionVariableDeclaration*) = 0;
     virtual void visit(InstructionFunctionDeclaration*) = 0;

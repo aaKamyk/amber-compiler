@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "utils/atom.hpp"
 #include "utils/operator.hpp"
@@ -50,12 +51,25 @@ struct ComparisonExpression final : Expression {
     void accept(ExpressionVisitor* v) override;
 };
 
+struct CallExpression final : Expression {
+    std::vector<std::unique_ptr<Atom>> arguments{};
+    std::unique_ptr<AtomIdentifier> callee{nullptr};
+
+    CallExpression() = default;
+    CallExpression(
+        std::vector<std::unique_ptr<Atom>> arguments,
+        std::unique_ptr<AtomIdentifier> callee
+    );
+    void accept(ExpressionVisitor* v) override;
+};
+
 class ExpressionVisitor {
 public:
     virtual void visit(BinaryExpression*) = 0;
     virtual void visit(UnaryExpression*) = 0;
     virtual void visit(ComparisonExpression*) = 0;
     virtual void visit(TerminalExpression*) = 0;
+    virtual void visit(CallExpression*) = 0;
 
     virtual ~ExpressionVisitor() = default;
 };

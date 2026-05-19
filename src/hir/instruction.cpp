@@ -30,16 +30,6 @@ void hir::InstructionBranch::accept(InstructionVisitor* v) {
     v->visit(this);
 }
 
-hir::InstructionCall::InstructionCall(
-    std::vector<std::unique_ptr<Atom>> arguments,
-    std::unique_ptr<AtomIdentifier> function_name
-)
-    : arguments(std::move(arguments)), callee(std::move(function_name)) {}
-
-void hir::InstructionCall::accept(InstructionVisitor* v) {
-    v->visit(this);
-}
-
 hir::InstructionBranchConditional::InstructionBranchConditional(
     std::unique_ptr<ComparisonExpression> condition,
     std::unique_ptr<AtomIdentifier> true_case, std::unique_ptr<AtomIdentifier> false_case

@@ -61,9 +61,23 @@ void hir::Hir::visit(ast::AssignmentStatement* assignment_statement) {
 }
 
 void hir::Hir::visit(ast::ReturnStatement* return_statement) {
+    auto ensure_atom = [this](std::unique_ptr<Expression>& e) -> std::unique_ptr<Atom> {
+        if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
+            return std::move(terminal->value);
+        }
+        auto temp = this->create_temporary_identifier("v");
+        auto assignment =
+            std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
+        this->append_to_active_func(std::move(assignment));
+        return temp;
+    };
+
     this->translate(std::move(return_statement->expression));
-    auto return_instruction =
-        std::make_unique<InstructionReturn>(this->get_last_expression());
+    auto last_expr = this->get_last_expression();
+    auto atom = ensure_atom(last_expr);
+    auto return_instruction = std::make_unique<InstructionReturn>(
+        std::make_unique<TerminalExpression>(std::move(atom))
+    );
     this->append_to_active_func(std::move(return_instruction));
 }
 
@@ -324,15 +338,15 @@ void hir::Hir::visit(ast::CallExpression* call_expression) {
         return temp;
     };
 
-    auto call_instruction = std::make_unique<InstructionCall>();
-    call_instruction->callee = std::move(call_expression->function);
+    auto call_expr = std::make_unique<CallExpression>();
+    call_expr->callee = std::move(call_expression->function);
     for (auto& arg : call_expression->arguments) {
         this->translate(std::move(arg));
         auto last_expr = this->get_last_expression();
         auto atom = ensure_atom(last_expr);
-        call_instruction->arguments.emplace_back(std::move(atom));
+        call_expr->arguments.emplace_back(std::move(atom));
     }
-    this->append_to_active_func(std::move(call_instruction));
+    m_active_expressions.emplace_back(std::move(call_expr));
 }
 
 std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_identifier(
@@ -480,20 +494,6 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         std::cout << instruction_branch_conditional->false_case->name << ";\n";
     }
 
-    void visit(hir::InstructionCall* instruction_call) override {
-        std::cout << "call ";
-        std::cout << instruction_call->callee->name << ' ';
-        if (const auto& args = instruction_call->arguments; !args.empty()) {
-            for (const auto& arg : args | std::views::take(args.size() - 1)) {
-                print(arg.get());
-                std::cout << ", ";
-            }
-            const auto& arg = args.back();
-            print(arg.get());
-        }
-        std::cout << '\n';
-    }
-
     void visit(hir::InstructionVariableDeclaration* instruction_declaration) override {
         std::cout << instruction_declaration->type << ' ';
         std::cout << instruction_declaration->identifier->name << ";\n";
@@ -536,6 +536,15 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         print(comparison_expression->left.get());
         std::cout << ' ' << comparison_expression->op << ' ';
         print(comparison_expression->right.get());
+    }
+
+    void visit(hir::CallExpression* call_expression) override {
+        std::cout << "call ";
+        print(call_expression->callee.get());
+        for (const auto& arg : call_expression->arguments) {
+            std::cout << ' ';
+            print(arg.get());
+        }
     }
 
     void visit(hir::TerminalExpression* terminal_expression) override {
