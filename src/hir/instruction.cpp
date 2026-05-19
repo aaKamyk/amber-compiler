@@ -6,6 +6,12 @@ hir::Label::Label(std::unique_ptr<AtomIdentifier> identifier)
 void hir::Label::accept(InstructionVisitor* v) {
     v->visit(this);
 }
+hir::InstructionDiscard::InstructionDiscard(std::unique_ptr<Expression> expression)
+    : expression(std::move(expression)) {}
+
+void hir::InstructionDiscard::accept(InstructionVisitor* v) {
+    v->visit(this);
+}
 
 hir::InstructionAssignment::InstructionAssignment(
     std::unique_ptr<AtomIdentifier> identifier, std::unique_ptr<Expression> value

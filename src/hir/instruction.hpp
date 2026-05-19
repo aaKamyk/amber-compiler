@@ -28,6 +28,13 @@ struct Label final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
+struct InstructionDiscard final : Instruction {
+    std::unique_ptr<Expression> expression{nullptr};
+
+    explicit InstructionDiscard(std::unique_ptr<Expression> expression);
+    void accept(InstructionVisitor*) override;
+};
+
 struct InstructionAssignment final : Instruction {
     std::unique_ptr<AtomIdentifier> identifier{nullptr};
     std::unique_ptr<Expression> value{nullptr};
@@ -97,6 +104,7 @@ class InstructionVisitor {
 public:
     virtual void visit(Label*) = 0;
 
+    virtual void visit(InstructionDiscard*) = 0;
     virtual void visit(InstructionAssignment*) = 0;
     virtual void visit(InstructionReturn*) = 0;
     virtual void visit(InstructionBranch*) = 0;

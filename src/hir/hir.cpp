@@ -176,8 +176,14 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
 }
 
 void hir::Hir::visit(ast::ExpressionStatement* expression_statement) {
-    /// TODO unused result of expression unless doesnt have nodiscard
     this->translate(std::move(expression_statement->expression));
+    auto expr = this->get_last_expression();
+    if (dynamic_cast<CallExpression*>(expr.get())) {
+        auto discard = std::make_unique<InstructionDiscard>(std::move(expr));
+        this->append_to_active_func(std::move(discard));
+        return;
+    }
+    /// TODO emit unused result of expression warning
 }
 
 void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
@@ -352,6 +358,7 @@ void hir::Hir::visit(ast::CallExpression* call_expression) {
 std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_identifier(
     const std::string& name
 ) {
+    if (name == "_") { return std::make_unique<AtomIdentifier>(name); }
     const uint64_t count = m_temporary_counts[name]++;
     std::string real_name = "__" + name + std::to_string(count);
     return std::make_unique<AtomIdentifier>(std::move(real_name));
@@ -466,6 +473,11 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
 
     void visit(hir::Label* label) override {
         std::cout << label->identifier->name << ":\n";
+    };
+
+    void visit(hir::InstructionDiscard* instruction_discard) override {
+        instruction_discard->expression->accept(this);
+        std::cout << ";\n";
     };
 
     void visit(hir::InstructionAssignment* instruction_assignment) override {
