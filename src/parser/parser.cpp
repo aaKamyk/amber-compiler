@@ -3,6 +3,8 @@
 #include <format>
 #include <iostream>
 
+#include "pass.hpp"
+
 ast::Program ast::Parser::parse() {
     Program program{};
     while (peek().type != TokenType::TOKEN_EOF) {
@@ -12,7 +14,7 @@ ast::Program ast::Parser::parse() {
                 continue;
             }
         } else if (auto statement = try_parse<Statement>()) {
-            program.children.emplace_back(std::move(statement));
+            /// TODO Statements not allowed at global scope
             continue;
         }
         m_successfully_parsed = false;
@@ -74,7 +76,11 @@ void ast::Parser::add_error(std::string message, const bool add_context) {
 ast::Program ast::parse(std::vector<Token> tokens, CompilationContext& ctx) {
     Parser parser(std::move(tokens), ctx);
     auto program = parser.parse();
-    if (parser.was_successful()) { return program; }
-    for (const auto& error : parser.get_errors()) { error.print(&ctx); }
+    if (!parser.was_successful()) {
+        for (const auto& error : parser.get_errors()) { error.print(&ctx); }
+    }
+    /// run constant fold pass
+    ConstantFold constant_fold(std::move(program));
+    program = constant_fold.run();
     return program;
 }

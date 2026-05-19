@@ -89,7 +89,11 @@ struct FunctionDeclaration final : Declaration {
 };
 
 struct Program {
-    std::vector<std::unique_ptr<Node>> children{};
+    Program(Program&&) = default;
+    Program() = default;
+    Program& operator=(Program&&) = default;
+
+    std::vector<std::unique_ptr<Declaration>> children{};
 };
 
 class NodeVisitor {
