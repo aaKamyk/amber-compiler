@@ -4,7 +4,7 @@
 #include <iosfwd>
 
 enum class Type : std::uint8_t {
-    INT,
+    I32,
     VOID,
 };
 

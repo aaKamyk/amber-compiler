@@ -15,7 +15,7 @@ enum class TokenType : uint8_t {
     FN,
     RETURN,
     // --- Types ---
-    INT,
+    I32,
     VOID,
     // --- identifiers & literals ---
     IDENTIFIER,

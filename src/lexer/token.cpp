@@ -15,7 +15,7 @@ std::string Token::to_string() const {
         {TokenType::FN, "fn"},
         {TokenType::RETURN, "return"},
         // --- Types ---
-        {TokenType::INT, "int"},
+        {TokenType::I32, "int"},
         {TokenType::VOID, "void"},
         // --- braces & punctuation ---
         {TokenType::CURLY_BRACE_START, "{"},

@@ -374,7 +374,7 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_declaration(
     );
     this->current_scope().set(nid, sid);
     auto temp_decl =
-        std::make_unique<InstructionVariableDeclaration>(Type::INT, atom->clone());
+        std::make_unique<InstructionVariableDeclaration>(Type::I32, atom->clone());
     this->append_to_active_func(std::move(temp_decl));
     return atom;
 }

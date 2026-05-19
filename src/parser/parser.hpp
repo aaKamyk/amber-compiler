@@ -147,9 +147,9 @@ struct ast::NodeParser<Type> {
     static std::optional<Type> parse(Parser& ctx) {
         /// TODO make this expandable
         switch (const auto token = ctx.peek(); token.type) {
-            case TokenType::INT:
+            case TokenType::I32:
                 ctx.consume(1);
-                return Type::INT;
+                return Type::I32;
             case TokenType::VOID:
                 ctx.consume(1);
                 return Type::VOID;
@@ -346,7 +346,7 @@ struct ast::NodeParser<ast::BlockStatement> {
         }
         while (true) {
             /// match declaration starts
-            if (ctx.match_any(TokenType::FN, TokenType::INT)) {
+            if (ctx.match_any(TokenType::FN, TokenType::I32)) {
                 if (auto decl = ctx.try_parse<Declaration>()) {
                     block_statement->entries.emplace_back(std::move(decl));
                 } else {
@@ -540,7 +540,7 @@ struct ast::NodeParser<ast::Declaration> {
             case TokenType::FN:
                 return ctx.try_parse<FunctionDeclaration>();
 
-            case TokenType::INT:
+            case TokenType::I32:
                 return ctx.try_parse<VariableDeclaration>();
 
             default: {
