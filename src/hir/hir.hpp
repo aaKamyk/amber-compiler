@@ -54,7 +54,9 @@ private:
     void visit(ast::CallExpression* call_expression) override;
 
     std::unique_ptr<AtomIdentifier> create_temporary_identifier(const std::string& name);
-    std::unique_ptr<AtomIdentifier> create_temporary_declaration(const std::string& name);
+    std::unique_ptr<AtomIdentifier> create_temporary_declaration(
+        const std::string& name, Type type
+    );
     std::unique_ptr<AtomIdentifier> create_temporary_label(const std::string& name);
     std::optional<uint64_t> resolve_scope(const AtomIdentifier* atom) const;
     const Scope& current_scope() const;

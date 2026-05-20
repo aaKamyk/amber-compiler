@@ -98,7 +98,8 @@ void hir::Hir::visit(ast::IfStatement* if_statement) {
                     dynamic_cast<TerminalExpression*>(condition_expression.get())) {
                 return std::move(terminal_expr->value);
             }
-            auto cond_var = this->create_temporary_declaration("cond");
+            /// TODO change the type of the variable
+            auto cond_var = this->create_temporary_declaration("cond", Type::I32);
             auto instr_assign = std::make_unique<InstructionAssignment>(
                 cond_var->clone(), std::move(condition_expression)
             );
@@ -166,7 +167,8 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
                     dynamic_cast<TerminalExpression*>(condition_expression.get())) {
                 return std::move(terminal_expr->value);
             }
-            auto cond_var = this->create_temporary_declaration("cond");
+            /// TODO change the default type
+            auto cond_var = this->create_temporary_declaration("cond", Type::I32);
             auto instr_assign = std::make_unique<InstructionAssignment>(
                 cond_var->clone(), std::move(condition_expression)
             );
@@ -376,16 +378,16 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_identifier(
 }
 
 std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_declaration(
-    const std::string& name
+    const std::string& name, const Type type
 ) {
     auto atom = this->create_temporary_identifier(name);
     const auto nid = m_symbol_table.add_name(atom->name);
     const auto sid = m_symbol_table.add_symbol(
-        {.type = Type::VOID, .nid = nid, .depth = this->current_scope().depth}
+        {.type = type, .nid = nid, .depth = this->current_scope().depth}
     );
     this->current_scope().set(nid, sid);
     auto temp_decl =
-        std::make_unique<InstructionVariableDeclaration>(Type::I32, atom->clone());
+        std::make_unique<InstructionVariableDeclaration>(Type::I32, atom->clone(), true);
     this->append_to_active_func(std::move(temp_decl));
     return atom;
 }
@@ -451,7 +453,8 @@ void hir::Hir::append_to_program(std::unique_ptr<InstructionFunctionDeclaration>
 void hir::Hir::append_global_init_to_program() {
     auto ident = std::make_unique<AtomIdentifier>("global_init");
     auto global_init = std::make_unique<InstructionFunctionDeclaration>(
-        Type::VOID, std::move(ident), std::vector<Argument>{}, std::move(m_global_init)
+        Type::VOID, std::move(ident), std::vector<FunctionArgument>{},
+        std::move(m_global_init)
     );
     this->append_to_program(std::move(global_init));
 }
