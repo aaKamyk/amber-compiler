@@ -15,7 +15,7 @@ struct AtomIdentifier final : Atom {
 };
 
 struct AtomIntegerLiteral final : Atom {
-    uint64_t value;
+    int64_t value;
 
     explicit AtomIntegerLiteral(uint64_t value);
     [[nodiscard]] std::unique_ptr<AtomIntegerLiteral> clone() const;
