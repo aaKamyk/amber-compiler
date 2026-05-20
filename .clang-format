@@ -4,7 +4,7 @@ BasedOnStyle: Google
 IndentWidth: 4
 AccessModifierOffset: -4
 AllowShortFunctionsOnASingleLine: Inline
-ColumnLimit: 100
+ColumnLimit: 90
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: false

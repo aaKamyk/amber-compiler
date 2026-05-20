@@ -3,6 +3,7 @@ Checks: >
   -*
   modernize-*,
   readability-*,
+  -readability-identifier-length
   performance-*
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
