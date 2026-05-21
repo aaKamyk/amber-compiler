@@ -50,6 +50,7 @@ struct WhileStatement final : Statement {
     void accept(NodeVisitor*) override;
 };
 
+/// expression is set to nullptr if returning void;
 struct ReturnStatement final : Statement {
     std::unique_ptr<Expression> expression{nullptr};
 

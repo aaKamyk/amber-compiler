@@ -18,7 +18,7 @@ void ast::ConstantFold::visit(AssignmentStatement* assignment_statement) {
 }
 
 void ast::ConstantFold::visit(ReturnStatement* return_statement) {
-    this->pass(return_statement->expression);
+    if (return_statement->expression) { this->pass(return_statement->expression); }
 }
 
 void ast::ConstantFold::visit(IfStatement* if_statement) {

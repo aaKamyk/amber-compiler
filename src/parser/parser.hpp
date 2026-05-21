@@ -423,9 +423,7 @@ struct ast::NodeParser<ast::ReturnStatement> {
     static std::unique_ptr<ReturnStatement> parse(Parser& ctx) {
         auto return_statement = std::make_unique<ReturnStatement>();
         if (!ctx.expect(TokenType::RETURN)) { return nullptr; }
-        if (!ctx.parse_into<Expression>(ctx, return_statement->expression)) {
-            return nullptr;
-        }
+        ctx.parse_into<Expression>(ctx, return_statement->expression);
         if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
         return return_statement;
     }

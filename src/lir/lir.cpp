@@ -45,8 +45,13 @@ void lir::Lir::visit(hir::InstructionAssignment* instruction_assignment) {
 void lir::Lir::visit(hir::InstructionReturn* instruction_return) {
     auto instruction = std::make_unique<ReturnInstruction>();
 
-    instruction->type = Type::I32;
-    instruction->value = this->ensure_value(std::move(instruction_return->value->value));
+    if (instruction_return->value) {
+        instruction->type = Type::I32;
+        instruction->value =
+            this->ensure_value(std::move(instruction_return->value->value));
+    } else {
+        instruction->type = Type::VOID;
+    }
     this->get_active_func()->current_block().add(std::move(instruction));
 }
 

@@ -72,13 +72,18 @@ void hir::Hir::visit(ast::ReturnStatement* return_statement) {
         return temp;
     };
 
-    this->translate(std::move(return_statement->expression));
-    auto last_expr = this->get_last_expression();
-    auto atom = ensure_atom(last_expr);
-    auto return_instruction = std::make_unique<InstructionReturn>(
-        std::make_unique<TerminalExpression>(std::move(atom))
-    );
-    this->append_to_active_func(std::move(return_instruction));
+    if (return_statement->expression) {
+        this->translate(std::move(return_statement->expression));
+        auto last_expr = this->get_last_expression();
+        auto atom = ensure_atom(last_expr);
+        auto return_instruction = std::make_unique<InstructionReturn>(
+            std::make_unique<TerminalExpression>(std::move(atom))
+        );
+        this->append_to_active_func(std::move(return_instruction));
+    } else {
+        auto return_instruction = std::make_unique<InstructionReturn>(nullptr);
+        this->append_to_active_func(std::move(return_instruction));
+    }
 }
 
 void hir::Hir::visit(ast::IfStatement* if_statement) {
@@ -502,7 +507,11 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
 
     void visit(hir::InstructionReturn* instruction_return) override {
         std::cout << "return ";
-        instruction_return->value->accept(this);
+        if (instruction_return->value) {
+            instruction_return->value->accept(this);
+        } else {
+            std::cout << "void";
+        }
         std::cout << ";\n";
     }
 
@@ -600,6 +609,7 @@ hir::Program hir::translate(ast::Program program, CompilationContext& ctx) {
 }
 
 void hir::print_program(const Program& program) {
+    std::cout << "========== HIR ==========\n";
     HirPrinter printer{};
     printer.print(program);
 }

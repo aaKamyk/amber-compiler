@@ -77,6 +77,9 @@ struct BinaryBitwiseInstruction final : BinaryInstruction {
 
 struct TerminatorInstruction : Instruction {};
 
+/// value is set to nullptr if return type is void \n
+/// @code ret i32 %x @endcode \n
+/// @code ret void
 struct ReturnInstruction final : TerminatorInstruction {
     std::unique_ptr<Atom> value;
     Type type;

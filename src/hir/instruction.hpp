@@ -45,6 +45,7 @@ struct InstructionAssignment final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
+/// value is set to nullptr if returning void
 struct InstructionReturn final : Instruction {
     std::unique_ptr<TerminalExpression> value{nullptr};
 
