@@ -65,7 +65,7 @@ void hir::Hir::visit(ast::ReturnStatement* return_statement) {
         if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
             return std::move(terminal->value);
         }
-        auto temp = this->create_temporary_identifier("v");
+        auto temp = this->create_temporary_declaration("v", Type::I32);
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
         this->append_to_active_func(std::move(assignment));
