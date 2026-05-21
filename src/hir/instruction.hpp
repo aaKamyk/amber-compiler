@@ -46,9 +46,9 @@ struct InstructionAssignment final : Instruction {
 };
 
 struct InstructionReturn final : Instruction {
-    std::unique_ptr<Expression> value{nullptr};
+    std::unique_ptr<TerminalExpression> value{nullptr};
 
-    explicit InstructionReturn(std::unique_ptr<Expression> value);
+    explicit InstructionReturn(std::unique_ptr<TerminalExpression> value);
     void accept(InstructionVisitor*) override;
 };
 

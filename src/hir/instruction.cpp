@@ -22,7 +22,7 @@ void hir::InstructionAssignment::accept(InstructionVisitor* v) {
     v->visit(this);
 }
 
-hir::InstructionReturn::InstructionReturn(std::unique_ptr<Expression> value)
+hir::InstructionReturn::InstructionReturn(std::unique_ptr<TerminalExpression> value)
     : value(std::move(value)) {}
 
 void hir::InstructionReturn::accept(InstructionVisitor* v) {
