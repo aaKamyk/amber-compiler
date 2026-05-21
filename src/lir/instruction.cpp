@@ -31,7 +31,7 @@ void BinaryIntegerInstruction::accept(InstructionVisitor* v) {
     v->visit(this);
 }
 
-void BinaryFloatingInstruction::accept(InstructionVisitor* v) {
+void BinaryFloatingPointInstruction::accept(InstructionVisitor* v) {
     v->visit(this);
 }
 

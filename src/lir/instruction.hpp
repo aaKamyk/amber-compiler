@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "operator.hpp"
 #include "type.hpp"
@@ -15,8 +16,8 @@ struct Instruction {
     virtual ~Instruction() = default;
 };
 
+/// @code %ptr = alloca i32
 struct AllocaInstruction final : Instruction {
-    /// %ptr = alloca i32
     std::unique_ptr<AtomIdentifier> result;
     Type type;
 
@@ -24,8 +25,8 @@ struct AllocaInstruction final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
+/// @code store i32 3, ptr %dest
 struct StoreInstruction final : Instruction {
-    /// store i32 3, ptr %dest
     std::unique_ptr<Atom> value;
     std::unique_ptr<AtomIdentifier> destination;
     Type type;
@@ -33,8 +34,8 @@ struct StoreInstruction final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
+/// @code %result = load i32, ptr %source
 struct LoadInstruction final : Instruction {
-    /// %result = load i32, ptr %source
     std::unique_ptr<AtomIdentifier> result;
     std::unique_ptr<Atom> source;
     Type type;
@@ -61,28 +62,26 @@ struct BinaryInstruction : Instruction {
     std::unique_ptr<AtomIdentifier> result;
     std::unique_ptr<Atom> lhs;
     std::unique_ptr<Atom> rhs;
+    Type operand_type;
 };
 
+/// @code %result = add i32, %lhs, %rhs
 struct BinaryIntegerInstruction final : BinaryInstruction {
-    /// %result = add i32, %lhs, %rhs
     BinaryIntegerOperator op;
-    Type type;
 
     void accept(InstructionVisitor*) override;
 };
 
-struct BinaryFloatingInstruction final : BinaryInstruction {
-    /// %result = fadd float, %lhs, %rhs
-    BinaryFloatingOperator op;
-    Type type;
+/// @code %result = fadd float, %lhs, %rhs
+struct BinaryFloatingPointInstruction final : BinaryInstruction {
+    BinaryFloatingPointOperator op;
 
     void accept(InstructionVisitor*) override;
 };
 
+/// @code %result = and i32, %lhs, %rhs
 struct BinaryBitwiseInstruction final : BinaryInstruction {
-    /// %result = and i32, %lhs, %rhs
     BinaryBitwiseOperator op;
-    Type type;
 
     void accept(InstructionVisitor*) override;
 };
@@ -137,8 +136,10 @@ public:
     virtual void visit(AllocaInstruction*) = 0;
     virtual void visit(StoreInstruction*) = 0;
     virtual void visit(LoadInstruction*) = 0;
+    virtual void visit(CallInstruction*) = 0;
+
     virtual void visit(BinaryIntegerInstruction*) = 0;
-    virtual void visit(BinaryFloatingInstruction*) = 0;
+    virtual void visit(BinaryFloatingPointInstruction*) = 0;
     virtual void visit(BinaryBitwiseInstruction*) = 0;
 
     virtual void visit(IntegerComparisonInstruction*) = 0;
