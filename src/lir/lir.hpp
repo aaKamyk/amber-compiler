@@ -36,18 +36,22 @@ public:
 
     void set_active_func(FunctionDefinition*);
     [[nodiscard]] FunctionDefinition* get_active_func() const;
-    std::unique_ptr<Atom> get_last_value();
     std::unique_ptr<Atom> ensure_value(std::unique_ptr<Atom> at);
-
     static std::unique_ptr<AtomIdentifier> get_temporary_identifier(
         const std::string& name
     );
 
+    void set_last_value(std::unique_ptr<Atom> at);
+    void set_target_value(std::unique_ptr<AtomIdentifier> at);
+    std::unique_ptr<Atom> get_last_value();
+    std::unique_ptr<AtomIdentifier> get_target_value();
+
     hir::Program m_program;
     Program m_lir_program;
     FunctionDefinition* m_active_func;
-    std::unique_ptr<Atom> m_last_value;
     std::map<AtomIdentifier, size_t> m_load_counts;
+    std::unique_ptr<AtomIdentifier> m_target_value{nullptr};
+    std::unique_ptr<Atom> m_last_value{nullptr};
 };
 
 Program translate(hir::Program program, CompilationContext& context);

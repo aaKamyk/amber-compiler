@@ -27,6 +27,13 @@ void FunctionDefinition::append(BasicBlock basic_block) {
     this->blocks.emplace_back(std::make_unique<BasicBlock>(std::move(basic_block)));
 }
 
+void FunctionDefinition::append(std::unique_ptr<Instruction> instruction) const {
+    if (this->empty()) {
+        throw std::runtime_error("Appending instruction with no basic blocks available");
+    }
+    this->current_block().add(std::move(instruction));
+}
+
 BasicBlock& FunctionDefinition::current_block() const {
     return *this->blocks.back();
 }
@@ -36,13 +43,22 @@ bool FunctionDefinition::empty() const {
 }
 
 bool FunctionDefinition::has_variable(const AtomIdentifier& ident) const {
-    return std::ranges::find(this->variables, ident) != this->variables.end();
+    return std::ranges::find_if(this->variables, [&](auto&& var_info) {
+               return var_info.name == ident;
+           }) != this->variables.end();
 }
 
 bool FunctionDefinition::has_argument(const AtomIdentifier& ident) const {
     return std::ranges::find_if(this->arguments, [&](auto&& arg) -> bool {
                return *arg.name == ident;
            }) != this->arguments.end();
+}
+FunctionDefinition::VariableInfo& FunctionDefinition::get_variable(
+    const AtomIdentifier& ident
+) {
+    return *std::ranges::find_if(this->variables, [&](auto&& var_info) {
+        return var_info.name == ident;
+    });
 }
 
 FunctionDeclaration::FunctionDeclaration(const FunctionDefinition& definition)

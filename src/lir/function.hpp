@@ -26,20 +26,35 @@ struct FunctionArgument {
 };
 
 struct FunctionDefinition {
+    struct VariableInfo {
+        enum class Kind {
+            GLOBAL,
+            LOCAL,
+            HIR_TEMPORARY,
+            LIR_TEMPORARY,
+        };
+        AtomIdentifier name;
+        Type type{Type::VOID};
+        Kind kind{Kind::LIR_TEMPORARY};
+    };
+
     std::unique_ptr<AtomIdentifier> name{nullptr};
     Type return_type{Type::VOID};
     std::vector<FunctionArgument> arguments{};
     std::vector<std::unique_ptr<BasicBlock>> blocks{};
-    std::vector<AtomIdentifier> variables{};
+    std::vector<VariableInfo> variables{};
 
     explicit FunctionDefinition() = default;
     explicit FunctionDefinition(std::unique_ptr<AtomIdentifier> name, Type ret_type);
 
-    void append(BasicBlock basic_block);
     BasicBlock& current_block() const;
+    void append(BasicBlock basic_block);
+    void append(std::unique_ptr<Instruction> instruction) const;
+
     bool empty() const;
     bool has_variable(const AtomIdentifier& ident) const;
     bool has_argument(const AtomIdentifier& ident) const;
+    VariableInfo& get_variable(const AtomIdentifier& ident);
 };
 
 struct FunctionDeclaration {
