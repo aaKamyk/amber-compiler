@@ -52,6 +52,7 @@ public:
     std::map<AtomIdentifier, size_t> m_load_counts;
     std::unique_ptr<AtomIdentifier> m_target_value{nullptr};
     std::unique_ptr<Atom> m_last_value{nullptr};
+    bool m_discard_value{false};
 };
 
 Program translate(hir::Program program, CompilationContext& context);

@@ -23,6 +23,9 @@ LoadInstruction::LoadInstruction(
 void LoadInstruction::accept(InstructionVisitor* v) {
     v->visit(this);
 }
+void CallInstruction::accept(InstructionVisitor* v) {
+    v->visit(this);
+}
 
 void BinaryIntegerInstruction::accept(InstructionVisitor* v) {
     v->visit(this);

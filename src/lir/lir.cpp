@@ -27,7 +27,10 @@ void lir::Lir::visit(hir::Label* label) {
     this->get_active_func()->append(std::move(bb));
 }
 
-void lir::Lir::visit(hir::InstructionDiscard*) {}
+void lir::Lir::visit(hir::InstructionDiscard* instruction_discard) {
+    this->m_discard_value = true;
+    instruction_discard->expression->accept(this);
+}
 
 void lir::Lir::visit(hir::InstructionAssignment* instruction_assignment) {
     if (!this->get_active_func()->has_variable(*instruction_assignment->identifier)) {
@@ -113,7 +116,6 @@ void lir::Lir::visit(
     for (auto& argument : args) { function.arguments.emplace_back(std::move(argument)); }
 
     /// construct definition from declaration
-    this->m_lir_program.function_declarations.emplace_back(function);
     this->m_lir_program.functions.emplace_back(std::move(function));
     this->set_active_func(&this->m_lir_program.functions.back());
     for (const auto& instr : instruction_function_declaration->instructions) {
@@ -127,7 +129,7 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
         {hir::BinaryOperator::PLUS, lir::BinaryIntegerOperator::ADD},
         {hir::BinaryOperator::MINUS, lir::BinaryIntegerOperator::SUB},
         {hir::BinaryOperator::TIMES, lir::BinaryIntegerOperator::MUL},
-        {hir::BinaryOperator::DIVIDE, lir::BinaryIntegerOperator::UDIV}
+        {hir::BinaryOperator::DIVIDE, lir::BinaryIntegerOperator::SDIV}
     };
 
     std::unique_ptr<AtomIdentifier> result_ident =
@@ -138,7 +140,7 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
     binary_instruction->result = result_ident->clone();
     binary_instruction->lhs = this->ensure_value(std::move(binary_expression->left));
     binary_instruction->rhs = this->ensure_value(std::move(binary_expression->right));
-    binary_instruction->type = Type::I32;
+    binary_instruction->operand_type = Type::I32;
     binary_instruction->op = mapping.at(binary_expression->op);
 
     this->get_active_func()->current_block().add(std::move(binary_instruction));
@@ -179,7 +181,22 @@ void lir::Lir::visit(hir::TerminalExpression* terminal_expression) {
     this->set_last_value(std::move(terminal_expression->value));
 }
 
-void lir::Lir::visit(hir::CallExpression*) {}
+void lir::Lir::visit(hir::CallExpression* call_expression) {
+    auto call_instruction = std::make_unique<CallInstruction>();
+
+    std::unique_ptr<AtomIdentifier> result_ident =
+        this->m_discard_value  ? nullptr
+        : this->m_target_value ? this->get_target_value()
+                               : this->get_temporary_identifier("t");
+    call_instruction->result = result_ident->clone();
+    call_instruction->callee = std::move(call_expression->callee);
+    call_instruction->arguments = std::move(call_expression->arguments);
+    /// TODO match type to the function type
+    call_instruction->type = Type::I32;
+
+    this->get_active_func()->current_block().add(std::move(call_instruction));
+    if (!this->m_discard_value) { this->set_last_value(std::move(result_ident)); }
+}
 
 void lir::Lir::set_active_func(FunctionDefinition* f) {
     this->m_active_func = f;
@@ -237,9 +254,9 @@ std::unique_ptr<AtomIdentifier> lir::Lir::get_target_value() {
 }
 
 struct LirPrinter final : lir::InstructionVisitor {
-    static void print(const Atom* at) {
+    static void print(const Atom* at, const bool local = true) {
         if (const auto* ident = dynamic_cast<const AtomIdentifier*>(at)) {
-            std::cout << "%" << ident->name;
+            std::cout << (local ? "%" : "@") << ident->name;
         } else if (const auto* lit = dynamic_cast<const AtomIntegerLiteral*>(at)) {
             std::cout << lit->value;
         }
@@ -312,17 +329,35 @@ struct LirPrinter final : lir::InstructionVisitor {
         std::cout << '\n';
     }
 
+    void visit(lir::CallInstruction* call_instruction) override {
+        if (call_instruction->result) {
+            print(call_instruction->result.get());
+            std::cout << " = ";
+        }
+        std::cout << "call " << call_instruction->type << ' ';
+        print(call_instruction->callee.get(), false);
+        std::cout << '(';
+        if (const auto& args = call_instruction->arguments; !args.empty()) {
+            for (const auto& arg : args | std::views::take(args.size() - 1)) {
+                print(arg.get());
+                std::cout << ", ";
+            }
+            print(args.back().get());
+        }
+        std::cout << ")\n";
+    }
+
     void visit(lir::BinaryIntegerInstruction* binary_integer_instruction) override {
         print(binary_integer_instruction->result.get());
         std::cout << " = " << binary_integer_instruction->op;
-        std::cout << ' ' << binary_integer_instruction->type << ' ';
+        std::cout << ' ' << binary_integer_instruction->operand_type << ' ';
         print(binary_integer_instruction->lhs.get());
         std::cout << ", ";
         print(binary_integer_instruction->rhs.get());
         std::cout << '\n';
     }
 
-    void visit(lir::BinaryFloatingInstruction*) override {}
+    void visit(lir::BinaryFloatingPointInstruction*) override {}
     void visit(lir::BinaryBitwiseInstruction*) override {}
 
     void visit(lir::IntegerComparisonInstruction* comparison_instruction) override {

@@ -45,6 +45,18 @@ struct LoadInstruction final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
+/// result is set to nullptr if return value is meant to be ignored \n
+/// @code %result = call i32, @foo(%arg1, %arg2, ...) @endcode \n
+/// @code call void @void_func()
+struct CallInstruction final : Instruction {
+    std::unique_ptr<AtomIdentifier> result{nullptr};
+    std::unique_ptr<AtomIdentifier> callee{nullptr};
+    std::vector<std::unique_ptr<Atom>> arguments;
+    Type type;
+
+    void accept(InstructionVisitor*) override;
+};
+
 struct BinaryInstruction : Instruction {
     std::unique_ptr<AtomIdentifier> result;
     std::unique_ptr<Atom> lhs;
