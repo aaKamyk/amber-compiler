@@ -7,7 +7,4 @@ add_subdirectory(lexer)
 add_subdirectory(parser)
 add_subdirectory(hir)
 add_subdirectory(utils)
-
-target_include_directories(kcp PRIVATE
-        ./
-)
+add_subdirectory(lir)
