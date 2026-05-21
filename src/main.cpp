@@ -2,6 +2,7 @@
 
 #include "hir/hir.hpp"
 #include "lexer/lexer.hpp"
+#include "lir/lir.hpp"
 #include "parser/parser.hpp"
 #include "program_arguments.hpp"
 
@@ -13,8 +14,10 @@ void runCompiler(const int argc, const char** argv) {
     ctx.set_stream(*input);
     auto tokens = lxr::lex(*input, ctx);
     auto ast = ast::parse(std::move(tokens), ctx);
-    const auto hir = hir::translate(std::move(ast), ctx);
+    auto hir = hir::translate(std::move(ast), ctx);
     hir::print_program(hir);
+    const auto lir = lir::translate(std::move(hir), ctx);
+    lir::print_program(lir);
 }
 
 int main(const int argc, const char** argv) {

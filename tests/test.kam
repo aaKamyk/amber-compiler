@@ -1,7 +1,4 @@
-fn main() -> void {
-    int x = 12
-    while (x > 2) {
-        x = x - 1;
-    }
-    return x;
+fn foo(i32 x, i32 y) -> i32 {
+    i32 val = x + y;
+    return 2 * val;
 }
