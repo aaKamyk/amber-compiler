@@ -261,7 +261,7 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
         if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
             return std::move(terminal->value);
         }
-        auto temp = this->create_temporary_identifier("v");
+        auto temp = this->create_temporary_declaration("v", Type::I32);
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
         this->append_to_active_func(std::move(assignment));
@@ -312,7 +312,7 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
         if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
             return std::move(terminal->value);
         }
-        auto temp = this->create_temporary_identifier("v");
+        auto temp = this->create_temporary_declaration("v", Type::I32);
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
         this->append_to_active_func(std::move(assignment));
@@ -350,7 +350,7 @@ void hir::Hir::visit(ast::CallExpression* call_expression) {
         if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
             return std::move(terminal->value);
         }
-        auto temp = this->create_temporary_identifier("v");
+        auto temp = this->create_temporary_declaration("v", Type::I32);
         auto assignment =
             std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
         this->append_to_active_func(std::move(assignment));
