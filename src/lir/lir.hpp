@@ -9,7 +9,8 @@
 namespace lir {
 
 struct Program {
-    std::vector<Function> functions;
+    std::vector<FunctionDeclaration> function_declarations;
+    std::vector<FunctionDefinition> functions;
 };
 
 class Lir final : hir::InstructionVisitor, hir::ExpressionVisitor {
@@ -33,9 +34,10 @@ public:
     void visit(hir::TerminalExpression*) override;
     void visit(hir::CallExpression*) override;
 
-    void set_active_func(Function*);
-    [[nodiscard]] Function* get_active_func() const;
+    void set_active_func(FunctionDefinition*);
+    [[nodiscard]] FunctionDefinition* get_active_func() const;
     std::unique_ptr<Atom> get_last_value();
+    std::unique_ptr<Atom> ensure_value(std::unique_ptr<Atom> at);
 
     static std::unique_ptr<AtomIdentifier> get_temporary_identifier(
         const std::string& name
@@ -43,8 +45,9 @@ public:
 
     hir::Program m_program;
     Program m_lir_program;
-    Function* m_active_func;
+    FunctionDefinition* m_active_func;
     std::unique_ptr<Atom> m_last_value;
+    std::map<AtomIdentifier, size_t> m_load_counts;
 };
 
 Program translate(hir::Program program, CompilationContext& context);
