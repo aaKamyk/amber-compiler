@@ -78,9 +78,10 @@ struct InstructionDeclaration : Instruction {};
 struct InstructionVariableDeclaration final : InstructionDeclaration {
     Type type{};
     std::unique_ptr<AtomIdentifier> identifier{nullptr};
+    const bool is_temporary{false};
 
     explicit InstructionVariableDeclaration(
-        Type type, std::unique_ptr<AtomIdentifier> identifier
+        Type type, std::unique_ptr<AtomIdentifier> identifier, bool is_temporary = false
     );
     void accept(InstructionVisitor*) override;
 };

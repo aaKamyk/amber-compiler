@@ -49,9 +49,9 @@ void hir::InstructionBranchConditional::accept(InstructionVisitor* v) {
 }
 
 hir::InstructionVariableDeclaration::InstructionVariableDeclaration(
-    const Type type, std::unique_ptr<AtomIdentifier> identifier
+    const Type type, std::unique_ptr<AtomIdentifier> identifier, const bool is_temporary
 )
-    : type(type), identifier(std::move(identifier)) {}
+    : type(type), identifier(std::move(identifier)), is_temporary(is_temporary) {}
 
 void hir::InstructionVariableDeclaration::accept(InstructionVisitor* v) {
     v->visit(this);
