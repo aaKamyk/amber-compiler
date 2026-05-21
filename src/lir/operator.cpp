@@ -17,13 +17,13 @@ std::ostream& operator<<(std::ostream& os, const lir::BinaryIntegerOperator& op)
     throw std::invalid_argument("Unknown binary integer operator");
 }
 
-std::ostream& operator<<(std::ostream& os, const lir::BinaryFloatingOperator& op) {
-    static const std::map<lir::BinaryFloatingOperator, const char*> mapping = {
-        {lir::BinaryFloatingOperator::FADD, "fadd"},
-        {lir::BinaryFloatingOperator::FSUB, "fsub"},
-        {lir::BinaryFloatingOperator::FMUL, "fmul"},
-        {lir::BinaryFloatingOperator::FVID, "fdiv"},
-        {lir::BinaryFloatingOperator::FREM, "frem"},
+std::ostream& operator<<(std::ostream& os, const lir::BinaryFloatingPointOperator& op) {
+    static const std::map<lir::BinaryFloatingPointOperator, const char*> mapping = {
+        {lir::BinaryFloatingPointOperator::FADD, "fadd"},
+        {lir::BinaryFloatingPointOperator::FSUB, "fsub"},
+        {lir::BinaryFloatingPointOperator::FMUL, "fmul"},
+        {lir::BinaryFloatingPointOperator::FVID, "fdiv"},
+        {lir::BinaryFloatingPointOperator::FREM, "frem"},
     };
     if (mapping.contains(op)) { return os << mapping.at(op); }
     throw std::invalid_argument("Unknown binary floating point operator");
@@ -40,4 +40,44 @@ std::ostream& operator<<(std::ostream& os, const lir::BinaryBitwiseOperator& op)
     };
     if (mapping.contains(op)) { return os << mapping.at(op); }
     throw std::invalid_argument("Unknown binary bitwise operator");
+}
+
+std::ostream& operator<<(std::ostream& os, const lir::IntegerComparisonOperator& op) {
+    static const std::map<lir::IntegerComparisonOperator, const char*> mapping = {
+        {lir::IntegerComparisonOperator::EQ, "eq"},
+        {lir::IntegerComparisonOperator::NE, "ne"},
+        {lir::IntegerComparisonOperator::UGT, "ugt"},
+        {lir::IntegerComparisonOperator::UGE, "uge"},
+        {lir::IntegerComparisonOperator::ULT, "ult"},
+        {lir::IntegerComparisonOperator::ULE, "ule"},
+        {lir::IntegerComparisonOperator::SGT, "sgt"},
+        {lir::IntegerComparisonOperator::SGE, "sge"},
+        {lir::IntegerComparisonOperator::SLT, "slt"},
+        {lir::IntegerComparisonOperator::SLE, "sle"},
+    };
+    if (mapping.contains(op)) { return os << mapping.at(op); }
+    throw std::invalid_argument("Unknown integer comparison operator");
+}
+
+std::ostream& operator<<(std::ostream& os, const lir::FloatingPointComparisonOperator& op) {
+    static const std::map<lir::FloatingPointComparisonOperator, const char*> mapping = {
+        {lir::FloatingPointComparisonOperator::FALSE, "false"},
+        {lir::FloatingPointComparisonOperator::OEQ, "oeq"},
+        {lir::FloatingPointComparisonOperator::OGT, "ogt"},
+        {lir::FloatingPointComparisonOperator::OGE, "oge"},
+        {lir::FloatingPointComparisonOperator::OLT, "olt"},
+        {lir::FloatingPointComparisonOperator::OLE, "ole"},
+        {lir::FloatingPointComparisonOperator::ONE, "one"},
+        {lir::FloatingPointComparisonOperator::ORD, "ord"},
+        {lir::FloatingPointComparisonOperator::UEQ, "ueq"},
+        {lir::FloatingPointComparisonOperator::UGT, "ugt"},
+        {lir::FloatingPointComparisonOperator::UGE, "uge"},
+        {lir::FloatingPointComparisonOperator::ULT, "ult"},
+        {lir::FloatingPointComparisonOperator::ULE, "ule"},
+        {lir::FloatingPointComparisonOperator::UNE, "une"},
+        {lir::FloatingPointComparisonOperator::UNO, "uno"},
+        {lir::FloatingPointComparisonOperator::TRUE, "true"},
+    };
+    if (mapping.contains(op)) { return os << mapping.at(op); }
+    throw std::invalid_argument("Unknown integer comparison operator");
 }

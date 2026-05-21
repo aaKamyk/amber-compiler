@@ -36,7 +36,19 @@ void BinaryBitwiseInstruction::accept(InstructionVisitor* v) {
     v->visit(this);
 }
 
+void IntegerComparisonInstruction::accept(InstructionVisitor* v) {
+    v->visit(this);
+}
+
+void FloatingPointComparisonInstruction::accept(InstructionVisitor* v) {
+    v->visit(this);
+}
+
 void ReturnInstruction::accept(InstructionVisitor* v) {
+    v->visit(this);
+}
+
+void BranchInstruction::accept(InstructionVisitor* v) {
     v->visit(this);
 }
 

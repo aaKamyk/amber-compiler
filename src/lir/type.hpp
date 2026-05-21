@@ -6,7 +6,16 @@
 
 namespace lir {
 
-enum class Type { I32, VOID };
+enum class Type {
+    // integer types
+    I1,
+    I8,
+    I16,
+    I32,
+    I64,
+    // special
+    VOID
+};
 
 Type type_from(::Type);
 

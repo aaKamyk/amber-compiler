@@ -63,8 +63,23 @@ void lir::Lir::visit(hir::InstructionReturn* instruction_return) {
     this->get_active_func()->current_block().add(std::move(instruction));
 }
 
-void lir::Lir::visit(hir::InstructionBranch* instruction_branch) {}
-void lir::Lir::visit(hir::InstructionBranchConditional* instruction_branch_conditional) {}
+void lir::Lir::visit(hir::InstructionBranch* instruction_branch) {
+    auto instruction = std::make_unique<BranchInstruction>();
+
+    instruction->true_case = std::move(instruction_branch->destination);
+    this->get_active_func()->current_block().add(std::move(instruction));
+}
+
+void lir::Lir::visit(hir::InstructionBranchConditional* instruction_branch_conditional) {
+    auto instruction = std::make_unique<BranchInstruction>();
+
+    instruction_branch_conditional->condition->accept(this);
+    instruction->condition = this->get_last_value();
+    instruction->true_case = std::move(instruction_branch_conditional->true_case);
+    instruction->false_case = std::move(instruction_branch_conditional->false_case);
+
+    this->get_active_func()->current_block().add(std::move(instruction));
+}
 
 void lir::Lir::visit(
     hir::InstructionVariableDeclaration* instruction_variable_declaration
@@ -132,7 +147,33 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
 
 void lir::Lir::visit(hir::UnaryExpression* unary_expression) {}
 
-void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {}
+void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
+    static const std::map<hir::ComparisonOperator, lir::IntegerComparisonOperator>
+        mapping = {
+            {hir::ComparisonOperator::EQUAL, lir::IntegerComparisonOperator::EQ},
+            {hir::ComparisonOperator::NOT_EQUAL, lir::IntegerComparisonOperator::NE},
+            {hir::ComparisonOperator::GREATER, lir::IntegerComparisonOperator::SGT},
+            {hir::ComparisonOperator::GREATER_EQUAL, lir::IntegerComparisonOperator::SGE},
+            {hir::ComparisonOperator::LESS, lir::IntegerComparisonOperator::SLT},
+            {hir::ComparisonOperator::LESS_EQUAL, lir::IntegerComparisonOperator::SLE}
+        };
+
+    std::unique_ptr<AtomIdentifier> result_ident =
+        this->m_target_value ? this->get_target_value()
+                             : this->get_temporary_identifier("t");
+
+    auto comparison_instruction = std::make_unique<IntegerComparisonInstruction>();
+    comparison_instruction->result = result_ident->clone();
+    comparison_instruction->lhs =
+        this->ensure_value(std::move(comparison_expression->left));
+    comparison_instruction->rhs =
+        this->ensure_value(std::move(comparison_expression->right));
+    comparison_instruction->compared_type = Type::I32;
+    comparison_instruction->op = mapping.at(comparison_expression->op);
+
+    this->get_active_func()->current_block().add(std::move(comparison_instruction));
+    this->set_last_value(std::move(result_ident));
+}
 
 void lir::Lir::visit(hir::TerminalExpression* terminal_expression) {
     this->set_last_value(std::move(terminal_expression->value));
@@ -284,6 +325,25 @@ struct LirPrinter final : lir::InstructionVisitor {
     void visit(lir::BinaryFloatingInstruction*) override {}
     void visit(lir::BinaryBitwiseInstruction*) override {}
 
+    void visit(lir::IntegerComparisonInstruction* comparison_instruction) override {
+        print(comparison_instruction->result.get());
+        std::cout << " = icmp " << comparison_instruction->op << ' '
+                  << comparison_instruction->compared_type << ' ';
+        print(comparison_instruction->lhs.get());
+        std::cout << ", ";
+        print(comparison_instruction->rhs.get());
+        std::cout << '\n';
+    }
+
+    void visit(lir::FloatingPointComparisonInstruction* comparison_instruction) override {
+        std::cout << "fcmp " << comparison_instruction->op << ' '
+                  << comparison_instruction->compared_type << ' ';
+        print(comparison_instruction->lhs.get());
+        std::cout << ", ";
+        print(comparison_instruction->rhs.get());
+        std::cout << '\n';
+    }
+
     void visit(lir::ReturnInstruction* return_instruction) override {
         std::cout << "ret " << return_instruction->type;
         if (return_instruction->type == lir::Type::VOID) {
@@ -294,6 +354,22 @@ struct LirPrinter final : lir::InstructionVisitor {
         print(return_instruction->value.get());
         std::cout << '\n';
     }
+
+    void visit(lir::BranchInstruction* branch_instruction) override {
+        std::cout << "br ";
+        if (branch_instruction->condition) {
+            std::cout << "i1 ";
+            print(branch_instruction->condition.get());
+            std::cout << ", label ";
+            print(branch_instruction->true_case.get());
+            std::cout << ", label ";
+            print(branch_instruction->false_case.get());
+        } else {
+            std::cout << "label ";
+            print(branch_instruction->true_case.get());
+        }
+        std::cout << '\n';
+    }
 };
 
 lir::Program lir::translate(hir::Program program, CompilationContext& context) {
@@ -302,6 +378,7 @@ lir::Program lir::translate(hir::Program program, CompilationContext& context) {
 }
 
 void lir::print_program(const Program& program) {
+    std::cout << "========== LIR ==========\n";
     LirPrinter printer{};
     printer.print(program);
 }
