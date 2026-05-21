@@ -11,7 +11,7 @@ namespace hir {
 
 class InstructionVisitor;
 
-struct Argument {
+struct FunctionArgument {
     Type type;
     std::unique_ptr<AtomIdentifier> name;
 };
@@ -88,13 +88,13 @@ struct InstructionVariableDeclaration final : InstructionDeclaration {
 struct InstructionFunctionDeclaration final : InstructionDeclaration {
     Type return_type{};
     std::unique_ptr<AtomIdentifier> name{nullptr};
-    std::vector<Argument> parameters{};
+    std::vector<FunctionArgument> parameters{};
     std::vector<std::unique_ptr<Instruction>> instructions{};
 
     explicit InstructionFunctionDeclaration() = default;
     explicit InstructionFunctionDeclaration(
         Type return_type, std::unique_ptr<AtomIdentifier> name,
-        std::vector<Argument> parameters,
+        std::vector<FunctionArgument> parameters,
         std::vector<std::unique_ptr<Instruction>> instructions
     );
     void accept(InstructionVisitor*) override;
