@@ -14,9 +14,17 @@ lir::Program lir::Lir::translate() {
 }
 
 void lir::Lir::visit(hir::Label* label) {
+    if (!this->get_active_func()->empty()) {
+        if (auto& last_block = this->get_active_func()->current_block();
+            !last_block.has_terminator()) {
+            auto instruction_branch = std::make_unique<BranchInstruction>();
+            instruction_branch->true_case = label->identifier->clone();
+            last_block.add(std::move(instruction_branch));
+        }
+    }
     BasicBlock bb;
     bb.label = std::move(label->identifier);
-    this->m_active_func->append(std::move(bb));
+    this->get_active_func()->append(std::move(bb));
 }
 
 void lir::Lir::visit(hir::InstructionDiscard*) {}

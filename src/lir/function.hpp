@@ -15,6 +15,9 @@ struct BasicBlock {
     std::vector<std::unique_ptr<Instruction>> instructions;
 
     void add(std::unique_ptr<Instruction> instruction);
+    bool has_terminator() const;
+    bool has_label() const;
+    bool is_valid() const;
 };
 
 struct FunctionArgument {
@@ -63,7 +66,6 @@ struct FunctionDeclaration {
     std::vector<Type> argument_types{};
 
     explicit FunctionDeclaration() = default;
-    explicit FunctionDeclaration(const FunctionDefinition& definition);
 };
 
 struct Module {

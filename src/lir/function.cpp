@@ -9,6 +9,19 @@ void BasicBlock::add(std::unique_ptr<Instruction> instruction) {
     this->instructions.emplace_back(std::move(instruction));
 }
 
+bool BasicBlock::has_terminator() const {
+    if (this->instructions.empty()) return false;
+    return dynamic_cast<const TerminatorInstruction*>(this->instructions.back().get());
+}
+
+bool BasicBlock::has_label() const {
+    return this->label.get();
+}
+
+bool BasicBlock::is_valid() const {
+    return this->has_label() && this->has_terminator();
+}
+
 FunctionArgument::FunctionArgument(hir::FunctionArgument arg) {
     this->type = type_from(arg.type);
     this->name = std::move(arg.name);
@@ -59,14 +72,6 @@ FunctionDefinition::VariableInfo& FunctionDefinition::get_variable(
     return *std::ranges::find_if(this->variables, [&](auto&& var_info) {
         return var_info.name == ident;
     });
-}
-
-FunctionDeclaration::FunctionDeclaration(const FunctionDefinition& definition)
-    : name(definition.name->clone()), return_type(definition.return_type) {
-    this->argument_types.reserve(definition.arguments.size());
-    for (const auto& arg : definition.arguments) {
-        argument_types.emplace_back(arg.type);
-    }
 }
 
 }  // namespace lir
