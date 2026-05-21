@@ -5,12 +5,15 @@
 
 struct Atom {
     virtual ~Atom() = default;
+
+    auto operator<=>(const Atom&) const = default;
 };
 
 struct AtomIdentifier final : Atom {
     std::string name;
 
     explicit AtomIdentifier(std::string name);
+    auto operator<=>(const AtomIdentifier&) const = default;
     [[nodiscard]] std::unique_ptr<AtomIdentifier> clone() const;
 };
 
