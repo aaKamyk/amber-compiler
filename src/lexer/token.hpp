@@ -51,6 +51,8 @@ enum class TokenType : uint8_t {
     LOGICAL_AND,
     LOGICAL_OR,
     LOGICAL_NOT,
+    // --- cast operator ---
+    AS
 };
 
 using TokenData = std::variant<std::monostate, std::string>;

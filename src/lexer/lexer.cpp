@@ -267,10 +267,18 @@ size_t lxr::Lexer::get_comment_len() const {
 
 TokenType lxr::Lexer::get_keyword(const std::string_view name) {
     static const std::map<std::string_view, TokenType> keywords = {
-        {"if", TokenType::IF},         {"else", TokenType::ELSE},
-        {"while", TokenType::WHILE},   {"fn", TokenType::FN},
-        {"return", TokenType::RETURN}, {"i32", TokenType::I32},
-        {"void", TokenType::VOID}
+        /// statement keywords
+        {"if", TokenType::IF},
+        {"else", TokenType::ELSE},
+        {"while", TokenType::WHILE},
+        {"return", TokenType::RETURN},
+        /// function definition
+        {"fn", TokenType::FN},
+        /// built-in types
+        {"i32", TokenType::I32},
+        {"void", TokenType::VOID},
+        /// cast operator
+        {"as", TokenType::AS},
     };
     if (!keywords.contains(name)) { return TokenType::IDENTIFIER; }
     return keywords.at(name);
