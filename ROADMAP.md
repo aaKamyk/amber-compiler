@@ -1,6 +1,6 @@
 ### Compiler goals
 
-- Start lowering into llvm
+- Continue working on lowering into llvm ir
 - A proper logging / error system
 - Add function signatures to symbol table
 - Fix lexer issue with long identifiers
