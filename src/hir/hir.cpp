@@ -5,6 +5,7 @@
 #include <iostream>
 #include <ranges>
 
+#include "fmt/core.h"
 #include "utils/symbolTable.hpp"
 #include "utils/util.hpp"
 
@@ -58,7 +59,7 @@ void hir::Hir::visit(ast::AssignmentStatement* assignment_statement) {
     if (expr->result_type != type) {
         this->add_error(
             assignment_statement,
-            std::format(
+            fmt::format(
                 "Cannot assign to variable of type {} with expression of type {}", type,
                 expr->result_type
             )
@@ -231,7 +232,7 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
         if (variable_declaration->type != expr->result_type) {
             this->add_error(
                 variable_declaration,
-                std::format(
+                fmt::format(
                     "Cannot assign to variable of type {} with expression of type {}",
                     variable_declaration->type, expr->result_type
                 )
@@ -313,12 +314,6 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
     auto right_type = resolve_type(*right_atom);
     if (left_type != right_type) {
         /// TODO
-        // this->add_error(
-        //     binary_expression, std::format(
-        //                            "No matching operator '{}' for types {}, {}",
-        //                            binary_expression->op, left_type, right_type
-        //                        )
-        // );
     }
     if (const auto it = arithmetic_operators.find(binary_expression->op);
         it != arithmetic_operators.end()) {
