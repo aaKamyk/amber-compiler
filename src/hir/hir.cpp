@@ -1,22 +1,24 @@
 #include "hir.hpp"
 
 #include <cassert>
+#include <format>
 #include <iostream>
 #include <ranges>
 
 #include "utils/symbolTable.hpp"
 #include "utils/util.hpp"
 
-bool hir::Scope::contains(const NameID nid) const {
-    return symbols.contains(nid);
+bool hir::Scope::contains(const std::string_view name) const {
+    return symbols.contains(name.data());
 }
 
-SymbolID hir::Scope::get_sid(const NameID nid) const {
-    return symbols.at(nid);
+void hir::Scope::add(std::string name, std::string unique_name) {
+    this->symbols.insert({std::move(name), std::move(unique_name)});
 }
 
-void hir::Scope::set(const NameID nid, const SymbolID sid) {
-    symbols[nid] = sid;
+std::string hir::Scope::get_unique_name(std::string_view name) const {
+    if (symbols.contains(name.data())) { return symbols.at(name.data()); }
+    throw std::out_of_range("Symbol not found");
 }
 
 hir::Hir::Hir(ast::Program program, CompilationContext& ctx)
@@ -41,44 +43,44 @@ void hir::Hir::visit(ast::BlockStatement* block_statement) {
 }
 
 void hir::Hir::visit(ast::AssignmentStatement* assignment_statement) {
-    const auto scope_id = this->resolve_scope(assignment_statement->identifier.get());
-    if (!scope_id) {
+    auto unique_name = this->resolve_scope(*assignment_statement->identifier);
+    if (!unique_name) {
         this->add_error(
             assignment_statement, "Symbol has not been declared in this scope \'" +
                                       assignment_statement->identifier->name + '\''
         );
         return;
     }
-    // const auto nid =
-    //     this->m_symbol_table.get_name_id(assignment_statement->identifier->name);
-    // const auto sid = this->m_active_scopes[*scope_id].get_sid(nid);
-    // const auto info = this->m_symbol_table.get_metadata(sid);
+    const auto [type, is_mut] = this->m_symbol_table.get_metadata(*unique_name);
+
     this->translate(std::move(assignment_statement->expression));
+    auto expr = this->get_last_expression();
+    if (expr->result_type != type) {
+        this->add_error(
+            assignment_statement,
+            std::format(
+                "Cannot assign to variable of type {} with expression of type {}", type,
+                expr->result_type
+            )
+        );
+        return;
+    }
+
     auto instruction_assignment = std::make_unique<InstructionAssignment>(
-        std::move(assignment_statement->identifier), this->get_last_expression()
+        std::make_unique<AtomIdentifier>(std::move(*unique_name)), std::move(expr)
     );
     this->append_to_active_func(std::move(instruction_assignment));
 }
 
 void hir::Hir::visit(ast::ReturnStatement* return_statement) {
-    auto ensure_atom = [this](std::unique_ptr<Expression>& e) -> std::unique_ptr<Atom> {
-        if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
-            return std::move(terminal->value);
-        }
-        auto temp = this->create_temporary_declaration("v", Type::I32);
-        auto assignment =
-            std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
-        this->append_to_active_func(std::move(assignment));
-        return temp;
-    };
-
     if (return_statement->expression) {
         this->translate(std::move(return_statement->expression));
         auto last_expr = this->get_last_expression();
-        auto atom = ensure_atom(last_expr);
-        auto return_instruction = std::make_unique<InstructionReturn>(
-            std::make_unique<TerminalExpression>(std::move(atom))
-        );
+        auto atom = this->ensure_atom(std::move(last_expr));
+        auto return_instruction =
+            std::make_unique<InstructionReturn>(std::make_unique<TerminalExpression>(
+                this->resolve_type(*atom), std ::move(atom)
+            ));
         this->append_to_active_func(std::move(return_instruction));
     } else {
         auto return_instruction = std::make_unique<InstructionReturn>(nullptr);
@@ -112,7 +114,7 @@ void hir::Hir::visit(ast::IfStatement* if_statement) {
             return cond_var;
         }();
         cond_branch->condition = std::make_unique<ComparisonExpression>(
-            ComparisonOperator::NOT_EQUAL, std::move(atom),
+            Type::BOOL, ComparisonOperator::NOT_EQUAL, std::move(atom),
             std::make_unique<AtomIntegerLiteral>(0ull)
         );
     }
@@ -181,7 +183,7 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
             return cond_var;
         }();
         cond_branch->condition = std::make_unique<ComparisonExpression>(
-            ComparisonOperator::NOT_EQUAL, std::move(atom),
+            Type::BOOL, ComparisonOperator::NOT_EQUAL, std::move(atom),
             std::make_unique<AtomIntegerLiteral>(0ull)
         );
     }
@@ -205,16 +207,19 @@ void hir::Hir::visit(ast::ExpressionStatement* expression_statement) {
 }
 
 void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
-    std::unique_ptr<AtomIdentifier> atom = std::move(variable_declaration->name);
-    /// adds name to symbol table if didnt exist before
-    const auto nid = m_symbol_table.add_name(atom->name);
-    const auto sid = m_symbol_table.add_symbol(
-        {.type = variable_declaration->type,
-         .nid = nid,
-         .depth = this->current_scope().depth}
+    /// gets the unique variable name and adds it to the symbol table
+    auto name = variable_declaration->name->name;
+    auto unique_name = SymbolTable::get_unique_name(name);
+    m_symbol_table.add_symbol(
+        unique_name,
+        SymbolMetadata{
+            .type = variable_declaration->type,
+            .is_mut = false,
+        }
     );
     /// add or shadow a new variable in the current scope
-    this->current_scope().set(nid, sid);
+    this->current_scope().add(std::move(name), unique_name);
+    auto atom = std::make_unique<AtomIdentifier>(std::move(unique_name));
     auto var_decl = std::make_unique<InstructionVariableDeclaration>(
         variable_declaration->type, atom->clone()
     );
@@ -222,9 +227,18 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     /// assignment
     if (variable_declaration->value) {
         this->translate(std::move(variable_declaration->value));
-        auto instr_assign = std::make_unique<InstructionAssignment>(
-            std::move(atom), this->get_last_expression()
-        );
+        auto expr = this->get_last_expression();
+        if (variable_declaration->type != expr->result_type) {
+            this->add_error(
+                variable_declaration,
+                std::format(
+                    "Cannot assign to variable of type {} with expression of type {}",
+                    variable_declaration->type, expr->result_type
+                )
+            );
+        }
+        auto instr_assign =
+            std::make_unique<InstructionAssignment>(std::move(atom), std::move(expr));
         this->append_to_active_func(std::move(instr_assign));
     }
 }
@@ -252,9 +266,21 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
 }
 
 void hir::Hir::visit(ast::AtomExpression* atom_expression) {
-    m_active_expressions.emplace_back(
-        std::make_unique<TerminalExpression>(std::move(atom_expression->atom))
-    );
+    if (dynamic_cast<AtomIntegerLiteral*>(atom_expression->atom.get())) {
+        auto expr = std::make_unique<TerminalExpression>(
+            this->resolve_type(*atom_expression->atom), std::move(atom_expression->atom)
+        );
+        m_active_expressions.emplace_back(std::move(expr));
+    } else {
+        const auto& ident = dynamic_cast<AtomIdentifier&>(*atom_expression->atom);
+        auto unique_name = this->resolve_scope(ident);
+        if (!unique_name) { throw std::runtime_error("Usage of undeclared identifier"); }
+        auto type = this->resolve_type(*unique_name);
+        auto expr = std::make_unique<TerminalExpression>(
+            type, std::make_unique<AtomIdentifier>(std::move(*unique_name))
+        );
+        m_active_expressions.emplace_back(std::move(expr));
+    }
 }
 
 void hir::Hir::visit(ast::ParenExpression* paren_expression) {
@@ -262,24 +288,11 @@ void hir::Hir::visit(ast::ParenExpression* paren_expression) {
 }
 
 void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
-    auto ensure_atom = [this](std::unique_ptr<Expression>& e) -> std::unique_ptr<Atom> {
-        if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
-            return std::move(terminal->value);
-        }
-        auto temp = this->create_temporary_declaration("v", Type::I32);
-        auto assignment =
-            std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
-        this->append_to_active_func(std::move(assignment));
-        return temp;
-    };
-
     this->translate(std::move(binary_expression->left));
-    auto left = this->get_last_expression();
+    auto left_atom = this->ensure_atom(this->get_last_expression());
     this->translate(std::move(binary_expression->right));
-    auto right = this->get_last_expression();
+    auto right_atom = this->ensure_atom(this->get_last_expression());
 
-    auto left_atom = ensure_atom(left);
-    auto right_atom = ensure_atom(right);
     std::map<ast::BinaryOperator, BinaryOperator> arithmetic_operators = {
         {ast::BinaryOperator::PLUS, BinaryOperator::PLUS},
         {ast::BinaryOperator::MINUS, BinaryOperator::MINUS},
@@ -295,10 +308,22 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
         {ast::BinaryOperator::GREATER, ComparisonOperator::GREATER},
         {ast::BinaryOperator::GREATER_EQUAL, ComparisonOperator::GREATER_EQUAL}
     };
+
+    auto left_type = resolve_type(*left_atom);
+    auto right_type = resolve_type(*right_atom);
+    if (left_type != right_type) {
+        /// TODO
+        // this->add_error(
+        //     binary_expression, std::format(
+        //                            "No matching operator '{}' for types {}, {}",
+        //                            binary_expression->op, left_type, right_type
+        //                        )
+        // );
+    }
     if (const auto it = arithmetic_operators.find(binary_expression->op);
         it != arithmetic_operators.end()) {
         auto result = std::make_unique<BinaryExpression>(
-            it->second, std::move(left_atom), std::move(right_atom)
+            left_type, it->second, std::move(left_atom), std::move(right_atom)
         );
         m_active_expressions.emplace_back(std::move(result));
         return;
@@ -306,28 +331,16 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
     if (const auto it = comparison_operators.find(binary_expression->op);
         it != comparison_operators.end()) {
         auto result = std::make_unique<ComparisonExpression>(
-            it->second, std::move(left_atom), std::move(right_atom)
+            Type::BOOL, it->second, std::move(left_atom), std::move(right_atom)
         );
         m_active_expressions.emplace_back(std::move(result));
     }
 }
 
 void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
-    auto ensure_atom = [this](std::unique_ptr<Expression>& e) -> std::unique_ptr<Atom> {
-        if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
-            return std::move(terminal->value);
-        }
-        auto temp = this->create_temporary_declaration("v", Type::I32);
-        auto assignment =
-            std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
-        this->append_to_active_func(std::move(assignment));
-        return temp;
-    };
-
     this->translate(std::move(unary_expression->expression));
-    auto last_expr = this->get_last_expression();
 
-    auto atom = ensure_atom(last_expr);
+    auto atom = this->ensure_atom(this->get_last_expression());
     std::map<ast::UnaryOperator, UnaryOperator> arithmetic_operators = {
         {ast::UnaryOperator::MINUS, UnaryOperator::MINUS},
     };
@@ -336,7 +349,9 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
     };
     if (const auto it = arithmetic_operators.find(unary_expression->op);
         it != arithmetic_operators.end()) {
-        auto result = std::make_unique<UnaryExpression>(it->second, std::move(atom));
+        auto result = std::make_unique<UnaryExpression>(
+            this->resolve_type(*atom), it->second, std::move(atom)
+        );
         m_active_expressions.emplace_back(std::move(result));
         return;
     }
@@ -344,30 +359,18 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
         it != logical_operators.end()) {
         auto zero_lit = std::make_unique<AtomIntegerLiteral>(0);
         auto result = std::make_unique<ComparisonExpression>(
-            it->second, std::move(atom), std::move(zero_lit)
+            Type::BOOL, it->second, std::move(atom), std::move(zero_lit)
         );
         m_active_expressions.emplace_back(std::move(result));
     }
 }
 
 void hir::Hir::visit(ast::CallExpression* call_expression) {
-    auto ensure_atom = [this](std::unique_ptr<Expression>& e) -> std::unique_ptr<Atom> {
-        if (auto* terminal = dynamic_cast<TerminalExpression*>(e.get())) {
-            return std::move(terminal->value);
-        }
-        auto temp = this->create_temporary_declaration("v", Type::I32);
-        auto assignment =
-            std::make_unique<InstructionAssignment>(temp->clone(), std::move(e));
-        this->append_to_active_func(std::move(assignment));
-        return temp;
-    };
-
     auto call_expr = std::make_unique<CallExpression>();
     call_expr->callee = std::move(call_expression->function);
     for (auto& arg : call_expression->arguments) {
         this->translate(std::move(arg));
-        auto last_expr = this->get_last_expression();
-        auto atom = ensure_atom(last_expr);
+        auto atom = this->ensure_atom(this->get_last_expression());
         call_expr->arguments.emplace_back(std::move(atom));
     }
     m_active_expressions.emplace_back(std::move(call_expr));
@@ -386,11 +389,8 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_declaration(
     const std::string& name, const Type type
 ) {
     auto atom = this->create_temporary_identifier(name);
-    const auto nid = m_symbol_table.add_name(atom->name);
-    const auto sid = m_symbol_table.add_symbol(
-        {.type = type, .nid = nid, .depth = this->current_scope().depth}
-    );
-    this->current_scope().set(nid, sid);
+    m_symbol_table.add_symbol(atom->name, {.type = type, .is_mut = false});
+    this->current_scope().add(atom->name, atom->name);
     auto temp_decl =
         std::make_unique<InstructionVariableDeclaration>(Type::I32, atom->clone(), true);
     this->append_to_active_func(std::move(temp_decl));
@@ -406,14 +406,21 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_label(
     return atom;
 }
 
-std::optional<uint64_t> hir::Hir::resolve_scope(const AtomIdentifier* atom) const {
-    if (m_symbol_table.has_name(atom->name)) {
-        const auto nid = m_symbol_table.get_name_id(atom->name);
-        for (const auto& scope : std::views::reverse(m_active_scopes)) {
-            if (scope.contains(nid)) { return scope.depth; }
-        }
+std::optional<std::string> hir::Hir::resolve_scope(const AtomIdentifier& atom) const {
+    for (const auto& scope : std::views::reverse(m_active_scopes)) {
+        if (scope.contains(atom.name)) { return scope.get_unique_name(atom.name); }
     }
     return std::nullopt;
+}
+
+Type hir::Hir::resolve_type(const Atom& atom) const {
+    if (dynamic_cast<const AtomIntegerLiteral*>(&atom)) { return Type::I32; }
+    const auto& ident = dynamic_cast<const AtomIdentifier&>(atom);
+    return this->m_symbol_table.get_metadata(ident.name).type;
+}
+
+Type hir::Hir::resolve_type(const std::string& ident) const {
+    return this->m_symbol_table.get_metadata(ident).type;
 }
 
 const hir::Scope& hir::Hir::current_scope() const {
@@ -474,6 +481,17 @@ std::unique_ptr<hir::Expression> hir::Hir::get_last_expression() {
     std::unique_ptr<Expression> expression = std::move(m_active_expressions.back());
     m_active_expressions.pop_back();
     return expression;
+}
+
+std::unique_ptr<Atom> hir::Hir::ensure_atom(std::unique_ptr<Expression> expr) {
+    if (auto* terminal = dynamic_cast<TerminalExpression*>(expr.get())) {
+        return std::move(terminal->value);
+    }
+    auto temp = this->create_temporary_declaration("v", expr->result_type);
+    auto assignment =
+        std::make_unique<InstructionAssignment>(temp->clone(), std::move(expr));
+    this->append_to_active_func(std::move(assignment));
+    return temp;
 }
 
 hir::Instruction& hir::Hir::get_last_instruction() const {

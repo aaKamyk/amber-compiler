@@ -16,11 +16,11 @@ struct Program {
 
 struct Scope {
     uint64_t depth;
-    std::unordered_map<NameID, SymbolID> symbols;
+    std::unordered_map<std::string, std::string> symbols;
 
-    bool contains(NameID nid) const;
-    SymbolID get_sid(NameID nid) const;
-    void set(NameID nid, SymbolID sid);
+    bool contains(std::string_view name) const;
+    void add(std::string name, std::string unique_name);
+    std::string get_unique_name(std::string_view name) const;
 };
 
 class Hir final : ast::NodeVisitor, ast::ExpressionVisitor {
@@ -58,7 +58,9 @@ private:
         const std::string& name, Type type
     );
     std::unique_ptr<AtomIdentifier> create_temporary_label(const std::string& name);
-    std::optional<uint64_t> resolve_scope(const AtomIdentifier* atom) const;
+    std::optional<std::string> resolve_scope(const AtomIdentifier& atom) const;
+    Type resolve_type(const Atom& atom) const;
+    Type resolve_type(const std::string& ident) const;
     const Scope& current_scope() const;
     Scope& current_scope();
     void push_scope();
@@ -72,6 +74,7 @@ private:
     void add_error(const ast::Node*, const std::string& msg);
 
     std::unique_ptr<Expression> get_last_expression();
+    std::unique_ptr<Atom> ensure_atom(std::unique_ptr<Expression> expr);
     Instruction& get_last_instruction() const;
 
     std::vector<Scope> m_active_scopes;
