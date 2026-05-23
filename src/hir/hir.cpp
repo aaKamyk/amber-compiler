@@ -534,7 +534,7 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         if (instruction_return->value) {
             instruction_return->value->accept(this);
         } else {
-            fmt::println("void");
+            fmt::print("void");
         }
         fmt::println(";");
     }
