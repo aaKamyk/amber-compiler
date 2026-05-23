@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "expression.hpp"
@@ -66,7 +67,7 @@ struct ExpressionStatement final : Statement {
 struct Declaration : Node {};
 
 struct VariableDeclaration final : Declaration {
-    Type type{};
+    std::optional<Type> type{};
     std::unique_ptr<AtomIdentifier> name{nullptr};
     std::unique_ptr<Expression> initializer{nullptr};
 

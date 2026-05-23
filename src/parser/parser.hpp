@@ -454,14 +454,22 @@ struct ast::NodeParser<ast::VariableDeclaration> {
         if (ctx.match(TokenType::COLON)) {
             /// explicit type declaration
             ctx.consume(1);
-            if (!ctx.parse_into<Type>(ctx, variable_declaration->type)) {
+            if (const auto type = ctx.try_parse<Type>()) {
+                variable_declaration->type = type;
+            } else {
+                ctx.add_error("Expected type identifier");
                 return nullptr;
             }
         } else {
             /// implicit type inference
+            variable_declaration->type = std::nullopt;
         }
         if (ctx.expect(TokenType::SEMICOLON)) {
             variable_declaration->initializer = nullptr;
+            if (!variable_declaration->type) {
+                ctx.add_error("Cannot infer type if no initializer is present");
+                return nullptr;
+            }
             return variable_declaration;
         }
         if (ctx.expect(TokenType::EQUALS)) {
@@ -469,7 +477,6 @@ struct ast::NodeParser<ast::VariableDeclaration> {
                 return nullptr;
             }
             if (!ctx.expect(TokenType::SEMICOLON)) {
-                const auto next_token = ctx.peek();
                 ctx.add_error(R"(Expected ';')");
                 return nullptr;
             }

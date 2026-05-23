@@ -208,40 +208,47 @@ void hir::Hir::visit(ast::ExpressionStatement* expression_statement) {
 }
 
 void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
+    /// check type against initializer expression
+    auto variable_type{Type::VOID};
+    if (variable_declaration->initializer) {
+        this->translate(std::move(variable_declaration->initializer));
+        const auto* expr = this->view_last_expression();
+        variable_type = expr->result_type;
+        if (variable_declaration->type && *variable_declaration->type != variable_type) {
+            this->add_error(
+                variable_declaration,
+                fmt::format(
+                    "Cannot assign to variable of type {} with expression of type {}",
+                    *variable_declaration->type, expr->result_type
+                )
+            );
+        }
+    } else if (!variable_declaration->type) {
+        throw std::runtime_error("Variable declaration in invalid state from ast");
+    } else {
+        variable_type = *variable_declaration->type;
+    }
     /// gets the unique variable name and adds it to the symbol table
     auto name = variable_declaration->name->name;
     auto unique_name = SymbolTable::get_unique_name(name);
     m_symbol_table.add_symbol(
         unique_name,
         SymbolMetadata{
-            .type = variable_declaration->type,
+            .type = variable_type,
             .is_mut = false,
         }
     );
     /// add or shadow a new variable in the current scope
     this->current_scope().add(std::move(name), unique_name);
     auto atom = std::make_unique<AtomIdentifier>(std::move(unique_name));
-    auto var_decl = std::make_unique<InstructionVariableDeclaration>(
-        variable_declaration->type, atom->clone()
-    );
+    auto var_decl =
+        std::make_unique<InstructionVariableDeclaration>(variable_type, atom->clone());
     this->append_to_active_func(std::move(var_decl));
     /// assignment
-    if (variable_declaration->initializer) {
-        this->translate(std::move(variable_declaration->initializer));
-        auto expr = this->get_last_expression();
-        if (variable_declaration->type != expr->result_type) {
-            this->add_error(
-                variable_declaration,
-                fmt::format(
-                    "Cannot assign to variable of type {} with expression of type {}",
-                    variable_declaration->type, expr->result_type
-                )
-            );
-        }
-        auto instr_assign =
-            std::make_unique<InstructionAssignment>(std::move(atom), std::move(expr));
-        this->append_to_active_func(std::move(instr_assign));
-    }
+    auto instr_assign = std::make_unique<InstructionAssignment>(
+        std::move(atom), this->get_last_expression()
+    );
+    this->append_to_active_func(std::move(instr_assign));
 }
 
 void hir::Hir::visit(ast::FunctionArgument* function_argument) {}
@@ -476,6 +483,11 @@ std::unique_ptr<hir::Expression> hir::Hir::get_last_expression() {
     std::unique_ptr<Expression> expression = std::move(m_active_expressions.back());
     m_active_expressions.pop_back();
     return expression;
+}
+
+const hir::Expression* hir::Hir::view_last_expression() const {
+    if (m_active_expressions.empty()) { return nullptr; }
+    return m_active_expressions.back().get();
 }
 
 std::unique_ptr<Atom> hir::Hir::ensure_atom(std::unique_ptr<Expression> expr) {

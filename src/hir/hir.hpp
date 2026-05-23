@@ -74,6 +74,7 @@ private:
     void add_error(const ast::Node*, const std::string& msg);
 
     std::unique_ptr<Expression> get_last_expression();
+    const Expression* view_last_expression() const;
     std::unique_ptr<Atom> ensure_atom(std::unique_ptr<Expression> expr);
     Instruction& get_last_instruction() const;
 

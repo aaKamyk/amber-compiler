@@ -100,7 +100,11 @@ private:
     void visit(VariableDeclaration* var) override {
         std::cout << "Variable\n";
 
-        print_node(var->type, false);
+        if (var->type) {
+            print_node(*var->type, false);
+        } else {
+            std::cout << "auto";
+        }
         print_node(var->name.get(), var->initializer == nullptr);
         if (var->initializer) { print_node(var->initializer, true); }
     }
