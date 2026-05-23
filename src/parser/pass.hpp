@@ -4,8 +4,7 @@
 
 namespace ast {
 
-class Pass : public NodeVisitor, public ExpressionVisitor {
-public:
+struct Pass : NodeVisitor, ExpressionVisitor {
     virtual Program run() = 0;
     ~Pass() override = default;
 };
