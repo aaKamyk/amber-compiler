@@ -7,8 +7,8 @@
   `enum declaration` \
   <br>
 - `variable_declaration ::=` \
-  `[modifiers]? TYPE IDENT;` |\
-  `[modifiers]? TYPE IDENT = expr;` \
+  `let IDENT: TYPE [modifiers]?;` | \
+  `let IDENT: TYPE [modifiers]? = expr;` | \
   <br>
 - `modifiers ::=` \
   `comptime` | `mut` | `pub` \
