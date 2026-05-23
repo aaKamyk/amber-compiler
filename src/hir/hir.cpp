@@ -160,6 +160,7 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
     /// while body start
     this->append_to_active_func(std::make_unique<Label>(while_body->clone()));
     this->translate(std::move(while_statement->block));
+    this->append_to_active_func(std::make_unique<InstructionBranch>(while_cond->clone()));
     /// while condition start
     this->append_to_active_func(std::make_unique<Label>(std::move(while_cond)));
     this->translate(std::move(while_statement->condition));
