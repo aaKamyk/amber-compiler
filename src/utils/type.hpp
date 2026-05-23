@@ -6,8 +6,11 @@
 #include "fmt/base.h"
 
 enum class Type : std::uint8_t {
-    BOOL,
+    I64,
     I32,
+    I16,
+    I8,
+    BOOL,
     VOID,
 };
 

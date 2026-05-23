@@ -7,13 +7,14 @@
 
 ast::Program ast::Parser::parse() {
     Program program{};
+
     while (peek().type != TokenType::TOKEN_EOF) {
-        if (match_any(TokenType::FN, TokenType::I32)) {
-            if (auto decl = try_parse<Declaration>()) {
-                program.children.emplace_back(std::move(decl));
-                continue;
-            }
-        } else if (auto statement = try_parse<Statement>()) {
+        if (auto decl = try_parse<Declaration>()) {
+            program.children.emplace_back(std::move(decl));
+            continue;
+        }
+
+        if (auto statement = try_parse<Statement>()) {
             /// TODO Statements not allowed at global scope
             continue;
         }

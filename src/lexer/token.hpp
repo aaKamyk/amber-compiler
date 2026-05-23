@@ -4,19 +4,26 @@
 #include <string>
 #include <variant>
 
+// clang-format off
 enum class TokenType : uint8_t {
     // --- special ---
     TOKEN_EOF,
     NONE,
     // --- Keywords ---
-    IF,
+    IF,         // statements
     ELSE,
     WHILE,
-    FN,
+    FN,         // declarations
     LET,
     RETURN,
+    TRUE,       // built-in values
+    FALSE,
     // --- Types ---
+    I64,
     I32,
+    I16,
+    I8,
+    BOOL,
     VOID,
     // --- identifiers & literals ---
     IDENTIFIER,
@@ -55,6 +62,7 @@ enum class TokenType : uint8_t {
     // --- cast operator ---
     AS
 };
+// clang-format on
 
 using TokenData = std::variant<std::monostate, std::string>;
 

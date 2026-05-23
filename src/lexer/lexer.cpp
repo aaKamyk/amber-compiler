@@ -275,8 +275,15 @@ TokenType lxr::Lexer::get_keyword(const std::string_view name) {
         /// declarations
         {"fn", TokenType::FN},
         {"let", TokenType::LET},
+        /// built-in values
+        {"true", TokenType::TRUE},
+        {"false", TokenType::FALSE},
         /// built-in types
+        {"i64", TokenType::I64},
         {"i32", TokenType::I32},
+        {"i16", TokenType::I16},
+        {"i8", TokenType::I8},
+        {"bool", TokenType::BOOL},
         {"void", TokenType::VOID},
         /// cast operator
         {"as", TokenType::AS},

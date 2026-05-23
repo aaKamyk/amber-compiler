@@ -15,8 +15,14 @@ std::string Token::to_string() const {
         {TokenType::FN, "fn"},
         {TokenType::LET, "let"},
         {TokenType::RETURN, "return"},
+        {TokenType::TRUE, "true"},
+        {TokenType::FALSE, "false"},
         // --- Types ---
-        {TokenType::I32, "int"},
+        {TokenType::I64, "i64"},
+        {TokenType::I32, "i32"},
+        {TokenType::I16, "i16"},
+        {TokenType::I8, "i8"},
+        {TokenType::BOOL, "bool"},
         {TokenType::VOID, "void"},
         // --- braces & punctuation ---
         {TokenType::CURLY_BRACE_START, "{"},

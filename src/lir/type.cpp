@@ -4,10 +4,16 @@
 #include <stdexcept>
 
 lir::Type lir::type_from(const ::Type type) {
+    // clang-format off
     static const std::map<::Type, Type> mapping = {
+        {::Type::I64, Type::I64},
         {::Type::I32, Type::I32},
+        {::Type::I16, Type::I16},
+        {::Type::I8, Type::I8},
+        {::Type::BOOL, Type::I1},
         {::Type::VOID, Type::VOID},
     };
+    // clang-format on
     if (!mapping.contains(type)) { throw std::runtime_error("Unknown type from hir"); }
     return mapping.at(type);
 }

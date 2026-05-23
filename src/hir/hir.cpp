@@ -275,18 +275,18 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
 }
 
 void hir::Hir::visit(ast::AtomExpression* atom_expression) {
-    if (dynamic_cast<AtomIntegerLiteral*>(atom_expression->atom.get())) {
-        auto expr = std::make_unique<TerminalExpression>(
-            this->resolve_type(*atom_expression->atom), std::move(atom_expression->atom)
-        );
-        m_active_expressions.emplace_back(std::move(expr));
-    } else {
-        const auto& ident = dynamic_cast<AtomIdentifier&>(*atom_expression->atom);
-        auto unique_name = this->resolve_scope(ident);
+    if (const auto* ident =
+            dynamic_cast<const AtomIdentifier*>(atom_expression->atom.get())) {
+        auto unique_name = this->resolve_scope(*ident);
         if (!unique_name) { throw std::runtime_error("Usage of undeclared identifier"); }
         auto type = this->resolve_type(*unique_name);
         auto expr = std::make_unique<TerminalExpression>(
             type, std::make_unique<AtomIdentifier>(std::move(*unique_name))
+        );
+        m_active_expressions.emplace_back(std::move(expr));
+    } else {
+        auto expr = std::make_unique<TerminalExpression>(
+            this->resolve_type(*atom_expression->atom), std::move(atom_expression->atom)
         );
         m_active_expressions.emplace_back(std::move(expr));
     }
@@ -418,6 +418,7 @@ std::optional<std::string> hir::Hir::resolve_scope(const AtomIdentifier& atom) c
 
 Type hir::Hir::resolve_type(const Atom& atom) const {
     if (dynamic_cast<const AtomIntegerLiteral*>(&atom)) { return Type::I32; }
+    if (dynamic_cast<const AtomBooleanLiteral*>(&atom)) { return Type::BOOL; }
     const auto& ident = dynamic_cast<const AtomIdentifier&>(atom);
     return this->m_symbol_table.get_metadata(ident.name).type;
 }
@@ -612,8 +613,11 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         if (const auto* ident = dynamic_cast<const AtomIdentifier*>(at)) {
             fmt::print("{}", ident->name);
         }
-        if (const auto* lit = dynamic_cast<const AtomIntegerLiteral*>(at)) {
-            fmt::print("{}", lit->value);
+        if (const auto* int_lit = dynamic_cast<const AtomIntegerLiteral*>(at)) {
+            fmt::print("{}", int_lit->value);
+        }
+        if (const auto* bool_lit = dynamic_cast<const AtomBooleanLiteral*>(at)) {
+            fmt::print("{}", bool_lit->value);
         }
     }
 };

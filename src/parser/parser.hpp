@@ -145,18 +145,24 @@ Program parse(std::vector<Token> tokens, CompilationContext& ctx);
 template <>
 struct ast::NodeParser<Type> {
     static std::optional<Type> parse(Parser& ctx) {
-        /// TODO make this expandable
-        switch (const auto token = ctx.peek(); token.type) {
-            case TokenType::I32:
-                ctx.consume(1);
-                return Type::I32;
-            case TokenType::VOID:
-                ctx.consume(1);
-                return Type::VOID;
-            default:
-                ctx.add_error("Expected type");
-                return std::nullopt;
+        // clang-format off
+        static const std::map<TokenType, Type> built_in_types = {
+            {TokenType::I64, Type::I64},
+            {TokenType::I32, Type::I32},
+            {TokenType::I16, Type::I16},
+            {TokenType::I8, Type::I8},
+            {TokenType::BOOL, Type::BOOL},
+            {TokenType::VOID, Type::VOID},
+        };
+        // clang-format on
+
+        if (const auto it = built_in_types.find(ctx.peek().type);
+            it != built_in_types.end()) {
+            ctx.consume(1);
+            return it->second;
         }
+
+        return std::nullopt;
     }
 };
 
@@ -185,6 +191,25 @@ struct ast::NodeParser<AtomIntegerLiteral> {
                 "Invalid integer literal: \'" + token.to_string() + '\'', false
             );
             return nullptr;
+        }
+    }
+};
+
+template <>
+struct ast::NodeParser<AtomBooleanLiteral> {
+    static std::unique_ptr<AtomBooleanLiteral> parse(Parser& ctx) {
+        const auto token = ctx.peek();
+        if (!ctx.match_any(TokenType::FALSE, TokenType::TRUE)) { return nullptr; }
+        switch (token.type) {
+            case TokenType::FALSE:
+                ctx.consume(1);
+                return std::make_unique<AtomBooleanLiteral>(false);
+            case TokenType::TRUE:
+                ctx.consume(1);
+                return std::make_unique<AtomBooleanLiteral>(true);
+            default:
+                return nullptr;
+                /// unreachable
         }
     }
 };
@@ -235,7 +260,10 @@ struct ast::NodeParser<ast::PrimaryExpression> {
         if (ctx.match(TokenType::IDENTIFIER) && ctx.match(TokenType::PAREN_START, 1)) {
             if (auto call_expr = ctx.try_parse<CallExpression>()) { return call_expr; }
         }
-        if (ctx.match_any(TokenType::IDENTIFIER, TokenType::INTEGER_LITERAL)) {
+        if (ctx.match_any(
+                TokenType::IDENTIFIER, TokenType::INTEGER_LITERAL, TokenType::TRUE,
+                TokenType::FALSE
+            )) {
             if (auto atom_expr = ctx.try_parse<AtomExpression>()) { return atom_expr; }
         }
         if (ctx.match(TokenType::PAREN_START)) {
@@ -256,6 +284,9 @@ struct ast::NodeParser<ast::AtomExpression> {
         }
         if (auto int_literal = ctx.try_parse<AtomIntegerLiteral>()) {
             return std::make_unique<AtomExpression>(std::move(int_literal));
+        }
+        if (auto bool_literal = ctx.try_parse<AtomBooleanLiteral>()) {
+            return std::make_unique<AtomExpression>(std::move(bool_literal));
         }
 
         return nullptr;
