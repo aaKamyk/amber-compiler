@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <iosfwd>
+
+#include "fmt/core.h"
 
 namespace lir {
 
@@ -68,8 +69,50 @@ enum class FloatingPointComparisonOperator : uint8_t {
 
 }  // namespace lir
 
-std::ostream& operator<<(std::ostream& os, const lir::BinaryIntegerOperator& op);
-std::ostream& operator<<(std::ostream& os, const lir::BinaryFloatingPointOperator& op);
-std::ostream& operator<<(std::ostream& os, const lir::BinaryBitwiseOperator& op);
-std::ostream& operator<<(std::ostream& os, const lir::IntegerComparisonOperator& op);
-std::ostream& operator<<(std::ostream& os, const lir::FloatingPointComparisonOperator& op);
+std::string to_string(lir::BinaryIntegerOperator);
+std::string to_string(lir::BinaryFloatingPointOperator);
+std::string to_string(lir::BinaryBitwiseOperator);
+std::string to_string(lir::IntegerComparisonOperator);
+std::string to_string(lir::FloatingPointComparisonOperator);
+
+template <>
+struct fmt::formatter<lir::BinaryIntegerOperator> : formatter<string_view> {
+    auto format(const lir::BinaryIntegerOperator op, format_context& ctx) const {
+        const string_view name = ::to_string(op);
+        return formatter<string_view>::format(name, ctx);
+    }
+};
+
+template <>
+struct fmt::formatter<lir::BinaryFloatingPointOperator> : formatter<string_view> {
+    auto format(const lir::BinaryFloatingPointOperator op, format_context& ctx) const {
+        const string_view name = ::to_string(op);
+        return formatter<string_view>::format(name, ctx);
+    }
+};
+
+template <>
+struct fmt::formatter<lir::BinaryBitwiseOperator> : formatter<string_view> {
+    auto format(const lir::BinaryBitwiseOperator op, format_context& ctx) const {
+        const string_view name = ::to_string(op);
+        return formatter<string_view>::format(name, ctx);
+    }
+};
+
+template <>
+struct fmt::formatter<lir::IntegerComparisonOperator> : formatter<string_view> {
+    auto format(const lir::IntegerComparisonOperator op, format_context& ctx) const {
+        const string_view name = ::to_string(op);
+        return formatter<string_view>::format(name, ctx);
+    }
+};
+
+template <>
+struct fmt::formatter<lir::FloatingPointComparisonOperator> : formatter<string_view> {
+    auto format(
+        const lir::FloatingPointComparisonOperator op, format_context& ctx
+    ) const {
+        const string_view name = ::to_string(op);
+        return formatter<string_view>::format(name, ctx);
+    }
+};

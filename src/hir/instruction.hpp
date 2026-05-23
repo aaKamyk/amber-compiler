@@ -26,6 +26,8 @@ struct Label final : Instruction {
 
     explicit Label(std::unique_ptr<AtomIdentifier> identifier);
     void accept(InstructionVisitor*) override;
+
+    const std::string& get_name() const { return identifier->name; }
 };
 
 struct InstructionDiscard final : Instruction {
@@ -43,6 +45,8 @@ struct InstructionAssignment final : Instruction {
         std::unique_ptr<AtomIdentifier> identifier, std::unique_ptr<Expression> value
     );
     void accept(InstructionVisitor*) override;
+
+    const std::string& get_name() const { return identifier->name; }
 };
 
 /// value is set to nullptr if returning void
@@ -58,6 +62,8 @@ struct InstructionBranch final : Instruction {
 
     explicit InstructionBranch(std::unique_ptr<AtomIdentifier> destination);
     void accept(InstructionVisitor*) override;
+
+    const std::string& get_dest_name() const { return destination->name; }
 };
 
 struct InstructionBranchConditional final : Instruction {
@@ -72,6 +78,9 @@ struct InstructionBranchConditional final : Instruction {
         std::unique_ptr<AtomIdentifier> false_case
     );
     void accept(InstructionVisitor*) override;
+
+    const std::string& get_tcase_name() const { return true_case->name; };
+    const std::string& get_fcase_name() const { return false_case->name; };
 };
 
 struct InstructionDeclaration : Instruction {};
@@ -85,6 +94,8 @@ struct InstructionVariableDeclaration final : InstructionDeclaration {
         Type type, std::unique_ptr<AtomIdentifier> identifier, bool is_temporary = false
     );
     void accept(InstructionVisitor*) override;
+
+    const std::string& get_name() const { return identifier->name; }
 };
 
 struct InstructionFunctionDeclaration final : InstructionDeclaration {
@@ -100,6 +111,8 @@ struct InstructionFunctionDeclaration final : InstructionDeclaration {
         std::vector<std::unique_ptr<Instruction>> instructions
     );
     void accept(InstructionVisitor*) override;
+
+    const std::string& get_name() const { return name->name; }
 };
 
 class InstructionVisitor {

@@ -18,6 +18,9 @@ struct BasicBlock {
     bool has_terminator() const;
     bool has_label() const;
     bool is_valid() const;
+    bool empty() const;
+
+    const std::string& get_label() const;
 };
 
 struct FunctionArgument {
@@ -53,6 +56,7 @@ struct FunctionDefinition {
     BasicBlock& current_block() const;
     void append(BasicBlock basic_block);
     void append(std::unique_ptr<Instruction> instruction) const;
+    const std::string& get_name() const;
 
     bool empty() const;
     bool has_variable(const AtomIdentifier& ident) const;
@@ -66,6 +70,8 @@ struct FunctionDeclaration {
     std::vector<Type> argument_types{};
 
     explicit FunctionDeclaration() = default;
+
+    const std::string& get_name() const { return this->name->name; }
 };
 
 struct Module {

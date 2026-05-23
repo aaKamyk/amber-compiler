@@ -256,16 +256,16 @@ std::unique_ptr<AtomIdentifier> lir::Lir::get_target_value() {
 struct LirPrinter final : lir::InstructionVisitor {
     static void print(const Atom* at, const bool local = true) {
         if (const auto* ident = dynamic_cast<const AtomIdentifier*>(at)) {
-            std::cout << (local ? "%" : "@") << ident->name;
+            fmt::print("{}{}", local ? '%' : '@', ident->name);
         } else if (const auto* lit = dynamic_cast<const AtomIntegerLiteral*>(at)) {
-            std::cout << lit->value;
+            fmt::print("{}", lit->value);
         }
     }
 
     void print(const std::unique_ptr<lir::BasicBlock>& bb) {
-        std::cout << bb->label->name << ":\n";
+        fmt::println("{}:", bb->get_label());
         for (const auto& instr : bb->instructions) {
-            std::cout << "    ";
+            fmt::print("    ");
             instr->accept(this);
         }
     }
@@ -273,88 +273,89 @@ struct LirPrinter final : lir::InstructionVisitor {
     void print(const lir::Program& program) {
         /// Print declarations
         for (const auto& declaration : program.function_declarations) {
-            std::cout << "declare " << declaration.return_type << " @"
-                      << declaration.name->name << '(';
+            fmt::print(
+                "declare {} @{}(", declaration.return_type, declaration.get_name()
+            );
             if (const auto& types = declaration.argument_types; !types.empty()) {
                 for (const auto& type : types | std::views::take(types.size() - 1)) {
-                    std::cout << type << ", ";
+                    fmt::print("{}, ", type);
                 }
-                std::cout << types.back();
+                fmt::print("{}", types.back());
             }
-            std::cout << ")\n";
+            fmt::println(")");
         }
-        std::cout << '\n';
+        fmt::println("");
         /// Print definitions
         for (const auto& function : program.functions) {
-            std::cout << "define " << function.return_type << " @" << function.name->name
-                      << '(';
+            fmt::print("define {} @{}(", function.return_type, function.get_name());
             if (const auto& args = function.arguments; !args.empty()) {
                 for (const auto& [type, ident] :
                      args | std::views::take(args.size() - 1)) {
-                    std::cout << type << " %";
-                    std::cout << ident->name << ", ";
+                    fmt::print("{} %{}, ", type, ident->name);
                 }
                 const auto& [type, ident] = args.back();
-                std::cout << type << " %" << ident->name;
+                fmt::print("{} %{}", type, ident->name);
             }
-            std::cout << ") {\n";
+            fmt::println(") {{");
             if (const auto& blocks = function.blocks; !blocks.empty()) {
                 for (const auto& bb : blocks | std::views::take(blocks.size() - 1)) {
                     print(bb);
-                    std::cout << '\n';
+                    fmt::println("");
                 }
                 print(blocks.back());
             }
-            std::cout << "}\n\n";
+            fmt::print("}}\n\n");
         }
     }
 
     void visit(lir::AllocaInstruction* alloca_instruction) override {
         print(alloca_instruction->result.get());
-        std::cout << " = alloca " << alloca_instruction->type << '\n';
+        fmt::println(" = alloca {}", alloca_instruction->type);
     }
 
     void visit(lir::StoreInstruction* store_instruction) override {
-        std::cout << "store " << store_instruction->type << ' ';
+        fmt::print("score {} ", store_instruction->type);
         print(store_instruction->value.get());
-        std::cout << ", ptr ";
+        fmt::print(", ptr");
         print(store_instruction->destination.get());
-        std::cout << '\n';
+        fmt::println("");
     }
 
     void visit(lir::LoadInstruction* load_instruction) override {
         print(load_instruction->result.get());
-        std::cout << " = load " << load_instruction->type << ", ptr ";
+        fmt::print(" = load {}, ptr ", load_instruction->type);
         print(load_instruction->source.get());
-        std::cout << '\n';
+        fmt::println("");
     }
 
     void visit(lir::CallInstruction* call_instruction) override {
         if (call_instruction->result) {
             print(call_instruction->result.get());
-            std::cout << " = ";
+            fmt::print(" = ");
         }
-        std::cout << "call " << call_instruction->type << ' ';
+        fmt::print("call {} ", call_instruction->type);
         print(call_instruction->callee.get(), false);
-        std::cout << '(';
+        fmt::print("(");
         if (const auto& args = call_instruction->arguments; !args.empty()) {
             for (const auto& arg : args | std::views::take(args.size() - 1)) {
                 print(arg.get());
-                std::cout << ", ";
+                fmt::print(", ");
             }
             print(args.back().get());
         }
-        std::cout << ")\n";
+        fmt::println(")");
     }
 
     void visit(lir::BinaryIntegerInstruction* binary_integer_instruction) override {
         print(binary_integer_instruction->result.get());
-        std::cout << " = " << binary_integer_instruction->op;
-        std::cout << ' ' << binary_integer_instruction->operand_type << ' ';
+        fmt::print(
+            " = {} {} ", binary_integer_instruction->op,
+            binary_integer_instruction->operand_type
+        );
         print(binary_integer_instruction->lhs.get());
-        std::cout << ", ";
+        fmt::print(", ");
         print(binary_integer_instruction->rhs.get());
-        std::cout << '\n';
+        fmt::println("");
     }
 
     void visit(lir::BinaryFloatingPointInstruction*) override {}
@@ -362,48 +363,52 @@ struct LirPrinter final : lir::InstructionVisitor {
 
     void visit(lir::IntegerComparisonInstruction* comparison_instruction) override {
         print(comparison_instruction->result.get());
-        std::cout << " = icmp " << comparison_instruction->op << ' '
-                  << comparison_instruction->compared_type << ' ';
+        fmt::print(
+            " = icmp {} {} ", comparison_instruction->op,
+            comparison_instruction->compared_type
+        );
         print(comparison_instruction->lhs.get());
-        std::cout << ", ";
+        fmt::print(", ");
         print(comparison_instruction->rhs.get());
-        std::cout << '\n';
+        fmt::println("");
     }
 
     void visit(lir::FloatingPointComparisonInstruction* comparison_instruction) override {
-        std::cout << "fcmp " << comparison_instruction->op << ' '
-                  << comparison_instruction->compared_type << ' ';
+        fmt::print(
+            " = fcmp {} {} ", comparison_instruction->op,
+            comparison_instruction->compared_type
+        );
         print(comparison_instruction->lhs.get());
-        std::cout << ", ";
+        fmt::print(", ");
         print(comparison_instruction->rhs.get());
-        std::cout << '\n';
+        fmt::println("");
     }
 
     void visit(lir::ReturnInstruction* return_instruction) override {
-        std::cout << "ret " << return_instruction->type;
+        fmt::print("ret {}", return_instruction->type);
         if (return_instruction->type == lir::Type::VOID) {
-            std::cout << '\n';
+            fmt::println("");
             return;
         }
-        std::cout << ' ';
+        fmt::print(" ");
         print(return_instruction->value.get());
-        std::cout << '\n';
+        fmt::println("");
     }
 
     void visit(lir::BranchInstruction* branch_instruction) override {
-        std::cout << "br ";
+        fmt::print("br ");
         if (branch_instruction->condition) {
-            std::cout << "i1 ";
+            fmt::print("i1 ");
             print(branch_instruction->condition.get());
-            std::cout << ", label ";
+            fmt::print(", label ");
             print(branch_instruction->true_case.get());
-            std::cout << ", label ";
+            fmt::print(", label ");
             print(branch_instruction->false_case.get());
         } else {
-            std::cout << "label ";
+            fmt::print("label ");
             print(branch_instruction->true_case.get());
         }
-        std::cout << '\n';
+        fmt::println("");
     }
 };
 
@@ -413,7 +418,7 @@ lir::Program lir::translate(hir::Program program, CompilationContext& context) {
 }
 
 void lir::print_program(const Program& program) {
-    std::cout << "========== LIR ==========\n";
+    fmt::println("========== LIR ==========");
     LirPrinter printer{};
     printer.print(program);
 }

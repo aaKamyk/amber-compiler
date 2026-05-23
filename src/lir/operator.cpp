@@ -3,7 +3,7 @@
 #include <iostream>
 #include <map>
 
-std::ostream& operator<<(std::ostream& os, const lir::BinaryIntegerOperator& op) {
+std::string to_string(const lir::BinaryIntegerOperator op) {
     static const std::map<lir::BinaryIntegerOperator, const char*> mapping = {
         {lir::BinaryIntegerOperator::ADD, "add"},
         {lir::BinaryIntegerOperator::SUB, "sub"},
@@ -13,11 +13,11 @@ std::ostream& operator<<(std::ostream& os, const lir::BinaryIntegerOperator& op)
         {lir::BinaryIntegerOperator::UREM, "urem"},
         {lir::BinaryIntegerOperator::SREM, "srem"},
     };
-    if (mapping.contains(op)) { return os << mapping.at(op); }
+    if (mapping.contains(op)) { return mapping.at(op); }
     throw std::invalid_argument("Unknown binary integer operator");
 }
 
-std::ostream& operator<<(std::ostream& os, const lir::BinaryFloatingPointOperator& op) {
+std::string to_string(const lir::BinaryFloatingPointOperator op) {
     static const std::map<lir::BinaryFloatingPointOperator, const char*> mapping = {
         {lir::BinaryFloatingPointOperator::FADD, "fadd"},
         {lir::BinaryFloatingPointOperator::FSUB, "fsub"},
@@ -25,11 +25,11 @@ std::ostream& operator<<(std::ostream& os, const lir::BinaryFloatingPointOperato
         {lir::BinaryFloatingPointOperator::FVID, "fdiv"},
         {lir::BinaryFloatingPointOperator::FREM, "frem"},
     };
-    if (mapping.contains(op)) { return os << mapping.at(op); }
+    if (mapping.contains(op)) { return mapping.at(op); }
     throw std::invalid_argument("Unknown binary floating point operator");
 }
 
-std::ostream& operator<<(std::ostream& os, const lir::BinaryBitwiseOperator& op) {
+std::string to_string(const lir::BinaryBitwiseOperator op) {
     static const std::map<lir::BinaryBitwiseOperator, const char*> mapping = {
         {lir::BinaryBitwiseOperator::SHL, "shl"},
         {lir::BinaryBitwiseOperator::LSHR, "lshr"},
@@ -38,11 +38,11 @@ std::ostream& operator<<(std::ostream& os, const lir::BinaryBitwiseOperator& op)
         {lir::BinaryBitwiseOperator::OR, "or"},
         {lir::BinaryBitwiseOperator::XOR, "xor"},
     };
-    if (mapping.contains(op)) { return os << mapping.at(op); }
+    if (mapping.contains(op)) { return mapping.at(op); }
     throw std::invalid_argument("Unknown binary bitwise operator");
 }
 
-std::ostream& operator<<(std::ostream& os, const lir::IntegerComparisonOperator& op) {
+std::string to_string(const lir::IntegerComparisonOperator op) {
     static const std::map<lir::IntegerComparisonOperator, const char*> mapping = {
         {lir::IntegerComparisonOperator::EQ, "eq"},
         {lir::IntegerComparisonOperator::NE, "ne"},
@@ -55,11 +55,11 @@ std::ostream& operator<<(std::ostream& os, const lir::IntegerComparisonOperator&
         {lir::IntegerComparisonOperator::SLT, "slt"},
         {lir::IntegerComparisonOperator::SLE, "sle"},
     };
-    if (mapping.contains(op)) { return os << mapping.at(op); }
+    if (mapping.contains(op)) { return mapping.at(op); }
     throw std::invalid_argument("Unknown integer comparison operator");
 }
 
-std::ostream& operator<<(std::ostream& os, const lir::FloatingPointComparisonOperator& op) {
+std::string to_string(const lir::FloatingPointComparisonOperator op) {
     static const std::map<lir::FloatingPointComparisonOperator, const char*> mapping = {
         {lir::FloatingPointComparisonOperator::FALSE, "false"},
         {lir::FloatingPointComparisonOperator::OEQ, "oeq"},
@@ -78,6 +78,6 @@ std::ostream& operator<<(std::ostream& os, const lir::FloatingPointComparisonOpe
         {lir::FloatingPointComparisonOperator::UNO, "uno"},
         {lir::FloatingPointComparisonOperator::TRUE, "true"},
     };
-    if (mapping.contains(op)) { return os << mapping.at(op); }
+    if (mapping.contains(op)) { return mapping.at(op); }
     throw std::invalid_argument("Unknown integer comparison operator");
 }

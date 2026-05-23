@@ -10,7 +10,7 @@ namespace ast {
 class NodePrinter final : NodeVisitor, ExpressionVisitor {
 public:
     void print_program(Program& program) {
-        std::cout << "Program\n";
+        fmt::println("Program");
         const size_t size = program.children.size();
         for (size_t i = 0; i < size; i++) {
             const bool is_last = i == size - 1;
@@ -23,7 +23,7 @@ private:
 
     template <typename Node>
     void print_node(std::unique_ptr<Node>& node, const bool is_last) {
-        std::cout << this->prefix << (is_last ? "\\- " : "|- ");
+        fmt::print("{}", is_last ? "\\- " : "|- ");
         auto old_prefix = std::move(this->prefix);
         this->prefix = old_prefix + (is_last ? "   " : "|  ");
         node->accept(this);
@@ -31,28 +31,32 @@ private:
     }
 
     void print_node(const Type type, const bool is_last) const {
-        std::cout << this->prefix << (is_last ? "\\- " : "|- ");
-        std::cout << "Type: " << type << '\n';
+        fmt::println("{}{}Type: {}", this->prefix, is_last ? "\\- " : "|- ", type);
     }
 
     void print_node(const BinaryOperator bin_op, const bool is_last) const {
-        std::cout << this->prefix << (is_last ? "\\- " : "|- ");
-        std::cout << "Binary operator: " << bin_op << '\n';
+        fmt::println(
+            "{}{}Binary operator: {}", this->prefix, is_last ? "\\- " : "|- ", bin_op
+        );
     }
 
     void print_node(const UnaryOperator unary_op, const bool is_last) const {
-        std::cout << this->prefix << (is_last ? "\\- " : "|- ");
-        std::cout << "Unary operator: " << unary_op << '\n';
+        fmt::println(
+            "{}{}Unary operator: {}", this->prefix, is_last ? "\\- " : "|- ", unary_op
+        );
     }
 
-    void print_node(AtomIdentifier* ident, const bool is_last) const {
-        std::cout << this->prefix << (is_last ? "\\- " : "|- ");
-        std::cout << "Identifier: " << ident->name << '\n';
+    void print_node(const AtomIdentifier* ident, const bool is_last) const {
+        fmt::println(
+            "{}{}Identifier: {}", this->prefix, is_last ? "\\- " : "|- ", ident->name
+        );
     }
 
-    void print_node(AtomIntegerLiteral* int_literal, const bool is_last) const {
-        std::cout << this->prefix << (is_last ? "\\- " : "|- ");
-        std::cout << "Integer literal: " << int_literal->value << '\n';
+    void print_node(const AtomIntegerLiteral* int_literal, const bool is_last) const {
+        fmt::println(
+            "{}{}Integer literal: {}", this->prefix, is_last ? "\\- " : "|- ",
+            int_literal->value
+        );
     }
 
     void print_node(Atom* atom, const bool is_last) const {
@@ -64,19 +68,19 @@ private:
     }
 
     void visit(AtomExpression* atom) override {
-        std::cout << "Atom expression\n";
+        fmt::println("Atom expression");
 
         print_node(atom->atom.get(), true);
     }
 
     void visit(ParenExpression* expr) override {
-        std::cout << "Paren expression\n";
+        fmt::println("Paren expression");
 
         print_node(expr->expression, true);
     }
 
     void visit(BinaryExpression* bin_expression) override {
-        std::cout << "Binary expression\n";
+        fmt::println("Binary expression");
 
         print_node(bin_expression->op, false);
         print_node(bin_expression->left, false);
@@ -84,40 +88,40 @@ private:
     }
 
     void visit(UnaryExpression* unary_expression) override {
-        std::cout << "Unary expression\n";
+        fmt::println("Unary expression");
 
         print_node(unary_expression->op, false);
         print_node(unary_expression->expression, true);
     }
 
     void visit(CallExpression* call_expression) override {
-        std::cout << "Call expression\n";
+        fmt::println("Call expression");
 
         print_node(call_expression->function.get(), false);
         for (auto& arg : call_expression->arguments) { print_node(arg, false); }
     }
 
     void visit(VariableDeclaration* var) override {
-        std::cout << "Variable\n";
+        fmt::println("Variable declaration");
 
         if (var->type) {
             print_node(*var->type, false);
         } else {
-            std::cout << "auto";
+            fmt::print("auto");
         }
         print_node(var->name.get(), var->initializer == nullptr);
         if (var->initializer) { print_node(var->initializer, true); }
     }
 
     void visit(FunctionArgument* arg) override {
-        std::cout << "Function arg\n";
+        fmt::println("Function argument");
 
         print_node(arg->type, false);
         print_node(arg->name.get(), true);
     }
 
     void visit(FunctionDeclaration* func) override {
-        std::cout << "Function\n";
+        fmt::println("Function");
 
         print_node(func->name.get(), false);
         print_node(func->return_type, false);
@@ -126,7 +130,7 @@ private:
     }
 
     void visit(BlockStatement* statement) override {
-        std::cout << "Block\n";
+        fmt::println("Block");
         const size_t size = statement->entries.size();
         for (size_t i = 0; i < size; i++) {
             const bool is_last = i == size - 1;
@@ -135,14 +139,14 @@ private:
     }
 
     void visit(AssignmentStatement* assignment) override {
-        std::cout << "Assignment\n";
+        fmt::println("Assignment");
 
         print_node(assignment->identifier.get(), false);
         print_node(assignment->expression, true);
     }
 
     void visit(IfStatement* if_statement) override {
-        std::cout << "If\n";
+        fmt::println("If");
 
         print_node(if_statement->condition, false);
         print_node(if_statement->true_case, !if_statement->has_false_case());
@@ -151,20 +155,20 @@ private:
     }
 
     void visit(WhileStatement* while_statement) override {
-        std::cout << "While\n";
+        fmt::println("While");
 
         print_node(while_statement->condition, false);
         print_node(while_statement->block, true);
     }
 
     void visit(ReturnStatement* return_statement) override {
-        std::cout << "Return\n";
+        fmt::println("Return");
 
         print_node(return_statement->expression, true);
     }
 
     void visit(ExpressionStatement* expression_statement) override {
-        std::cout << "Expression\n";
+        fmt::println("Expression");
 
         print_node(expression_statement->expression, true);
     }
