@@ -226,8 +226,8 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     );
     this->append_to_active_func(std::move(var_decl));
     /// assignment
-    if (variable_declaration->value) {
-        this->translate(std::move(variable_declaration->value));
+    if (variable_declaration->initializer) {
+        this->translate(std::move(variable_declaration->initializer));
         auto expr = this->get_last_expression();
         if (variable_declaration->type != expr->result_type) {
             this->add_error(

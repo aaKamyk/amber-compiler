@@ -34,8 +34,8 @@ void ast::ConstantFold::visit(ExpressionStatement* expression_statement) {
 }
 
 void ast::ConstantFold::visit(VariableDeclaration* variable_declaration) {
-    if (!variable_declaration->value) { return; }
-    this->pass(variable_declaration->value);
+    if (!variable_declaration->initializer) { return; }
+    this->pass(variable_declaration->initializer);
 }
 
 void ast::ConstantFold::visit(FunctionArgument* function_argument) {}

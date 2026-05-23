@@ -13,6 +13,7 @@ std::string Token::to_string() const {
         {TokenType::ELSE, "else"},
         {TokenType::WHILE, "while"},
         {TokenType::FN, "fn"},
+        {TokenType::LET, "let"},
         {TokenType::RETURN, "return"},
         // --- Types ---
         {TokenType::I32, "int"},

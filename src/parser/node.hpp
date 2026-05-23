@@ -68,7 +68,7 @@ struct Declaration : Node {};
 struct VariableDeclaration final : Declaration {
     Type type{};
     std::unique_ptr<AtomIdentifier> name{nullptr};
-    std::unique_ptr<Expression> value{nullptr};
+    std::unique_ptr<Expression> initializer{nullptr};
 
     void accept(NodeVisitor*) override;
 };

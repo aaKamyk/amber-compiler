@@ -272,8 +272,9 @@ TokenType lxr::Lexer::get_keyword(const std::string_view name) {
         {"else", TokenType::ELSE},
         {"while", TokenType::WHILE},
         {"return", TokenType::RETURN},
-        /// function definition
+        /// declarations
         {"fn", TokenType::FN},
+        {"let", TokenType::LET},
         /// built-in types
         {"i32", TokenType::I32},
         {"void", TokenType::VOID},

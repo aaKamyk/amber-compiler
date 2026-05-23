@@ -101,8 +101,8 @@ private:
         std::cout << "Variable\n";
 
         print_node(var->type, false);
-        print_node(var->name.get(), var->value == nullptr);
-        if (var->value) { print_node(var->value, true); }
+        print_node(var->name.get(), var->initializer == nullptr);
+        if (var->initializer) { print_node(var->initializer, true); }
     }
 
     void visit(FunctionArgument* arg) override {

@@ -13,6 +13,7 @@ enum class TokenType : uint8_t {
     ELSE,
     WHILE,
     FN,
+    LET,
     RETURN,
     // --- Types ---
     I32,

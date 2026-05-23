@@ -345,8 +345,9 @@ struct ast::NodeParser<ast::BlockStatement> {
             return nullptr;
         }
         while (true) {
+            if (ctx.match(TokenType::CURLY_BRACE_END)) { break; }
             /// match declaration starts
-            if (ctx.match_any(TokenType::FN, TokenType::I32)) {
+            if (ctx.match_any(TokenType::FN, TokenType::LET)) {
                 if (auto decl = ctx.try_parse<Declaration>()) {
                     block_statement->entries.emplace_back(std::move(decl));
                 } else {
@@ -445,17 +446,26 @@ template <>
 struct ast::NodeParser<ast::VariableDeclaration> {
     static std::unique_ptr<VariableDeclaration> parse(Parser& ctx) {
         auto variable_declaration = std::make_unique<VariableDeclaration>();
-        if (!ctx.parse_into<Type>(ctx, variable_declaration->type)) { return nullptr; }
+        if (!ctx.expect(TokenType::LET)) { return nullptr; }
         if (!ctx.parse_into<AtomIdentifier>(ctx, variable_declaration->name)) {
             ctx.add_error("Expected identifier");
             return nullptr;
         }
+        if (ctx.match(TokenType::COLON)) {
+            /// explicit type declaration
+            ctx.consume(1);
+            if (!ctx.parse_into<Type>(ctx, variable_declaration->type)) {
+                return nullptr;
+            }
+        } else {
+            /// implicit type inference
+        }
         if (ctx.expect(TokenType::SEMICOLON)) {
-            variable_declaration->value = nullptr;
+            variable_declaration->initializer = nullptr;
             return variable_declaration;
         }
         if (ctx.expect(TokenType::EQUALS)) {
-            if (!ctx.parse_into<Expression>(ctx, variable_declaration->value)) {
+            if (!ctx.parse_into<Expression>(ctx, variable_declaration->initializer)) {
                 return nullptr;
             }
             if (!ctx.expect(TokenType::SEMICOLON)) {
@@ -538,7 +548,7 @@ struct ast::NodeParser<ast::Declaration> {
             case TokenType::FN:
                 return ctx.try_parse<FunctionDeclaration>();
 
-            case TokenType::I32:
+            case TokenType::LET:
                 return ctx.try_parse<VariableDeclaration>();
 
             default: {
