@@ -4,15 +4,18 @@
 #include <iostream>
 #include <utility>
 
+#include "fmt/core.h"
+
 void CompilerError::print(CompilationContext* ctx) const {
     if (!ctx) { return; }
     static const std::string RED = "\033[1;31m";
     static const std::string RESET = "\033[0m";
 
-    std::cout << ctx->get_path() << ':' << this->line << ':' << this->column;
-    std::cout << " error: " << this->message << '\n';
-    std::cout << ctx->get_line(this->line) << '\n';
-    std::cout << std::string(this->column, ' ') << "^\n";
+    fmt::println(
+        "{}:{}:{} error: {}", ctx->get_path(), this->line, this->column, this->message
+    );
+    fmt::println("{}", ctx->get_line(this->line));
+    fmt::println("{: <{}}^", "", this->column);
 }
 
 CompilerError::CompilerError(const int line, const int column, std::string message)

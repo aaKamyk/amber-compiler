@@ -1,6 +1,7 @@
 #include "node.hpp"
 
 #include <iostream>
+#include <ranges>
 
 #include "utils/operator.hpp"
 #include "utils/type.hpp"
@@ -23,7 +24,7 @@ private:
 
     template <typename Node>
     void print_node(std::unique_ptr<Node>& node, const bool is_last) {
-        fmt::print("{}", is_last ? "\\- " : "|- ");
+        fmt::print("{}{}", this->prefix, is_last ? "\\- " : "|- ");
         auto old_prefix = std::move(this->prefix);
         this->prefix = old_prefix + (is_last ? "   " : "|  ");
         node->accept(this);
@@ -97,8 +98,14 @@ private:
     void visit(CallExpression* call_expression) override {
         fmt::println("Call expression");
 
-        print_node(call_expression->function.get(), false);
-        for (auto& arg : call_expression->arguments) { print_node(arg, false); }
+        auto& args = call_expression->arguments;
+        print_node(call_expression->function.get(), args.empty());
+        if (!args.empty()) {
+            for (auto& arg : args | std::views::take(args.size() - 1)) {
+                print_node(arg, false);
+            }
+            print_node(args.back(), true);
+        }
     }
 
     void visit(VariableDeclaration* var) override {
@@ -107,7 +114,7 @@ private:
         if (var->type) {
             print_node(*var->type, false);
         } else {
-            fmt::print("auto");
+            fmt::println("{}|- Type: auto", this->prefix);
         }
         print_node(var->name.get(), var->initializer == nullptr);
         if (var->initializer) { print_node(var->initializer, true); }
@@ -164,7 +171,9 @@ private:
     void visit(ReturnStatement* return_statement) override {
         fmt::println("Return");
 
-        print_node(return_statement->expression, true);
+        if (return_statement->expression) {
+            print_node(return_statement->expression, true);
+        }
     }
 
     void visit(ExpressionStatement* expression_statement) override {
