@@ -49,7 +49,7 @@ void lir::Lir::visit(hir::InstructionAssignment* instruction_assignment) {
         instruction_store->destination = std::move(instruction_assignment->identifier);
         instruction_store->type = Type::I32;
 
-        this->get_active_func()->current_block().add(std::move(instruction_store));
+        this->get_active_func()->append(std::move(instruction_store));
     }
 }
 
@@ -63,14 +63,16 @@ void lir::Lir::visit(hir::InstructionReturn* instruction_return) {
     } else {
         instruction->type = Type::VOID;
     }
-    this->get_active_func()->current_block().add(std::move(instruction));
+
+    this->get_active_func()->append(std::move(instruction));
 }
 
 void lir::Lir::visit(hir::InstructionBranch* instruction_branch) {
     auto instruction = std::make_unique<BranchInstruction>();
 
     instruction->true_case = std::move(instruction_branch->destination);
-    this->get_active_func()->current_block().add(std::move(instruction));
+
+    this->get_active_func()->append(std::move(instruction));
 }
 
 void lir::Lir::visit(hir::InstructionBranchConditional* instruction_branch_conditional) {
@@ -81,7 +83,7 @@ void lir::Lir::visit(hir::InstructionBranchConditional* instruction_branch_condi
     instruction->true_case = std::move(instruction_branch_conditional->true_case);
     instruction->false_case = std::move(instruction_branch_conditional->false_case);
 
-    this->get_active_func()->current_block().add(std::move(instruction));
+    this->get_active_func()->append(std::move(instruction));
 }
 
 void lir::Lir::visit(
@@ -100,7 +102,8 @@ void lir::Lir::visit(
         std::move(instruction_variable_declaration->identifier),
         type_from(instruction_variable_declaration->type)
     );
-    this->get_active_func()->current_block().add(std::move(instruction_alloca));
+
+    this->get_active_func()->append(std::move(instruction_alloca));
 }
 
 void lir::Lir::visit(
@@ -115,10 +118,13 @@ void lir::Lir::visit(
     function.arguments.reserve(args.size());
     for (auto& argument : args) { function.arguments.emplace_back(std::move(argument)); }
 
-    /// construct definition from declaration
     this->m_lir_program.functions.emplace_back(std::move(function));
     this->set_active_func(&this->m_lir_program.functions.back());
     for (const auto& instr : instruction_function_declaration->instructions) {
+        if (!this->get_active_func()->has_appendable_block() &&
+            !dynamic_cast<const hir::Label*>(instr.get())) {
+            continue;
+        }
         instr->accept(this);
     }
 }
@@ -143,7 +149,7 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
     binary_instruction->operand_type = Type::I32;
     binary_instruction->op = mapping.at(binary_expression->op);
 
-    this->get_active_func()->current_block().add(std::move(binary_instruction));
+    this->get_active_func()->append(std::move(binary_instruction));
     this->set_last_value(std::move(result_ident));
 }
 
@@ -173,7 +179,7 @@ void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
     comparison_instruction->compared_type = Type::I32;
     comparison_instruction->op = mapping.at(comparison_expression->op);
 
-    this->get_active_func()->current_block().add(std::move(comparison_instruction));
+    this->get_active_func()->append(std::move(comparison_instruction));
     this->set_last_value(std::move(result_ident));
 }
 
@@ -194,7 +200,7 @@ void lir::Lir::visit(hir::CallExpression* call_expression) {
     /// TODO match type to the function type
     call_instruction->type = Type::I32;
 
-    this->get_active_func()->current_block().add(std::move(call_instruction));
+    this->get_active_func()->append(std::move(call_instruction));
     if (!this->m_discard_value) { this->set_last_value(std::move(result_ident)); }
 }
 
@@ -208,25 +214,25 @@ lir::FunctionDefinition* lir::Lir::get_active_func() const {
 
 std::unique_ptr<Atom> lir::Lir::ensure_value(std::unique_ptr<Atom> at) {
     if (dynamic_cast<AtomIntegerLiteral*>(at.get())) { return at; }
-    if (const auto ident = dynamic_cast<AtomIdentifier*>(at.get())) {
-        if (this->get_active_func()->has_argument(*ident)) { return at; }
-        if (!this->get_active_func()->has_variable(*ident)) {
-            throw std::runtime_error("Use of undeclared variable");
-        }
-        if (const auto& var_info = this->get_active_func()->get_variable(*ident);
-            var_info.kind == FunctionDefinition::VariableInfo::Kind::LOCAL) {
-            auto load_dest = std::make_unique<AtomIdentifier>(
-                ident->name + ".load" + std::to_string(this->m_load_counts[*ident]++)
-            );
-            auto instruction_load = std::make_unique<LoadInstruction>(
-                load_dest->clone(), std::move(at), Type::I32
-            );
-            this->get_active_func()->current_block().add(std::move(instruction_load));
-            return load_dest;
-        }
-        return at;
+
+    const auto& ident = dynamic_cast<const AtomIdentifier&>(*at);
+    if (this->get_active_func()->has_argument(ident)) { return at; }
+    if (!this->get_active_func()->has_variable(ident)) {
+        throw std::runtime_error("Use of undeclared variable");
     }
-    throw std::invalid_argument("Invalid subclass of Atom");
+    if (const auto& var_info = this->get_active_func()->get_variable(ident);
+        var_info.kind == FunctionDefinition::VariableInfo::Kind::LOCAL) {
+        auto load_dest = std::make_unique<AtomIdentifier>(
+            ident.name + ".load" + std::to_string(this->m_load_counts[ident]++)
+        );
+        auto instruction_load = std::make_unique<LoadInstruction>(
+            load_dest->clone(), std::move(at), Type::I32
+        );
+
+        this->get_active_func()->append(std::move(instruction_load));
+        return load_dest;
+    }
+    return at;
 }
 
 std::unique_ptr<AtomIdentifier> lir::Lir::get_temporary_identifier(

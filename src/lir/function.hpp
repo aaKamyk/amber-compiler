@@ -54,6 +54,7 @@ struct FunctionDefinition {
     explicit FunctionDefinition(std::unique_ptr<AtomIdentifier> name, Type ret_type);
 
     BasicBlock& current_block() const;
+    bool has_appendable_block() const;
     void append(BasicBlock basic_block);
     void append(std::unique_ptr<Instruction> instruction) const;
     const std::string& get_name() const;

@@ -22,6 +22,15 @@ bool BasicBlock::is_valid() const {
     return this->has_label() && this->has_terminator();
 }
 
+bool BasicBlock::empty() const {
+    return this->instructions.empty();
+}
+
+const std::string& BasicBlock::get_label() const {
+    if (!this->label) { throw std::runtime_error("Basic block does not have a label"); }
+    return this->label->name;
+}
+
 FunctionArgument::FunctionArgument(hir::FunctionArgument arg) {
     this->type = type_from(arg.type);
     this->name = std::move(arg.name);
@@ -47,8 +56,17 @@ void FunctionDefinition::append(std::unique_ptr<Instruction> instruction) const 
     this->current_block().add(std::move(instruction));
 }
 
+const std::string& FunctionDefinition::get_name() const {
+    return this->name->name;
+}
+
 BasicBlock& FunctionDefinition::current_block() const {
     return *this->blocks.back();
+}
+
+bool FunctionDefinition::has_appendable_block() const {
+    if (this->empty()) { return false; }
+    return !this->current_block().has_terminator();
 }
 
 bool FunctionDefinition::empty() const {
