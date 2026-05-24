@@ -15,12 +15,12 @@ struct BasicBlock {
     std::vector<std::unique_ptr<Instruction>> instructions;
 
     void add(std::unique_ptr<Instruction> instruction);
-    bool has_terminator() const;
-    bool has_label() const;
-    bool is_valid() const;
-    bool empty() const;
+    [[nodiscard]] bool has_terminator() const;
+    [[nodiscard]] bool has_label() const;
+    [[nodiscard]] bool is_valid() const;
+    [[nodiscard]] bool empty() const;
 
-    const std::string& get_label() const;
+    [[nodiscard]] const std::string& get_label() const;
 };
 
 struct FunctionArgument {
@@ -53,26 +53,16 @@ struct FunctionDefinition {
     explicit FunctionDefinition() = default;
     explicit FunctionDefinition(std::unique_ptr<AtomIdentifier> name, Type ret_type);
 
-    BasicBlock& current_block() const;
-    bool has_appendable_block() const;
+    [[nodiscard]] BasicBlock& current_block() const;
+    [[nodiscard]] bool has_appendable_block() const;
     void append(BasicBlock basic_block);
     void append(std::unique_ptr<Instruction> instruction) const;
-    const std::string& get_name() const;
+    [[nodiscard]] const std::string& get_name() const;
 
-    bool empty() const;
-    bool has_variable(const AtomIdentifier& ident) const;
-    bool has_argument(const AtomIdentifier& ident) const;
+    [[nodiscard]] bool empty() const;
+    [[nodiscard]] bool has_variable(const AtomIdentifier& ident) const;
+    [[nodiscard]] bool has_argument(const AtomIdentifier& ident) const;
     VariableInfo& get_variable(const AtomIdentifier& ident);
-};
-
-struct FunctionDeclaration {
-    std::unique_ptr<AtomIdentifier> name{nullptr};
-    Type return_type{Type::VOID};
-    std::vector<Type> argument_types{};
-
-    explicit FunctionDeclaration() = default;
-
-    const std::string& get_name() const { return this->name->name; }
 };
 
 struct Module {
