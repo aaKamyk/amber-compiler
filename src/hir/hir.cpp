@@ -265,15 +265,29 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
     auto func_decl = std::make_unique<InstructionFunctionDeclaration>();
     func_decl->return_type = function_declaration->return_type;
     func_decl->name = std::move(function_declaration->name);
+    /// additional scope for function parameters
+    this->push_scope();
     for (const auto& param : function_declaration->arguments) {
-        assert(param);
-        auto& [type, name] = *param;
-        func_decl->parameters.emplace_back(type, std::move(name));
+        auto& [type, identifier] = *param;
+        auto unique_name = SymbolTable::get_unique_name(identifier->name);
+        m_symbol_table.add_symbol(
+            unique_name,
+            SymbolMetadata{
+                .type = type,
+                .is_mut = false,
+            }
+        );
+        this->current_scope().add(std::move(identifier->name), unique_name);
+        func_decl->parameters.emplace_back(
+            type, std::make_unique<AtomIdentifier>(std::move(unique_name))
+        );
     }
+
     this->set_active_function(func_decl->instructions);
     this->append_to_active_func(std::make_unique<Label>(func_decl->name->clone()));
     this->append_to_program(std::move(func_decl));
     this->translate(std::move(function_declaration->body));
+    this->pop_scope();
     this->unset_active_function();
 }
 
