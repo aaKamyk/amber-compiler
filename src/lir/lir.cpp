@@ -306,7 +306,7 @@ struct LirPrinter final : lir::InstructionVisitor {
     }
 
     void visit(lir::StoreInstruction* store_instruction) override {
-        fmt::print("score {} ", store_instruction->type);
+        fmt::print("store {} ", store_instruction->type);
         print(store_instruction->value.get());
         fmt::print(", ptr");
         print(store_instruction->destination.get());
