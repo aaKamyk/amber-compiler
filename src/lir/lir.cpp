@@ -277,20 +277,6 @@ struct LirPrinter final : lir::InstructionVisitor {
     }
 
     void print(const lir::Program& program) {
-        /// Print declarations
-        for (const auto& declaration : program.function_declarations) {
-            fmt::print(
-                "declare {} @{}(", declaration.return_type, declaration.get_name()
-            );
-            if (const auto& types = declaration.argument_types; !types.empty()) {
-                for (const auto& type : types | std::views::take(types.size() - 1)) {
-                    fmt::print("{}, ", type);
-                }
-                fmt::print("{}", types.back());
-            }
-            fmt::println(")");
-        }
-        fmt::println("");
         /// Print definitions
         for (const auto& function : program.functions) {
             fmt::print("define {} @{}(", function.return_type, function.get_name());

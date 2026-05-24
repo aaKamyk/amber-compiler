@@ -9,7 +9,6 @@
 namespace lir {
 
 struct Program {
-    std::vector<FunctionDeclaration> function_declarations;
     std::vector<FunctionDefinition> functions;
 };
 
