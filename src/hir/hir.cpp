@@ -213,7 +213,7 @@ void hir::Hir::visit(ast::ExpressionStatement* expression_statement) {
 
 void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     /// check type against initializer expression
-    auto variable_type{Type::VOID};
+    Type variable_type{};
     if (variable_declaration->initializer) {
         this->translate(std::move(variable_declaration->initializer));
         const auto* expr = this->view_last_expression();
@@ -233,7 +233,7 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
         variable_type = *variable_declaration->type;
     }
     /// gets the unique variable name and adds it to the symbol table
-    auto name = variable_declaration->name->name;
+    auto& name = variable_declaration->name->name;
     auto unique_name = SymbolTable::get_unique_name(name);
     m_symbol_table.add_symbol(
         unique_name,
