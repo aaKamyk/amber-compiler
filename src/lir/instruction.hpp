@@ -50,9 +50,13 @@ struct LoadInstruction final : Instruction {
 /// @code %result = call i32, @foo(%arg1, %arg2, ...) @endcode \n
 /// @code call void @void_func()
 struct CallInstruction final : Instruction {
+    struct Argument {
+        std::unique_ptr<Atom> value;
+        Type type;
+    };
     std::unique_ptr<AtomIdentifier> result{nullptr};
     std::unique_ptr<AtomIdentifier> callee{nullptr};
-    std::vector<std::unique_ptr<Atom>> arguments;
+    std::vector<Argument> arguments;
     Type type;
 
     void accept(InstructionVisitor*) override;

@@ -59,11 +59,12 @@ void hir::InstructionVariableDeclaration::accept(InstructionVisitor* v) {
 
 hir::InstructionFunctionDeclaration::InstructionFunctionDeclaration(
     const Type return_type, std::unique_ptr<AtomIdentifier> name,
-    std::vector<FunctionArgument> parameters,
+    std::unique_ptr<Label> entry_label, std::vector<FunctionArgument> parameters,
     std::vector<std::unique_ptr<Instruction>> instructions
 )
     : return_type(return_type),
       name(std::move(name)),
+      entry_label(std::move(entry_label)),
       parameters(std::move(parameters)),
       instructions(std::move(instructions)) {}
 

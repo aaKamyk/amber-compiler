@@ -23,31 +23,26 @@ struct BasicBlock {
     [[nodiscard]] const std::string& get_label() const;
 };
 
-struct FunctionArgument {
-    Type type{};
-    std::unique_ptr<AtomIdentifier> name{nullptr};
+struct VariableInfo {
+    enum class Kind {
+        GLOBAL,
+        LOCAL,
+        PARAMETER,
+        HIR_TEMPORARY,
+        LIR_TEMPORARY,
+    };
+    AtomIdentifier identifier;
+    Type type{Type::VOID};
+    Kind kind{Kind::LIR_TEMPORARY};
 
-    explicit FunctionArgument(hir::FunctionArgument arg);
-    explicit FunctionArgument(std::unique_ptr<AtomIdentifier> name, lir::Type type);
+    static VariableInfo from_argument(const hir::FunctionArgument& arg);
 };
 
 struct FunctionDefinition {
-    struct VariableInfo {
-        enum class Kind {
-            GLOBAL,
-            LOCAL,
-            HIR_TEMPORARY,
-            LIR_TEMPORARY,
-        };
-        AtomIdentifier name;
-        Type type{Type::VOID};
-        Kind kind{Kind::LIR_TEMPORARY};
-    };
-
     std::unique_ptr<AtomIdentifier> name{nullptr};
     Type return_type{Type::VOID};
-    std::vector<FunctionArgument> arguments{};
     std::vector<std::unique_ptr<BasicBlock>> blocks{};
+    std::vector<VariableInfo> arguments{};
     std::vector<VariableInfo> variables{};
 
     explicit FunctionDefinition() = default;

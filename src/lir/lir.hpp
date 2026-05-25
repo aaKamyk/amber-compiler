@@ -35,15 +35,22 @@ public:
 
     void set_active_func(FunctionDefinition*);
     [[nodiscard]] FunctionDefinition* get_active_func() const;
-    std::unique_ptr<Atom> ensure_value(std::unique_ptr<Atom> at);
     static std::unique_ptr<AtomIdentifier> get_temporary_identifier(
         const std::string& name
     );
+    void allocate_parameter(const VariableInfo& info) const;
 
     void set_last_value(std::unique_ptr<Atom> at);
     void set_target_value(std::unique_ptr<AtomIdentifier> at);
+    std::unique_ptr<Atom> ensure_value(std::unique_ptr<Atom> at);
+    std::unique_ptr<AtomIdentifier> ensure_value(
+        std::unique_ptr<AtomIdentifier> identifier
+    );
     std::unique_ptr<Atom> get_last_value();
     std::unique_ptr<AtomIdentifier> get_target_value();
+    std::unique_ptr<AtomIdentifier> get_store_location(
+        std::unique_ptr<AtomIdentifier> ident
+    ) const;
 
     hir::Program m_program;
     Program m_lir_program;

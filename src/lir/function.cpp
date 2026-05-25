@@ -31,14 +31,13 @@ const std::string& BasicBlock::get_label() const {
     return this->label->name;
 }
 
-FunctionArgument::FunctionArgument(hir::FunctionArgument arg) {
-    this->type = type_from(arg.type);
-    this->name = std::move(arg.name);
+VariableInfo VariableInfo::from_argument(const hir::FunctionArgument& arg) {
+    return {
+        .identifier = std::move(*arg.name),
+        .type = type_from(arg.type),
+        .kind = Kind::PARAMETER
+    };
 }
-FunctionArgument::FunctionArgument(
-    std::unique_ptr<AtomIdentifier> name, const lir::Type type
-)
-    : type(type), name(std::move(name)) {}
 
 FunctionDefinition::FunctionDefinition(
     std::unique_ptr<AtomIdentifier> name, const lir::Type ret_type
@@ -74,22 +73,34 @@ bool FunctionDefinition::empty() const {
 }
 
 bool FunctionDefinition::has_variable(const AtomIdentifier& ident) const {
-    return std::ranges::find_if(this->variables, [&](auto&& var_info) {
-               return var_info.name == ident;
+    return std::ranges::find_if(
+               this->arguments, [&ident](auto&& arg) { return arg.identifier == ident; }
+           ) != this->arguments.end() ||
+           std::ranges::find_if(this->variables, [&](auto&& var_info) {
+               return var_info.identifier == ident;
            }) != this->variables.end();
 }
 
 bool FunctionDefinition::has_argument(const AtomIdentifier& ident) const {
     return std::ranges::find_if(this->arguments, [&](auto&& arg) -> bool {
-               return *arg.name == ident;
+               return arg.identifier == ident;
            }) != this->arguments.end();
 }
-FunctionDefinition::VariableInfo& FunctionDefinition::get_variable(
-    const AtomIdentifier& ident
-) {
-    return *std::ranges::find_if(this->variables, [&](auto&& var_info) {
-        return var_info.name == ident;
-    });
+
+VariableInfo& FunctionDefinition::get_variable(const AtomIdentifier& ident) {
+    if (const auto found = std::ranges::find_if(
+            this->arguments, [&ident](auto&& arg) { return arg.identifier == ident; }
+        );
+        found != this->arguments.end()) {
+        return *found;
+    }
+    if (const auto found = std::ranges::find_if(
+            this->variables, [&](auto&& var_info) { return var_info.identifier == ident; }
+        );
+        found != this->variables.end()) {
+        return *found;
+    }
+    throw std::runtime_error("Trying to get metadata of undeclared variable");
 }
 
 }  // namespace lir

@@ -265,6 +265,7 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
     auto func_decl = std::make_unique<InstructionFunctionDeclaration>();
     func_decl->return_type = function_declaration->return_type;
     func_decl->name = std::move(function_declaration->name);
+    func_decl->entry_label = std::make_unique<Label>(func_decl->name->clone());
     /// additional scope for function parameters
     this->push_scope();
     for (const auto& param : function_declaration->arguments) {
@@ -284,7 +285,6 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
     }
 
     this->set_active_function(func_decl->instructions);
-    this->append_to_active_func(std::make_unique<Label>(func_decl->name->clone()));
     this->append_to_program(std::move(func_decl));
     this->translate(std::move(function_declaration->body));
     this->pop_scope();
@@ -485,9 +485,10 @@ void hir::Hir::append_to_program(std::unique_ptr<InstructionFunctionDeclaration>
 
 void hir::Hir::append_global_init_to_program() {
     auto ident = std::make_unique<AtomIdentifier>("global_init");
+    auto entry_label = std::make_unique<Label>(ident->clone());
     auto global_init = std::make_unique<InstructionFunctionDeclaration>(
-        Type::VOID, std::move(ident), std::vector<FunctionArgument>{},
-        std::move(m_global_init)
+        Type::VOID, std::move(ident), std::move(entry_label),
+        std::vector<FunctionArgument>{}, std::move(m_global_init)
     );
     this->append_to_program(std::move(global_init));
 }
@@ -589,6 +590,7 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
             fmt::print("{} {}", type, ident->name);
         }
         fmt::println(") -> {}", instruction_declaration->return_type);
+        fmt::println("{}:", instruction_declaration->entry_label->get_name());
         for (const auto& instr : instruction_declaration->instructions) {
             if (!dynamic_cast<hir::Label*>(instr.get())) { fmt::print("  "); }
             instr->accept(this);

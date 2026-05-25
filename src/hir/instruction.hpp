@@ -95,19 +95,20 @@ struct InstructionVariableDeclaration final : InstructionDeclaration {
     );
     void accept(InstructionVisitor*) override;
 
-    const std::string& get_name() const { return identifier->name; }
+    [[nodiscard]] const std::string& get_name() const { return identifier->name; }
 };
 
 struct InstructionFunctionDeclaration final : InstructionDeclaration {
     Type return_type{};
     std::unique_ptr<AtomIdentifier> name{nullptr};
+    std::unique_ptr<Label> entry_label{nullptr};
     std::vector<FunctionArgument> parameters{};
     std::vector<std::unique_ptr<Instruction>> instructions{};
 
     explicit InstructionFunctionDeclaration() = default;
     explicit InstructionFunctionDeclaration(
         Type return_type, std::unique_ptr<AtomIdentifier> name,
-        std::vector<FunctionArgument> parameters,
+        std::unique_ptr<Label> entry_label, std::vector<FunctionArgument> parameters,
         std::vector<std::unique_ptr<Instruction>> instructions
     );
     void accept(InstructionVisitor*) override;
