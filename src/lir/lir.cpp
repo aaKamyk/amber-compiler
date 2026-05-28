@@ -4,6 +4,7 @@
 #include <map>
 #include <ranges>
 
+#include "pass.hpp"
 #include "utils/util.hpp"
 
 lir::Lir::Lir(hir::Program program)
@@ -478,7 +479,9 @@ struct LirPrinter final : lir::InstructionVisitor {
 
 lir::Program lir::translate(hir::Program program, CompilationContext& context) {
     Lir translator(std::move(program));
-    return translator.translate();
+    auto lir_program = translator.translate();
+    diagnostic_pass(lir_program);
+    return lir_program;
 }
 
 void lir::print_program(const Program& program) {
