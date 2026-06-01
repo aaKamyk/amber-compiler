@@ -40,7 +40,7 @@ private:
     void visit(ExpressionStatement* expression_statement) override;
 
     void visit(VariableDeclaration* variable_declaration) override;
-    void visit(FunctionArgument* function_argument) override;
+    void visit(FunctionParameter* function_argument) override;
     void visit(FunctionDeclaration* function_declaration) override;
 
     void visit(AtomExpression* atom_expression) override;

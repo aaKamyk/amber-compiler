@@ -11,8 +11,8 @@ namespace hir {
 
 class InstructionVisitor;
 
-struct FunctionArgument {
-    Type type;
+struct FunctionParameter {
+    TypeID type;
     std::unique_ptr<AtomIdentifier> name;
 };
 
@@ -86,12 +86,12 @@ struct InstructionBranchConditional final : Instruction {
 struct InstructionDeclaration : Instruction {};
 
 struct InstructionVariableDeclaration final : InstructionDeclaration {
-    Type type{};
+    TypeID type{types::void_()};
     std::unique_ptr<AtomIdentifier> identifier{nullptr};
     const bool is_temporary{false};
 
     explicit InstructionVariableDeclaration(
-        Type type, std::unique_ptr<AtomIdentifier> identifier, bool is_temporary = false
+        TypeID type, std::unique_ptr<AtomIdentifier> identifier, bool is_temporary = false
     );
     void accept(InstructionVisitor*) override;
 
@@ -99,16 +99,16 @@ struct InstructionVariableDeclaration final : InstructionDeclaration {
 };
 
 struct InstructionFunctionDeclaration final : InstructionDeclaration {
-    Type return_type{};
+    TypeID return_type{types::void_()};
     std::unique_ptr<AtomIdentifier> name{nullptr};
     std::unique_ptr<Label> entry_label{nullptr};
-    std::vector<FunctionArgument> parameters{};
+    std::vector<FunctionParameter> parameters{};
     std::vector<std::unique_ptr<Instruction>> instructions{};
 
     explicit InstructionFunctionDeclaration() = default;
     explicit InstructionFunctionDeclaration(
-        Type return_type, std::unique_ptr<AtomIdentifier> name,
-        std::unique_ptr<Label> entry_label, std::vector<FunctionArgument> parameters,
+        TypeID return_type, std::unique_ptr<AtomIdentifier> name,
+        std::unique_ptr<Label> entry_label, std::vector<FunctionParameter> parameters,
         std::vector<std::unique_ptr<Instruction>> instructions
     );
     void accept(InstructionVisitor*) override;

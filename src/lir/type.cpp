@@ -3,18 +3,19 @@
 #include <map>
 #include <stdexcept>
 
-lir::Type lir::type_from(const ::Type type) {
+lir::Type lir::type_from(const TypeID type) {
     // clang-format off
-    static const std::map<::Type, Type> mapping = {
-        {::Type::I64, Type::I64},
-        {::Type::I32, Type::I32},
-        {::Type::I16, Type::I16},
-        {::Type::I8, Type::I8},
-        {::Type::BOOL, Type::I1},
-        {::Type::VOID, Type::VOID},
+    static const std::map<::TypeID, Type> mapping = {
+        {types::i64(), Type::I64},
+        {types::i32(), Type::I32},
+        {types::i16(), Type::I16},
+        {types::i8(), Type::I8},
+        {types::i16(), Type::I1},
+        {types::void_(), Type::VOID},
     };
     // clang-format on
-    if (!mapping.contains(type)) { throw std::runtime_error("Unknown type from hir"); }
+    /// TODO add other types
+    if (!mapping.contains(type)) { throw std::runtime_error("Non builtin type"); }
     return mapping.at(type);
 }
 

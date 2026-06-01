@@ -31,7 +31,7 @@ private:
         this->prefix = std::move(old_prefix);
     }
 
-    void print_node(const Type type, const bool is_last) const {
+    void print_node(const TypeID type, const bool is_last) const {
         fmt::println("{}{}Type: {}", this->prefix, is_last ? "\\- " : "|- ", type);
     }
 
@@ -61,9 +61,9 @@ private:
     }
 
     void print_node(Atom* atom, const bool is_last) const {
-        if (auto* ident = dynamic_cast<AtomIdentifier*>(atom)) {
+        if (const auto* ident = dynamic_cast<AtomIdentifier*>(atom)) {
             this->print_node(ident, is_last);
-        } else if (auto* lit = dynamic_cast<AtomIntegerLiteral*>(atom)) {
+        } else if (const auto* lit = dynamic_cast<AtomIntegerLiteral*>(atom)) {
             this->print_node(lit, is_last);
         }
     }
@@ -111,16 +111,12 @@ private:
     void visit(VariableDeclaration* var) override {
         fmt::println("Variable declaration");
 
-        if (var->type) {
-            print_node(*var->type, false);
-        } else {
-            fmt::println("{}|- Type: auto", this->prefix);
-        }
+        fmt::println("{}|- Type: auto", this->prefix);
         print_node(var->name.get(), var->initializer == nullptr);
         if (var->initializer) { print_node(var->initializer, true); }
     }
 
-    void visit(FunctionArgument* arg) override {
+    void visit(FunctionParameter* arg) override {
         fmt::println("Function argument");
 
         print_node(arg->type, false);
@@ -211,13 +207,21 @@ void VariableDeclaration::accept(NodeVisitor* v) {
     v->visit(this);
 }
 
-void FunctionArgument::accept(NodeVisitor* v) {
+VariableDeclaration::VariableDeclaration()
+    : type(types::void_()) {}
+
+void FunctionParameter::accept(NodeVisitor* v) {
     v->visit(this);
 }
+
+FunctionParameter::FunctionParameter()
+    : type(types::void_()) {}
 
 void FunctionDeclaration::accept(NodeVisitor* v) {
     v->visit(this);
 }
+FunctionDeclaration::FunctionDeclaration()
+    : return_type(types::void_()) {}
 
 void print_program(Program& program) {
     NodePrinter printer{};

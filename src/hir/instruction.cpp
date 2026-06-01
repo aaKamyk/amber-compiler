@@ -49,7 +49,7 @@ void hir::InstructionBranchConditional::accept(InstructionVisitor* v) {
 }
 
 hir::InstructionVariableDeclaration::InstructionVariableDeclaration(
-    const Type type, std::unique_ptr<AtomIdentifier> identifier, const bool is_temporary
+    const TypeID type, std::unique_ptr<AtomIdentifier> identifier, const bool is_temporary
 )
     : type(type), identifier(std::move(identifier)), is_temporary(is_temporary) {}
 
@@ -58,8 +58,8 @@ void hir::InstructionVariableDeclaration::accept(InstructionVisitor* v) {
 }
 
 hir::InstructionFunctionDeclaration::InstructionFunctionDeclaration(
-    const Type return_type, std::unique_ptr<AtomIdentifier> name,
-    std::unique_ptr<Label> entry_label, std::vector<FunctionArgument> parameters,
+    const TypeID return_type, std::unique_ptr<AtomIdentifier> name,
+    std::unique_ptr<Label> entry_label, std::vector<FunctionParameter> parameters,
     std::vector<std::unique_ptr<Instruction>> instructions
 )
     : return_type(return_type),

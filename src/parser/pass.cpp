@@ -38,7 +38,7 @@ void ast::ConstantFold::visit(VariableDeclaration* variable_declaration) {
     this->pass(variable_declaration->initializer);
 }
 
-void ast::ConstantFold::visit(FunctionArgument* function_argument) {}
+void ast::ConstantFold::visit(FunctionParameter* function_argument) {}
 
 void ast::ConstantFold::visit(FunctionDeclaration* function_declaration) {
     this->pass(function_declaration->body);

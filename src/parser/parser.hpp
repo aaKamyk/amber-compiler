@@ -74,7 +74,6 @@ private:
     CompilationContext& m_ctx;
 
     template <typename T>
-
     std::unique_ptr<T> try_parse() {
         const auto start = save();
         const auto current_token = this->current_token();
@@ -95,7 +94,7 @@ private:
 
     template <typename T>
         requires std::same_as<T, BinaryOperator> || std::same_as<T, UnaryOperator> ||
-                 std::same_as<T, Type>
+                 std::same_as<T, TypeID>
     std::optional<T> try_parse() {
         const auto start = save();
         if (auto parse_result = NodeParser<T>::parse(*this)) {
@@ -143,23 +142,23 @@ Program parse(std::vector<Token> tokens, CompilationContext& ctx);
 }  // namespace ast
 
 template <>
-struct ast::NodeParser<Type> {
-    static std::optional<Type> parse(Parser& ctx) {
+struct ast::NodeParser<TypeID> {
+    static std::optional<TypeID> parse(Parser& ctx) {
         // clang-format off
-        static const std::map<TokenType, Type> built_in_types = {
-            {TokenType::I64, Type::I64},
-            {TokenType::I32, Type::I32},
-            {TokenType::I16, Type::I16},
-            {TokenType::I8, Type::I8},
-            {TokenType::BOOL, Type::BOOL},
-            {TokenType::VOID, Type::VOID},
+        static const std::map<TokenType, BuiltinType> built_in_types = {
+            {TokenType::I64, BuiltinType::I64},
+            {TokenType::I32, BuiltinType::I32},
+            {TokenType::I16, BuiltinType::I16},
+            {TokenType::I8, BuiltinType::I8},
+            {TokenType::BOOL, BuiltinType::BOOL},
+            {TokenType::VOID, BuiltinType::VOID},
         };
         // clang-format on
 
         if (const auto it = built_in_types.find(ctx.peek().type);
             it != built_in_types.end()) {
             ctx.consume(1);
-            return it->second;
+            return TypeRegistry::instance().get_type_id(Type(it->second));
         }
 
         return std::nullopt;
@@ -485,19 +484,20 @@ struct ast::NodeParser<ast::VariableDeclaration> {
         if (ctx.match(TokenType::COLON)) {
             /// explicit type declaration
             ctx.consume(1);
-            if (const auto type = ctx.try_parse<Type>()) {
-                variable_declaration->type = type;
+            if (const auto type = ctx.try_parse<TypeID>()) {
+                variable_declaration->type = *type;
             } else {
                 ctx.add_error("Expected type identifier");
                 return nullptr;
             }
         } else {
             /// implicit type inference
-            variable_declaration->type = std::nullopt;
+            variable_declaration->type =
+                TypeRegistry::instance().get_type_id(Type{BuiltinType::AUTO});
         }
         if (ctx.expect(TokenType::SEMICOLON)) {
             variable_declaration->initializer = nullptr;
-            if (!variable_declaration->type) {
+            if (variable_declaration->type == types::auto_()) {
                 ctx.add_error("Cannot infer type if no initializer is present");
                 return nullptr;
             }
@@ -519,15 +519,19 @@ struct ast::NodeParser<ast::VariableDeclaration> {
 };
 
 template <>
-struct ast::NodeParser<ast::FunctionArgument> {
-    static std::unique_ptr<FunctionArgument> parse(Parser& ctx) {
-        auto arg = std::make_unique<FunctionArgument>();
-        if (!ctx.parse_into<Type>(ctx, arg->type)) {
-            ctx.add_error("Expected type");
-            return nullptr;
-        }
+struct ast::NodeParser<ast::FunctionParameter> {
+    static std::unique_ptr<FunctionParameter> parse(Parser& ctx) {
+        auto arg = std::make_unique<FunctionParameter>();
         if (!ctx.parse_into<AtomIdentifier>(ctx, arg->name)) {
             ctx.add_error("Expected identifier");
+            return nullptr;
+        }
+        if (!ctx.expect(TokenType::COLON)) {
+            ctx.add_error("Expected ':' before type identifier");
+            return nullptr;
+        }
+        if (!ctx.parse_into<TypeID>(ctx, arg->type)) {
+            ctx.add_error("Expected type");
             return nullptr;
         }
         return arg;
@@ -547,7 +551,7 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
 
         // Function parameters
         while (ctx.peek().type != TokenType::PAREN_END) {
-            if (auto arg = ctx.try_parse<FunctionArgument>()) {
+            if (auto arg = ctx.try_parse<FunctionParameter>()) {
                 func_declaration->arguments.emplace_back(std::move(arg));
             } else {
                 return nullptr;
@@ -563,13 +567,13 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
 
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
         if (ctx.expect(TokenType::ARROW)) {
-            if (!ctx.parse_into<Type>(ctx, func_declaration->return_type)) {
+            if (!ctx.parse_into<TypeID>(ctx, func_declaration->return_type)) {
                 ctx.add_error("Expected type");
                 return nullptr;
             }
         } else {
             // implicit void return type
-            func_declaration->return_type = Type::VOID;
+            func_declaration->return_type = types::void_();
         }
 
         if (!ctx.parse_into<BlockStatement>(ctx, func_declaration->body)) {

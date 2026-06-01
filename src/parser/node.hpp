@@ -67,27 +67,33 @@ struct ExpressionStatement final : Statement {
 struct Declaration : Node {};
 
 struct VariableDeclaration final : Declaration {
-    std::optional<Type> type{};
+    TypeID type;
     std::unique_ptr<AtomIdentifier> name{nullptr};
     std::unique_ptr<Expression> initializer{nullptr};
 
     void accept(NodeVisitor*) override;
+
+    VariableDeclaration();
 };
 
-struct FunctionArgument {
-    Type type{};
+struct FunctionParameter {
+    TypeID type;
     std::unique_ptr<AtomIdentifier> name{nullptr};
 
     void accept(NodeVisitor*);
+
+    FunctionParameter();
 };
 
 struct FunctionDeclaration final : Declaration {
-    Type return_type{};
+    TypeID return_type;
     std::unique_ptr<AtomIdentifier> name{nullptr};
-    std::vector<std::unique_ptr<FunctionArgument>> arguments{};
+    std::vector<std::unique_ptr<FunctionParameter>> arguments{};
     std::unique_ptr<BlockStatement> body{nullptr};
 
     void accept(NodeVisitor*) override;
+
+    FunctionDeclaration();
 };
 
 struct Program {
@@ -108,7 +114,7 @@ public:
     virtual void visit(ExpressionStatement*) = 0;
 
     virtual void visit(VariableDeclaration*) = 0;
-    virtual void visit(FunctionArgument*) = 0;
+    virtual void visit(FunctionParameter*) = 0;
     virtual void visit(FunctionDeclaration*) = 0;
 
     virtual ~NodeVisitor() = default;

@@ -10,10 +10,13 @@ struct Atom {
 };
 
 struct AtomIdentifier final : Atom {
-    std::string name;
+    std::string name{};
 
     explicit AtomIdentifier(std::string name);
+    explicit AtomIdentifier() = default;
     constexpr auto operator<=>(const AtomIdentifier&) const = default;
+    [[nodiscard]] const std::string& str() const { return name; }
+    [[nodiscard]] std::string str() { return name; }
     [[nodiscard]] std::unique_ptr<AtomIdentifier> clone() const;
 };
 

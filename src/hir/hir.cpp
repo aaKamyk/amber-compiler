@@ -110,7 +110,7 @@ void hir::Hir::visit(ast::IfStatement* if_statement) {
                 return std::move(terminal_expr->value);
             }
             /// TODO change the type of the variable
-            auto cond_var = this->create_temporary_declaration("cond", Type::I32);
+            auto cond_var = this->create_temporary_declaration("cond", types::i32());
             auto instr_assign = std::make_unique<InstructionAssignment>(
                 cond_var->clone(), std::move(condition_expression)
             );
@@ -118,7 +118,7 @@ void hir::Hir::visit(ast::IfStatement* if_statement) {
             return cond_var;
         }();
         cond_branch->condition = std::make_unique<ComparisonExpression>(
-            Type::BOOL, ComparisonOperator::NOT_EQUAL, std::move(atom),
+            types::bool_(), ComparisonOperator::NOT_EQUAL, std::move(atom),
             std::make_unique<AtomIntegerLiteral>(0ull)
         );
     }
@@ -180,7 +180,7 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
                 return std::move(terminal_expr->value);
             }
             /// TODO change the default type
-            auto cond_var = this->create_temporary_declaration("cond", Type::I32);
+            auto cond_var = this->create_temporary_declaration("cond", types::i32());
             auto instr_assign = std::make_unique<InstructionAssignment>(
                 cond_var->clone(), std::move(condition_expression)
             );
@@ -188,7 +188,7 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
             return cond_var;
         }();
         cond_branch->condition = std::make_unique<ComparisonExpression>(
-            Type::BOOL, ComparisonOperator::NOT_EQUAL, std::move(atom),
+            types::bool_(), ComparisonOperator::NOT_EQUAL, std::move(atom),
             std::make_unique<AtomIntegerLiteral>(0ull)
         );
     }
@@ -213,24 +213,23 @@ void hir::Hir::visit(ast::ExpressionStatement* expression_statement) {
 
 void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     /// check type against initializer expression
-    Type variable_type{};
+    TypeID variable_type{types::void_()};
     if (variable_declaration->initializer) {
         this->translate(std::move(variable_declaration->initializer));
         const auto* expr = this->view_last_expression();
         variable_type = expr->result_type;
-        if (variable_declaration->type && *variable_declaration->type != variable_type) {
+        if (variable_declaration->type != types::auto_() &&
+            variable_declaration->type != variable_type) {
             this->add_error(
                 variable_declaration,
                 fmt::format(
                     "Cannot assign to variable of type {} with expression of type {}",
-                    *variable_declaration->type, expr->result_type
+                    variable_declaration->type, expr->result_type
                 )
             );
         }
-    } else if (!variable_declaration->type) {
-        throw std::runtime_error("Variable declaration in invalid state from ast");
     } else {
-        variable_type = *variable_declaration->type;
+        variable_type = variable_declaration->type;
     }
     /// gets the unique variable name and adds it to the symbol table
     auto& name = variable_declaration->name->name;
@@ -255,7 +254,7 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     this->append_to_active_func(std::move(instr_assign));
 }
 
-void hir::Hir::visit(ast::FunctionArgument* function_argument) {}
+void hir::Hir::visit(ast::FunctionParameter* function_argument) {}
 
 void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
     if (current_scope().depth != 0) {
@@ -351,7 +350,7 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
     if (const auto it = comparison_operators.find(binary_expression->op);
         it != comparison_operators.end()) {
         auto result = std::make_unique<ComparisonExpression>(
-            Type::BOOL, it->second, std::move(left_atom), std::move(right_atom)
+            types::bool_(), it->second, std::move(left_atom), std::move(right_atom)
         );
         m_active_expressions.emplace_back(std::move(result));
     }
@@ -379,7 +378,7 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
         it != logical_operators.end()) {
         auto zero_lit = std::make_unique<AtomIntegerLiteral>(0);
         auto result = std::make_unique<ComparisonExpression>(
-            Type::BOOL, it->second, std::move(atom), std::move(zero_lit)
+            types::bool_(), it->second, std::move(atom), std::move(zero_lit)
         );
         m_active_expressions.emplace_back(std::move(result));
     }
@@ -406,13 +405,14 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_identifier(
 }
 
 std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_declaration(
-    const std::string& name, const Type type
+    const std::string& name, const TypeID type
 ) {
     auto atom = this->create_temporary_identifier(name);
     m_symbol_table.add_symbol(atom->name, {.type = type, .is_mut = false});
     this->current_scope().add(atom->name, atom->name);
-    auto temp_decl =
-        std::make_unique<InstructionVariableDeclaration>(Type::I32, atom->clone(), true);
+    auto temp_decl = std::make_unique<InstructionVariableDeclaration>(
+        types::i32(), atom->clone(), true
+    );
     this->append_to_active_func(std::move(temp_decl));
     return atom;
 }
@@ -428,19 +428,19 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_label(
 
 std::optional<std::string> hir::Hir::resolve_scope(const AtomIdentifier& atom) const {
     for (const auto& scope : std::views::reverse(m_active_scopes)) {
-        if (scope.contains(atom.name)) { return scope.get_unique_name(atom.name); }
+        if (scope.contains(atom.str())) { return scope.get_unique_name(atom.str()); }
     }
     return std::nullopt;
 }
 
-Type hir::Hir::resolve_type(const Atom& atom) const {
-    if (dynamic_cast<const AtomIntegerLiteral*>(&atom)) { return Type::I32; }
-    if (dynamic_cast<const AtomBooleanLiteral*>(&atom)) { return Type::BOOL; }
+TypeID hir::Hir::resolve_type(const Atom& atom) const {
+    if (dynamic_cast<const AtomIntegerLiteral*>(&atom)) { return types::i32(); }
+    if (dynamic_cast<const AtomBooleanLiteral*>(&atom)) { return types::bool_(); }
     const auto& ident = dynamic_cast<const AtomIdentifier&>(atom);
-    return this->m_symbol_table.get_metadata(ident.name).type;
+    return this->m_symbol_table.get_metadata(ident.str()).type;
 }
 
-Type hir::Hir::resolve_type(const std::string& ident) const {
+TypeID hir::Hir::resolve_type(const std::string& ident) const {
     return this->m_symbol_table.get_metadata(ident).type;
 }
 
@@ -487,8 +487,8 @@ void hir::Hir::append_global_init_to_program() {
     auto ident = std::make_unique<AtomIdentifier>("global_init");
     auto entry_label = std::make_unique<Label>(ident->clone());
     auto global_init = std::make_unique<InstructionFunctionDeclaration>(
-        Type::VOID, std::move(ident), std::move(entry_label),
-        std::vector<FunctionArgument>{}, std::move(m_global_init)
+        types::void_(), std::move(ident), std::move(entry_label),
+        std::vector<FunctionParameter>{}, std::move(m_global_init)
     );
     this->append_to_program(std::move(global_init));
 }

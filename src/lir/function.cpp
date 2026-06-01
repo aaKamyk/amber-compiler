@@ -31,7 +31,7 @@ const std::string& BasicBlock::get_label() const {
     return this->label->name;
 }
 
-VariableInfo VariableInfo::from_argument(const hir::FunctionArgument& arg) {
+VariableInfo VariableInfo::from_argument(const hir::FunctionParameter& arg) {
     return {
         .identifier = std::move(*arg.name),
         .type = type_from(arg.type),

@@ -6,7 +6,7 @@
 #include "type.hpp"
 
 struct SymbolMetadata {
-    Type type{};
+    TypeID type{types::void_()};
     bool is_mut{false};
 
     constexpr bool operator==(const SymbolMetadata& other) const noexcept = default;

@@ -44,7 +44,7 @@ private:
     void visit(ast::ExpressionStatement* expression_statement) override;
 
     void visit(ast::VariableDeclaration* variable_declaration) override;
-    void visit(ast::FunctionArgument* function_argument) override;
+    void visit(ast::FunctionParameter* function_argument) override;
     void visit(ast::FunctionDeclaration* function_declaration) override;
 
     void visit(ast::AtomExpression* atom_expression) override;
@@ -55,12 +55,12 @@ private:
 
     std::unique_ptr<AtomIdentifier> create_temporary_identifier(const std::string& name);
     std::unique_ptr<AtomIdentifier> create_temporary_declaration(
-        const std::string& name, Type type
+        const std::string& name, TypeID type
     );
     std::unique_ptr<AtomIdentifier> create_temporary_label(const std::string& name);
     std::optional<std::string> resolve_scope(const AtomIdentifier& atom) const;
-    Type resolve_type(const Atom& atom) const;
-    Type resolve_type(const std::string& ident) const;
+    TypeID resolve_type(const Atom& atom) const;
+    TypeID resolve_type(const std::string& ident) const;
     const Scope& current_scope() const;
     Scope& current_scope();
     void push_scope();

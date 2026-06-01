@@ -35,7 +35,7 @@ struct VariableInfo {
     Type type{Type::VOID};
     Kind kind{Kind::LIR_TEMPORARY};
 
-    static VariableInfo from_argument(const hir::FunctionArgument& arg);
+    static VariableInfo from_argument(const hir::FunctionParameter& arg);
 };
 
 struct FunctionDefinition {
