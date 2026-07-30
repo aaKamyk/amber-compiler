@@ -1,71 +1,73 @@
-- `program ::= (declaration)*` \
+## Amber grammar
+
+- `program ::= (declaration)*`
   <br>
-- `declaration ::=` \
-  `variable declaration |` \
-  `function declaration` \
-  `struct declaration` \
-  `enum declaration` \
+- `declaration ::=`
+  `variable declaration |`
+  `function declaration`
+  `struct declaration`
+  `enum declaration`
   <br>
-- `variable_declaration ::=` \
-  `let IDENT: TYPE [modifiers]?;` | \
-  `let IDENT: TYPE [modifiers]? = expr;` | \
+- `variable_declaration ::=`
+  `let IDENT: TYPE [modifiers]?;` |
+  `let IDENT: TYPE [modifiers]? = expr;` |
   <br>
-- `modifiers ::=` \
-  `comptime` | `mut` | `pub` \
+- `modifiers ::=`
+  `comptime` | `mut` | `pub`
   <br>
-- `function_declaration ::=` \
-  `fn IDENT(TYPE IDENT, ...) (-> TYPE)? block statement` \
+- `function_declaration ::=`
+  `fn IDENT(TYPE IDENT, ...) (-> TYPE)? block statement`
   `fn IDENT<TYPE, ...>(TYPE IDENT, ...) (-> TYPE)? where (comptime expression) block statment`
   <br>
-- `statement ::=` \
-  `block statement      |` \
-  `assignment statement |` \
-  `if statement         |` \
-  `while statement      |` \
-  `return statement     |` \
-  `expression statement` \
+- `statement ::=`
+  `block statement      |`
+  `assignment statement |`
+  `if statement         |`
+  `while statement      |`
+  `return statement     |`
+  `expression statement`
   <br>
-- `block statement ::=` \
-  `{(declatation | statement)*}` \
+- `block statement ::=`
+  `{(declatation | statement)*}`
   <br>
-- `assignment statement` \
-  `IDENT = expression;` \
+- `assignment statement`
+  `IDENT = expression;`
   <br>
-- `if statement ::=` \
-  `IF (CONDITION) block_statement` \
+- `if statement ::=`
+  `IF (CONDITION) block_statement`
   <br>
-- `while statement ::=` \
-  `WHILE (CONDITION) block_statement` \
+- `while statement ::=`
+  `WHILE (CONDITION) block_statement`
   <br>
-- `return statement ::=` \
-  `RETURN expression;` \
+- `return statement ::=`
+  `RETURN expression;`
   <br>
-- `expression statement ::=` \
-  `expression;` \
+- `expression statement ::=`
+  `expression;`
   <br>
-- `expression ::=` \
-  `primary expression` | \
-  `binary expression` \
+- `expression ::=`
+  `primary expression` |
+  `binary expression`
   <br>
-- `primary expression ::=` \
-  `atom expression` | \
-  `paren expression` | \
-  `unary expression` | \
-  `call expression` \
+- `primary expression ::=`
+  `atom expression` |
+  `paren expression` |
+  `unary expression` |
+  `call expression`
   <br>
-- `atom expression ::=` \
-  `IDENT` \
-  `INTEGER_LITERAL` \
+- `atom expression ::=`
+  `IDENT`
+  `INTEGER_LITERAL`
   <br>
-- `paren expression ::=` \
-  `(expression)` \
+- `paren expression ::=`
+  `(expression)`
   <br>
-- `unary expression ::=` \
-  `(unary operator) primary_expression` \
+- `unary expression ::=`
+  `(unary operator) primary_expression`
   <br>
-- `call expression ::=` \
+- `call expression ::=`
   `IDENT(expression, ...)`
   <br>
-- `binary expression ::=` \
-  `expr ession (binary operator) expression` \
+- `binary expression ::=`
+  `expr ession (binary operator) expression`
   <br>

@@ -1,4 +1,17 @@
-fn foo(i32 x, i32 y) -> i32 {
-    i32 val = x + y;
-    return 2 * val;
+fn foo(n: i32) -> i32 {
+   let sum = 0;
+   while (n > 0) {
+        sum = sum + n;
+        n = n - 1;
+   }
+   return sum;
+}
+
+struct Foo {
+    x: i32;
+};
+
+fn main() -> i32 {
+    let x = 5;
+    return foo(x);
 }
