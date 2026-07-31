@@ -1,9 +1,9 @@
-add_executable(kcp
+add_executable(act
         main.cpp
         program_arguments.cpp
 )
 
-target_include_directories(kcp PRIVATE
+target_include_directories(act PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -22,4 +22,4 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
-target_link_libraries(kcp PRIVATE fmt)
+target_link_libraries(act PRIVATE fmt)
