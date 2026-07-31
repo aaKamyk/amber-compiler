@@ -3,8 +3,10 @@ Checks: >
   -*
   modernize-*,
   readability-*,
-  -readability-identifier-length
-  performance-*
+  -readability-identifier-length,
+  -readability-redundant-member-init,
+  -readability-named-parameter,
+  performance-*,
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle: file
