@@ -43,9 +43,8 @@
 
 # Build directories
 build/
-Build/
 build-*/
-cmake-build-*
+cmake-build-*/
 
 # CMake generated files
 CMakeFiles/
@@ -63,3 +62,9 @@ compile_commands.json
 
 # IDE directories
 .idea
+*.sublime-project
+*.sublime-workspace
+
+# Clangd files
+.clangd
+.cache
