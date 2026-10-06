@@ -4,15 +4,22 @@
 #include <fstream>
 #include <memory>
 
+#include "fmt/core.h"
+
 Arguments parseArguments(const std::span<const char*> args) {
     if (args.size() < 2) {
-        throw std::runtime_error("[Arguments Parser] Usage: kcp <input_path>");
+        throw std::runtime_error("[Arguments Parser] Usage: act <input_path>");
     }
     Arguments parsed_args = {
         .input_path = fs::path(args[1]),
     };
     if (!fs::exists(parsed_args.input_path)) {
-        throw std::runtime_error("[Arguments Parser] Input path does not exist");
+        throw std::runtime_error(
+            fmt::format(
+                "[Arguments Parser] Input path: {} does not exist",
+                parsed_args.input_path.string()
+            )
+        );
     }
     if (args.size() > 2) {
         if (strcmp(args[2], "-o") != 0) {
@@ -35,7 +42,7 @@ std::unique_ptr<std::istream> getInputFromFile(const Arguments& args) {
         std::make_unique<std::ifstream>(args.input_path, std::ios::in | std::ios::binary);
     if (!file->is_open()) {
         throw std::runtime_error(
-            "Could not open input file: " + args.input_path.string()
+            "[Arguments Parser] Could not open input file: " + args.input_path.string()
         );
     }
     return file;
