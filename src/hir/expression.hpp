@@ -12,9 +12,9 @@ namespace hir {
 class ExpressionVisitor;
 
 struct Expression {
-    TypeID result_type{types::void_()};
+    type::TypeID result_type{type::unit()};
 
-    explicit Expression(const TypeID result_type)
+    explicit Expression(const type::TypeID result_type)
         : result_type(result_type) {}
     explicit Expression() = default;
     virtual void accept(ExpressionVisitor* v) = 0;
@@ -24,7 +24,7 @@ struct Expression {
 struct TerminalExpression final : Expression {
     std::unique_ptr<Atom> value;
 
-    explicit TerminalExpression(TypeID type, std::unique_ptr<Atom> value);
+    explicit TerminalExpression(type::TypeID type, std::unique_ptr<Atom> value);
     void accept(ExpressionVisitor* v) override;
 };
 
@@ -34,7 +34,7 @@ struct BinaryExpression final : Expression {
     std::unique_ptr<Atom> right;
 
     BinaryExpression(
-        TypeID type, BinaryOperator op, std::unique_ptr<Atom> left,
+        type::TypeID type, BinaryOperator op, std::unique_ptr<Atom> left,
         std::unique_ptr<Atom> right
     );
     void accept(ExpressionVisitor* v) override;
@@ -44,7 +44,7 @@ struct UnaryExpression final : Expression {
     UnaryOperator op;
     std::unique_ptr<Atom> operand;
 
-    UnaryExpression(TypeID type, UnaryOperator op, std::unique_ptr<Atom> operand);
+    UnaryExpression(type::TypeID type, UnaryOperator op, std::unique_ptr<Atom> operand);
     void accept(ExpressionVisitor* v) override;
 };
 
@@ -54,7 +54,7 @@ struct ComparisonExpression final : Expression {
     std::unique_ptr<Atom> right;
 
     ComparisonExpression(
-        TypeID type, ComparisonOperator op, std::unique_ptr<Atom> left,
+        type::TypeID type, ComparisonOperator op, std::unique_ptr<Atom> left,
         std::unique_ptr<Atom> right
     );
     void accept(ExpressionVisitor* v) override;
@@ -66,7 +66,7 @@ struct CallExpression final : Expression {
 
     CallExpression() = default;
     CallExpression(
-        TypeID type, std::vector<std::unique_ptr<Atom>> arguments,
+        type::TypeID type, std::vector<std::unique_ptr<Atom>> arguments,
         std::unique_ptr<AtomIdentifier> callee
     );
     void accept(ExpressionVisitor* v) override;

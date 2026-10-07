@@ -12,22 +12,7 @@
 #include "fmt/base.h"
 #include "meta.hpp"
 
-template <typename... T>
-struct overloaded : T... {
-    using T::operator()...;
-};
-template <typename... T>
-overloaded(T...) -> overloaded<T...>;
-
-enum class BuiltinType : std::uint8_t {
-    I64,
-    I32,
-    I16,
-    I8,
-    BOOL,
-    VOID,
-    AUTO,
-};
+namespace type {
 
 struct TypeID {
     TypeID() = delete;
@@ -100,8 +85,9 @@ struct Pointer {
     std::string_view get_name() const;
 };
 
-struct Type {
-    std::variant<BuiltinType, Function, Struct, Alias, Pointer> type{};
+using TypeVariant = std::variant<BuiltinType, Function, Struct, Alias, Pointer>;
+template <typename T>
+concept TypeVariantMember = meta::is_variant_member<std::decay_t<T>, TypeVariant>::value;
 
     [[nodiscard]] bool same_as(const Type& other) const;
     bool operator==(const Type& other) const noexcept { return this->same_as(other); }
@@ -132,7 +118,6 @@ private:
     std::deque<Type> types;
 };
 
-namespace types {
 TypeID i8() noexcept;
 TypeID i16() noexcept;
 TypeID i32() noexcept;
@@ -147,9 +132,11 @@ TypeID auto_() noexcept;
 std::string to_string(BuiltinType type);
 std::string to_string(TypeID id);
 
+}  // namespace type
+
 template <>
-struct fmt::formatter<TypeID> : formatter<string_view> {
-    auto format(const TypeID& type_id, format_context& ctx) const {
+struct fmt::formatter<type::TypeID> : formatter<string_view> {
+    auto format(const type::TypeID& type_id, format_context& ctx) const {
         const string_view name = type_id.get_name();
         return formatter<string_view>::format(name, ctx);
     }

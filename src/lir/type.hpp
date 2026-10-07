@@ -15,7 +15,7 @@ enum class Type {
     VOID
 };
 
-Type type_from(TypeID);
+Type type_from(type::TypeID);
 
 }  // namespace lir
 

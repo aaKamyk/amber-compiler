@@ -3,15 +3,15 @@
 #include <map>
 #include <stdexcept>
 
-lir::Type lir::type_from(const TypeID type) {
+lir::Type lir::type_from(const type::TypeID type) {
     // clang-format off
-    static const std::map<::TypeID, Type> mapping = {
-        {types::i64(), Type::I64},
-        {types::i32(), Type::I32},
-        {types::i16(), Type::I16},
-        {types::i8(), Type::I8},
-        {types::i16(), Type::I1},
-        {types::void_(), Type::VOID},
+    static const std::map<type::TypeID, Type> mapping = {
+        {type::i64(), Type::I64},
+        {type::i32(), Type::I32},
+        {type::i16(), Type::I16},
+        {type::i8(), Type::I8},
+        {type::i16(), Type::I1},
+        {type::unit(), Type::VOID},
     };
     // clang-format on
     /// TODO add other types
