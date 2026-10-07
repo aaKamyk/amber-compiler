@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <limits>
 #include <optional>
 #include <string>
 #include <variant>
@@ -39,8 +40,11 @@ private:
     size_t id{};
 
     friend class TypeRegistry;
-    explicit TypeID(const size_t id)
+    explicit constexpr TypeID(const size_t id)
         : id(id) {}
+
+public:
+    static const TypeID InvalidID;
 };
 
 constexpr TypeID TypeID::InvalidID = TypeID(std::numeric_limits<size_t>::max());
@@ -77,7 +81,8 @@ struct Struct {
     AtomIdentifier identifier{};
     std::optional<std::vector<StructField>> fields{};
 
-    std::string_view get_name() const;
+    [[nodiscard]] std::string to_string() const;
+
     [[nodiscard]] bool is_opaque() const { return this->fields.has_value(); }
 };
 
