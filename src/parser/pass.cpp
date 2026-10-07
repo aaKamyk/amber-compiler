@@ -25,7 +25,7 @@ void ast::ConstantFold::visit(IfStatement<type::TypeID>* if_statement) {
     this->pass(if_statement->condition);
 
     this->pass(if_statement->true_case);
-    this->pass(if_statement->false_case);
+    if (if_statement->has_false_case()) { this->pass(if_statement->false_case); }
 }
 
 void ast::ConstantFold::visit(WhileStatement<type::TypeID>* while_statement) {
