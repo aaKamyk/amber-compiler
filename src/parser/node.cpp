@@ -8,7 +8,8 @@
 
 namespace ast {
 
-class NodePrinter final : NodeVisitor, ExpressionVisitor {
+namespace {
+class NodePrinter final : public NodeVisitor<type::TypeID>, public ExpressionVisitor {
 public:
     void print_program(Program& program) {
         fmt::println("Program");
@@ -179,33 +180,7 @@ private:
     }
 };
 
-void BlockStatement::accept(NodeVisitor* v) {
-    v->visit(this);
-}
-
-void AssignmentStatement::accept(NodeVisitor* v) {
-    v->visit(this);
-}
-
-void IfStatement::accept(NodeVisitor* v) {
-    v->visit(this);
-}
-
-void WhileStatement::accept(NodeVisitor* v) {
-    v->visit(this);
-}
-
-void ReturnStatement::accept(NodeVisitor* v) {
-    v->visit(this);
-}
-
-void ExpressionStatement::accept(NodeVisitor* v) {
-    v->visit(this);
-}
-
-void VariableDeclaration::accept(NodeVisitor* v) {
-    v->visit(this);
-}
+}  // namespace
 
 VariableDeclaration::VariableDeclaration()
     : type(types::void_()) {}
