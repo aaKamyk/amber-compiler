@@ -1,7 +1,6 @@
 #include "function.hpp"
 
 #include <algorithm>
-#include <map>
 
 namespace lir {
 
@@ -10,12 +9,13 @@ void BasicBlock::add(std::unique_ptr<Instruction> instruction) {
 }
 
 bool BasicBlock::has_terminator() const {
-    if (this->instructions.empty()) return false;
-    return dynamic_cast<const TerminatorInstruction*>(this->instructions.back().get());
+    if (this->instructions.empty()) { return false; }
+    return dynamic_cast<const TerminatorInstruction*>(this->instructions.back().get()) !=
+           nullptr;
 }
 
 bool BasicBlock::has_label() const {
-    return this->label.get();
+    return this->label != nullptr;
 }
 
 bool BasicBlock::is_valid() const {
@@ -44,6 +44,15 @@ FunctionDefinition::FunctionDefinition(
 )
     : name(std::move(name)), return_type(ret_type) {}
 
+BasicBlock& FunctionDefinition::current_block() const {
+    return *this->blocks.back();
+}
+
+bool FunctionDefinition::has_appendable_block() const {
+    if (this->empty()) { return false; }
+    return !this->current_block().has_terminator();
+}
+
 void FunctionDefinition::append(BasicBlock basic_block) {
     this->blocks.emplace_back(std::make_unique<BasicBlock>(std::move(basic_block)));
 }
@@ -57,15 +66,6 @@ void FunctionDefinition::append(std::unique_ptr<Instruction> instruction) const 
 
 const std::string& FunctionDefinition::get_name() const {
     return this->name->name;
-}
-
-BasicBlock& FunctionDefinition::current_block() const {
-    return *this->blocks.back();
-}
-
-bool FunctionDefinition::has_appendable_block() const {
-    if (this->empty()) { return false; }
-    return !this->current_block().has_terminator();
 }
 
 bool FunctionDefinition::empty() const {

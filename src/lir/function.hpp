@@ -24,7 +24,7 @@ struct BasicBlock {
 };
 
 struct VariableInfo {
-    enum class Kind {
+    enum class Kind : uint8_t {
         GLOBAL,
         LOCAL,
         PARAMETER,
