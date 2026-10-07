@@ -10,7 +10,7 @@ struct Atom {
 };
 
 struct AtomIdentifier final : Atom {
-    std::string name{};
+    std::string name;
 
     explicit AtomIdentifier(std::string name);
     explicit AtomIdentifier() = default;
