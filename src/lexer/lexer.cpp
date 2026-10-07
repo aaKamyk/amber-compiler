@@ -275,6 +275,7 @@ TokenType lxr::Lexer::get_keyword(const std::string_view name) {
         /// declarations
         {"fn", TokenType::FN},
         {"let", TokenType::LET},
+        {"struct", TokenType::STRUCT},
         /// built-in values
         {"true", TokenType::TRUE},
         {"false", TokenType::FALSE},

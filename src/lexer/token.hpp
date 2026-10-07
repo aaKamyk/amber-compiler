@@ -15,6 +15,7 @@ enum class TokenType : uint8_t {
     WHILE,
     FN,         // declarations
     LET,
+    STRUCT,
     RETURN,
     TRUE,       // built-in values
     FALSE,

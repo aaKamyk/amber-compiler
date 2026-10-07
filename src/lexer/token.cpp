@@ -14,6 +14,7 @@ std::string Token::to_string() const {
         {TokenType::WHILE, "while"},
         {TokenType::FN, "fn"},
         {TokenType::LET, "let"},
+        {TokenType::STRUCT, "struct"},
         {TokenType::RETURN, "return"},
         {TokenType::TRUE, "true"},
         {TokenType::FALSE, "false"},
