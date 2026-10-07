@@ -139,15 +139,8 @@ void ast::CollectTypes::visit(StructDeclaration<type::ast::Type>* struct_declara
 
 ast::Program<type::TypeID> ast::ResolveTypes::run() {
     for (auto& decl : this->m_program.children) {
-        this->pass(decl);
-        if (this->m_current_node) {
-            this->m_resolved_program.children.emplace_back(
-                std::unique_ptr<Declaration<type::TypeID>>{
-                    dynamic_cast<Declaration<type::TypeID>*>(
-                        this->m_current_node.release()
-                    )
-                }
-            );
+        if (auto resolved_decl = this->transform<Declaration<type::TypeID>>(decl.get())) {
+            this->m_resolved_program.children.emplace_back(std::move(resolved_decl));
         }
     }
 
@@ -155,92 +148,130 @@ ast::Program<type::TypeID> ast::ResolveTypes::run() {
 }
 
 void ast::ResolveTypes::visit(BlockStatement<type::ast::Type>* block_statement) {
-    for (auto& node : block_statement->entries) { this->pass(node); }
+    auto resolved_entries = std::vector<std::unique_ptr<Node<type::TypeID>>>{};
+    resolved_entries.reserve(block_statement->entries.size());
+
+    for (auto& entry : block_statement->entries) {
+        resolved_entries.emplace_back(this->transform<Node<type::TypeID>>(entry.get()));
+    }
+
+    this->m_result_stack.emplace_back(
+        std::make_unique<BlockStatement<type::TypeID>>(std::move(resolved_entries))
+    );
 }
 
 void ast::ResolveTypes::visit(
     AssignmentStatement<type::ast::Type>* assignment_statement
-) {}
+) {
+    auto resolved_assignment = std::make_unique<AssignmentStatement<type::TypeID>>(
+        std::move(assignment_statement->identifier),
+        std::move(assignment_statement->expression)
+    );
+
+    this->m_result_stack.emplace_back(std::move(resolved_assignment));
+}
 
 void ast::ResolveTypes::visit(ReturnStatement<type::ast::Type>* return_statement) {}
 
-void ast::ResolveTypes::visit(IfStatement<type::ast::Type>* if_statement) {}
+void ast::ResolveTypes::visit(IfStatement<type::ast::Type>* if_statement) {
+    auto resolved_if = std::make_unique<IfStatement<type::TypeID>>(
+        std::move(if_statement->condition),
+        this->transform<BlockStatement<type::TypeID>>(if_statement->true_case.get()),
+        this->transform<BlockStatement<type::TypeID>>(if_statement->false_case.get())
+    );
 
-void ast::ResolveTypes::visit(WhileStatement<type::ast::Type>* while_statement) {}
+    this->m_result_stack.emplace_back(std::move(resolved_if));
+}
+
+void ast::ResolveTypes::visit(WhileStatement<type::ast::Type>* while_statement) {
+    auto resolved_while = std::make_unique<WhileStatement<type::TypeID>>(
+        std::move(while_statement->condition),
+        this->transform<BlockStatement<type::TypeID>>(while_statement->block.get())
+    );
+
+    this->m_result_stack.emplace_back(std::move(resolved_while));
+}
 
 void ast::ResolveTypes::visit(
     ExpressionStatement<type::ast::Type>* expression_statement
-) {}
+) {
+    auto resolved_expression = std::make_unique<ExpressionStatement<type::TypeID>>(
+        std::move(expression_statement->expression)
+    );
+
+    this->m_result_stack.emplace_back(std::move(resolved_expression));
+}
 
 void ast::ResolveTypes::visit(
     VariableDeclaration<type::ast::Type>* variable_declaration
-) {}
+) {
+    auto resolved_variable = std::make_unique<VariableDeclaration<type::TypeID>>(
+        ResolveTypes::resolve_type(variable_declaration->type),
+        std::move(variable_declaration->name),
+        std::move(variable_declaration->initializer)
+    );
+
+    this->m_result_stack.emplace_back(std::move(resolved_variable));
+}
 
 void ast::ResolveTypes::visit(FunctionParameter<type::ast::Type>* function_argument) {
-    auto type_id = type::TypeRegistry::instance().get_type_id(function_argument->type);
-
-    auto* function_declaration =
-        dynamic_cast<FunctionDeclaration<type::TypeID>*>(this->m_current_node.get());
-    function_declaration->arguments.emplace_back(
-        std::make_unique<FunctionParameter<type::TypeID>>(
-            type_id, std::move(function_argument->name)
-        )
+    auto resolved_argument = std::make_unique<FunctionParameter<type::TypeID>>(
+        ResolveTypes::resolve_type(function_argument->type),
+        std::move(function_argument->name)
     );
+
+    this->m_result_stack.emplace_back(std::move(resolved_argument));
 }
 
 void ast::ResolveTypes::visit(
     FunctionDeclaration<type::ast::Type>* function_declaration
 ) {
-    auto return_type_id =
-        type::TypeRegistry::instance().get_type_id(function_declaration->return_type);
+    auto return_type_id = resolve_type(function_declaration->return_type);
 
-    auto arguments = std::vector<std::unique_ptr<FunctionParameter<type::TypeID>>>{};
-    arguments.reserve(function_declaration->arguments.size());
-    auto block_entries = std::vector<std::unique_ptr<Node<type::TypeID>>>{};
-    block_entries.reserve(function_declaration->body->entries.size());
-
-    auto resolved_function_declaration =
-        std::make_unique<FunctionDeclaration<type::TypeID>>(
-            return_type_id, std::move(function_declaration->name), std::move(arguments),
-            std::make_unique<BlockStatement<type::TypeID>>(std::move(block_entries))
+    // Transform parameters
+    auto resolved_args = std::vector<std::unique_ptr<FunctionParameter<type::TypeID>>>{};
+    resolved_args.reserve(function_declaration->arguments.size());
+    for (auto& arg : function_declaration->arguments) {
+        resolved_args.emplace_back(
+            this->transform<FunctionParameter<type::TypeID>>(arg.get())
         );
+    }
 
-    // Process function arguments
-    this->m_current_node = std::move(resolved_function_declaration);
-    for (auto& arg : function_declaration->arguments) { this->pass(arg); }
-    resolved_function_declaration = std::unique_ptr<FunctionDeclaration<type::TypeID>>{
-        dynamic_cast<FunctionDeclaration<type::TypeID>*>(this->m_current_node.release())
-    };
+    // Transform body
+    auto resolved_body =
+        this->transform<BlockStatement<type::TypeID>>(function_declaration->body.get());
 
-    // Process code block
-    this->m_current_node = std::move(resolved_function_declaration->body);
-    this->pass(function_declaration->body);
-    resolved_function_declaration->body = std::unique_ptr<BlockStatement<type::TypeID>>{
-        dynamic_cast<BlockStatement<type::TypeID>*>(this->m_current_node.release())
-    };
-    this->m_current_node = std::move(resolved_function_declaration);
-}
-
-void ast::ResolveTypes::visit(StructField<type::ast::Type>* struct_field) {
-    const auto type_id = type::TypeRegistry::instance().get_type_id(struct_field->type);
-
-    auto* struct_declaration =
-        dynamic_cast<StructDeclaration<type::TypeID>*>(this->m_current_node.get());
-    struct_declaration->fields.emplace_back(
-        std::make_unique<StructField<type::TypeID>>(
-            type_id, std::move(struct_field->name)
+    this->m_result_stack.emplace_back(
+        std::make_unique<FunctionDeclaration<type::TypeID>>(
+            return_type_id, std::move(function_declaration->name),
+            std::move(resolved_args), std::move(resolved_body)
         )
     );
 }
 
-void ast::ResolveTypes::visit(StructDeclaration<type::ast::Type>* struct_declaration) {
-    auto fields = std::vector<std::unique_ptr<StructField<type::TypeID>>>();
-    fields.reserve(struct_declaration->fields.size());
-    this->m_current_node = std::make_unique<StructDeclaration<type::TypeID>>(
-        std::move(struct_declaration->name), std::move(fields)
+void ast::ResolveTypes::visit(StructField<type::ast::Type>* struct_field) {
+    auto resolved_field = std::make_unique<StructField<type::TypeID>>(
+        ResolveTypes::resolve_type(struct_field->type), std::move(struct_field->name)
     );
 
-    for (auto& field : struct_declaration->fields) { this->pass(field); }
+    this->m_result_stack.emplace_back(std::move(resolved_field));
+}
+
+void ast::ResolveTypes::visit(StructDeclaration<type::ast::Type>* struct_declaration) {
+    auto resolved_fields = std::vector<std::unique_ptr<StructField<type::TypeID>>>();
+    resolved_fields.reserve(struct_declaration->fields.size());
+
+    for (auto& field : struct_declaration->fields) {
+        resolved_fields.emplace_back(
+            this->transform<StructField<type::TypeID>>(field.get())
+        );
+    }
+
+    this->m_result_stack.emplace_back(
+        std::make_unique<StructDeclaration<type::TypeID>>(
+            std::move(struct_declaration->name), std::move(resolved_fields)
+        )
+    );
 }
 
 void ast::ResolveTypes::visit(AtomExpression* atom_expression) {}
@@ -252,3 +283,7 @@ void ast::ResolveTypes::visit(BinaryExpression* binary_expression) {}
 void ast::ResolveTypes::visit(UnaryExpression* unary_expression) {}
 
 void ast::ResolveTypes::visit(CallExpression* call_expression) {}
+
+type::TypeID ast::ResolveTypes::resolve_type(const type::ast::Type& type) {
+    return type::TypeRegistry::instance().get_type_id(type);
+}

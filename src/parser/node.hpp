@@ -87,6 +87,10 @@ struct AssignmentStatement final : Statement<TypeInfo> {
     void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
 
     AssignmentStatement() = default;
+    AssignmentStatement(
+        std::unique_ptr<AtomIdentifier> identifier, std::unique_ptr<Expression> expression
+    )
+        : identifier(std::move(identifier)), expression(std::move(expression)) {}
 };
 
 template <TypeMetadata TypeInfo>
@@ -99,6 +103,14 @@ struct IfStatement final : Statement<TypeInfo> {
     [[nodiscard]] bool has_false_case() const { return false_case != nullptr; };
 
     IfStatement() = default;
+    IfStatement(
+        std::unique_ptr<Expression> condition,
+        std::unique_ptr<BlockStatement<TypeInfo>> true_case,
+        std::unique_ptr<BlockStatement<TypeInfo>> false_case
+    )
+        : condition(std::move(condition)),
+          true_case(std::move(true_case)),
+          false_case(std::move(false_case)) {}
 };
 
 template <TypeMetadata TypeInfo>
@@ -109,6 +121,11 @@ struct WhileStatement final : Statement<TypeInfo> {
     void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
 
     WhileStatement() = default;
+    WhileStatement(
+        std::unique_ptr<Expression> condition,
+        std::unique_ptr<BlockStatement<TypeInfo>> block
+    )
+        : condition(std::move(condition)), block(std::move(block)) {}
 };
 
 /// expression is set to nullptr if returning void;
@@ -128,6 +145,8 @@ struct ExpressionStatement final : Statement<TypeInfo> {
     void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
 
     ExpressionStatement() = default;
+    ExpressionStatement(std::unique_ptr<Expression> expression)
+        : expression(std::move(expression)) {}
 };
 
 template <TypeMetadata TypeInfo>
@@ -140,6 +159,15 @@ struct VariableDeclaration final : Declaration<TypeInfo> {
     std::unique_ptr<Expression> initializer{nullptr};
 
     void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
+
+    VariableDeclaration() = default;
+    VariableDeclaration(
+        TypeInfo type, std::unique_ptr<AtomIdentifier> name,
+        std::unique_ptr<Expression> initializer
+    )
+        : type(std::move(type)),
+          name(std::move(name)),
+          initializer(std::move(initializer)) {}
 };
 
 template <TypeMetadata TypeInfo>

@@ -120,12 +120,27 @@ public:
 private:
     Program<type::ast::Type> m_program;
     Program<type::TypeID> m_resolved_program;
-    std::unique_ptr<ast::Node<type::TypeID>> m_current_node{nullptr};
+
+    // Transformation stack
+    std::vector<std::unique_ptr<ast::Node<type::TypeID>>> m_result_stack;
+
+    template <typename TargetNode, typename SourceNode>
+    std::unique_ptr<TargetNode> transform(SourceNode* node) {
+        if (node == nullptr) { return nullptr; }
+
+        node->accept(this);
+        auto result = std::move(m_result_stack.back());
+        m_result_stack.pop_back();
+
+        return std::unique_ptr<TargetNode>{dynamic_cast<TargetNode*>(result.release())};
+    }
 
     template <typename T>
     void pass(std::unique_ptr<T>& node) {
         node->accept(this);
     }
+
+    static type::TypeID resolve_type(const type::ast::Type& type);
 };
 
 }  // namespace ast

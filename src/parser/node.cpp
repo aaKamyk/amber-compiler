@@ -1,6 +1,5 @@
 #include "node.hpp"
 
-#include <iostream>
 #include <ranges>
 
 #include "utils/operator.hpp"
@@ -11,7 +10,7 @@ namespace ast {
 namespace {
 class NodePrinter final : public NodeVisitor<type::TypeID>, public ExpressionVisitor {
 public:
-    void print_program(Program& program) {
+    void print_program(Program<type::TypeID>& program) {
         fmt::println("Program");
         const size_t size = program.children.size();
         for (size_t i = 0; i < size; i++) {
@@ -69,6 +68,11 @@ private:
         }
     }
 
+    void print_node(const type::TypeID type, const bool is_last) const {
+        fmt::println("{}{} Type: {}", this->prefix, is_last ? "\\-" : "|- ", type);
+    }
+
+public:
     void visit(AtomExpression* atom) override {
         fmt::println("Atom expression");
 
@@ -109,7 +113,7 @@ private:
         }
     }
 
-    void visit(VariableDeclaration* var) override {
+    void visit(VariableDeclaration<type::TypeID>* var) override {
         fmt::println("Variable declaration");
 
         fmt::println("{}|- Type: auto", this->prefix);
@@ -117,14 +121,14 @@ private:
         if (var->initializer) { print_node(var->initializer, true); }
     }
 
-    void visit(FunctionParameter* arg) override {
+    void visit(FunctionParameter<type::TypeID>* arg) override {
         fmt::println("Function argument");
 
         print_node(arg->type, false);
         print_node(arg->name.get(), true);
     }
 
-    void visit(FunctionDeclaration* func) override {
+    void visit(FunctionDeclaration<type::TypeID>* func) override {
         fmt::println("Function");
 
         print_node(func->name.get(), false);
@@ -133,7 +137,25 @@ private:
         print_node(func->body, true);
     }
 
-    void visit(BlockStatement* statement) override {
+    void visit(StructField<type::TypeID>* struct_field) override {
+        fmt::println("StructField");
+        print_node(struct_field->type, false);
+        print_node(struct_field->name.get(), true);
+    }
+
+    void visit(StructDeclaration<type::TypeID>* struct_decl) override {
+        fmt::println("Struct");
+
+        const size_t size = struct_decl->fields.size();
+        print_node(struct_decl->name.get(), size == 0);
+
+        for (size_t i = 0; i < size; i++) {
+            const bool is_last = i == size - 1;
+            print_node(struct_decl->fields[i], is_last);
+        }
+    }
+
+    void visit(BlockStatement<type::TypeID>* statement) override {
         fmt::println("Block");
         const size_t size = statement->entries.size();
         for (size_t i = 0; i < size; i++) {
@@ -142,14 +164,14 @@ private:
         }
     }
 
-    void visit(AssignmentStatement* assignment) override {
+    void visit(AssignmentStatement<type::TypeID>* assignment) override {
         fmt::println("Assignment");
 
         print_node(assignment->identifier.get(), false);
         print_node(assignment->expression, true);
     }
 
-    void visit(IfStatement* if_statement) override {
+    void visit(IfStatement<type::TypeID>* if_statement) override {
         fmt::println("If");
 
         print_node(if_statement->condition, false);
@@ -158,14 +180,14 @@ private:
         print_node(if_statement->false_case, true);
     }
 
-    void visit(WhileStatement* while_statement) override {
+    void visit(WhileStatement<type::TypeID>* while_statement) override {
         fmt::println("While");
 
         print_node(while_statement->condition, false);
         print_node(while_statement->block, true);
     }
 
-    void visit(ReturnStatement* return_statement) override {
+    void visit(ReturnStatement<type::TypeID>* return_statement) override {
         fmt::println("Return");
 
         if (return_statement->expression) {
@@ -173,7 +195,7 @@ private:
         }
     }
 
-    void visit(ExpressionStatement* expression_statement) override {
+    void visit(ExpressionStatement<type::TypeID>* expression_statement) override {
         fmt::println("Expression");
 
         print_node(expression_statement->expression, true);
@@ -182,23 +204,7 @@ private:
 
 }  // namespace
 
-VariableDeclaration::VariableDeclaration()
-    : type(types::void_()) {}
-
-void FunctionParameter::accept(NodeVisitor* v) {
-    v->visit(this);
-}
-
-FunctionParameter::FunctionParameter()
-    : type(types::void_()) {}
-
-void FunctionDeclaration::accept(NodeVisitor* v) {
-    v->visit(this);
-}
-FunctionDeclaration::FunctionDeclaration()
-    : return_type(types::void_()) {}
-
-void print_program(Program& program) {
+void print_program(Program<type::TypeID>& program) {
     NodePrinter printer{};
     printer.print_program(program);
 }
