@@ -128,11 +128,10 @@ TypeID i16() noexcept;
 TypeID i32() noexcept;
 TypeID i64() noexcept;
 
-TypeID bool_() noexcept;
+TypeID boolean() noexcept;
 
-TypeID void_() noexcept;
-TypeID auto_() noexcept;
-}  // namespace types
+TypeID unit() noexcept;
+TypeID inferred() noexcept;
 
 template <TypeVariantMember Type>
 std::string to_string(Type&& type) {
