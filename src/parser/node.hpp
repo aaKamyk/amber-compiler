@@ -187,15 +187,19 @@ struct StructField final : Declaration<TypeInfo> {
         : type{std::move(type)}, name{std::move(name)} {}
 };
 
-struct FunctionDeclaration final : Declaration {
-    TypeID return_type;
+template <TypeMetadata TypeInfo>
+struct StructDeclaration final : Declaration<TypeInfo> {
     std::unique_ptr<AtomIdentifier> name{nullptr};
-    std::vector<std::unique_ptr<FunctionParameter>> arguments{};
-    std::unique_ptr<BlockStatement> body{nullptr};
+    std::vector<std::unique_ptr<StructField<TypeInfo>>> fields{};
 
-    void accept(NodeVisitor*) override;
+    void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
 
-    FunctionDeclaration();
+    StructDeclaration() = default;
+    StructDeclaration(
+        std::unique_ptr<AtomIdentifier> name,
+        std::vector<std::unique_ptr<StructField<TypeInfo>>> fields
+    )
+        : name{std::move(name)}, fields{std::move(fields)} {}
 };
 
 template <TypeMetadata TypeInfo>
