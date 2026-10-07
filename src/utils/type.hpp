@@ -52,14 +52,14 @@ struct Function {
     AtomIdentifier identifier{};
     std::vector<TypeID> parameters{};
 
-    std::string_view get_name() const;
+    [[nodiscard]] std::string to_string() const;
 };
 
 struct StructField {
     AtomIdentifier identifier{};
     TypeID type;
 
-    std::string_view get_name() const;
+    [[nodiscard]] std::string to_string() const;
 };
 
 struct Struct {
@@ -75,22 +75,25 @@ struct Alias {
     AtomIdentifier identifier{};
     TypeID underlying;
 
-    std::string_view get_name() const;
+    [[nodiscard]] std::string to_string() const;
 };
 
 struct Pointer {
     AtomIdentifier identifier{};
     TypeID underlying;
 
-    std::string_view get_name() const;
+    [[nodiscard]] std::string to_string() const;
 };
 
 using TypeVariant = std::variant<BuiltinType, Function, Struct, Alias, Pointer>;
 template <typename T>
 concept TypeVariantMember = meta::is_variant_member<std::decay_t<T>, TypeVariant>::value;
 
+struct Type : TypeVariant {
     [[nodiscard]] bool same_as(const Type& other) const;
     bool operator==(const Type& other) const noexcept { return this->same_as(other); }
+
+    [[nodiscard]] std::string to_string() const;
 
 private:
     [[nodiscard]] bool same_as(BuiltinType t) const;
@@ -110,7 +113,9 @@ public:
     static TypeRegistry& instance();
     void register_type(Type type);
     [[nodiscard]] const Type& get_type(TypeID id) const;
-    [[nodiscard]] TypeID get_type_id(const Type& type);
+    [[nodiscard]] TypeID get_type_id(const Type& type) const;
+    [[nodiscard]] TypeID get_type_id(std::string_view name) const;
+    [[nodiscard]] TypeID get_type_id(const ast::Type& type) const;
 
 private:
     TypeRegistry();
@@ -129,6 +134,10 @@ TypeID void_() noexcept;
 TypeID auto_() noexcept;
 }  // namespace types
 
+template <TypeVariantMember Type>
+std::string to_string(Type&& type) {
+    return type.to_string();
+}
 std::string to_string(BuiltinType type);
 std::string to_string(TypeID id);
 
@@ -138,6 +147,14 @@ template <>
 struct fmt::formatter<type::TypeID> : formatter<string_view> {
     auto format(const type::TypeID& type_id, format_context& ctx) const {
         const string_view name = type_id.get_name();
+        return formatter<string_view>::format(name, ctx);
+    }
+};
+
+template <>
+struct fmt::formatter<type::BuiltinType> : formatter<string_view> {
+    auto format(const type::BuiltinType& type, format_context& ctx) const {
+        const string_view name = type::to_string(type);
         return formatter<string_view>::format(name, ctx);
     }
 };
