@@ -142,14 +142,16 @@ struct VariableDeclaration final : Declaration<TypeInfo> {
     void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
 };
 
-struct FunctionParameter {
-    TypeID type;
 template <TypeMetadata TypeInfo>
-struct FunctionParameter final {
+struct FunctionParameter final : Declaration<TypeInfo> {
     TypeInfo type{type::BuiltinType::VOID};
     std::unique_ptr<AtomIdentifier> name{nullptr};
 
-    void accept(NodeVisitor<TypeInfo>* v) { v->visit(this); }
+    void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
+
+    FunctionParameter() = default;
+    FunctionParameter(TypeInfo type, std::unique_ptr<AtomIdentifier> name)
+        : type(std::move(type)), name(std::move(name)) {}
 };
 
 template <TypeMetadata TypeInfo>
@@ -173,11 +175,16 @@ struct FunctionDeclaration final : Declaration<TypeInfo> {
           body{std::move(body)} {}
 };
 
+template <TypeMetadata TypeInfo>
+struct StructField final : Declaration<TypeInfo> {
+    TypeInfo type{type::BuiltinType::VOID};
     std::unique_ptr<AtomIdentifier> name{nullptr};
 
-    void accept(NodeVisitor<TypeInfo>* v) { v->visit(this); }
+    void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
 
-    FunctionParameter();
+    StructField() = default;
+    StructField(TypeInfo type, std::unique_ptr<AtomIdentifier> name)
+        : type{std::move(type)}, name{std::move(name)} {}
 };
 
 struct FunctionDeclaration final : Declaration {
