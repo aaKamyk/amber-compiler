@@ -153,6 +153,7 @@ void hir::Hir::visit(ast::IfStatement<type::TypeID>* if_statement) {
         this->append_to_active_func(std::make_unique<Label>(std::move(end_ident)));
     }
 }
+
 void hir::Hir::visit(ast::WhileStatement<type::TypeID>* while_statement) {
     auto cond_branch = std::make_unique<InstructionBranchConditional>();
     auto while_cond = this->create_temporary_identifier("while_cond");
@@ -218,7 +219,7 @@ void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaratio
         this->translate(std::move(variable_declaration->initializer));
         const auto* expr = this->view_last_expression();
         variable_type = expr->result_type;
-        /*if (variable_declaration->type != types::auto_() &&
+        if (variable_declaration->type != type::inferred() &&
             variable_declaration->type != variable_type) {
             this->add_error(
                 variable_declaration,
@@ -227,9 +228,9 @@ void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaratio
                     variable_declaration->type, expr->result_type
                 )
             );
-        }*/
+        }
     } else {
-        // variable_type = variable_declaration->type;
+        variable_type = variable_declaration->type;
     }
     /// gets the unique variable name and adds it to the symbol table
     auto& name = variable_declaration->name->name;
@@ -242,13 +243,17 @@ void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaratio
     );
     /// add or shadow a new variable in the current scope
     this->current_scope().add(std::move(name), unique_name);
-    auto atom = std::make_unique<AtomIdentifier>(std::move(unique_name));
-    auto var_decl =
-        std::make_unique<InstructionVariableDeclaration>(variable_type, atom->clone());
+    auto name_atom = std::make_unique<AtomIdentifier>(std::move(unique_name));
+
+    /// create declaration instruction
+    auto var_decl = std::make_unique<InstructionVariableDeclaration>(
+        variable_type, name_atom->clone()
+    );
     this->append_to_active_func(std::move(var_decl));
-    /// assignment
+
+    /// create assignment instruction
     auto instr_assign = std::make_unique<InstructionAssignment>(
-        std::move(atom), this->get_last_expression()
+        std::move(name_atom), this->get_last_expression()
     );
     this->append_to_active_func(std::move(instr_assign));
 }
@@ -267,17 +272,16 @@ void hir::Hir::visit(ast::FunctionDeclaration<type::TypeID>* function_declaratio
     /// additional scope for function parameters
     this->push_scope();
     for (const auto& param : function_declaration->arguments) {
-        auto& [type, identifier] = *param;
-        auto unique_name = SymbolTable::get_unique_name(identifier->name);
+        auto unique_name = SymbolTable::get_unique_name(param->name->name);
         m_symbol_table.add_symbol(
             unique_name, SymbolMetadata{
-                             .type = type,
+                             .type = param->type,
                              .is_mut = false,
                          }
         );
-        this->current_scope().add(std::move(identifier->name), unique_name);
+        this->current_scope().add(std::move(param->name->name), unique_name);
         func_decl->parameters.emplace_back(
-            type, std::make_unique<AtomIdentifier>(std::move(unique_name))
+            param->type, std::make_unique<AtomIdentifier>(std::move(unique_name))
         );
     }
 
