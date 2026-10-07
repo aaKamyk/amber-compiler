@@ -136,6 +136,8 @@ struct ReturnStatement final : Statement<TypeInfo> {
     void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
 
     ReturnStatement() = default;
+    ReturnStatement(std::unique_ptr<Expression> expression)
+        : expression(std::move(expression)) {}
 };
 
 template <TypeMetadata TypeInfo>

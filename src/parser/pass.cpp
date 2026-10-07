@@ -171,7 +171,13 @@ void ast::ResolveTypes::visit(
     this->m_result_stack.emplace_back(std::move(resolved_assignment));
 }
 
-void ast::ResolveTypes::visit(ReturnStatement<type::ast::Type>* return_statement) {}
+void ast::ResolveTypes::visit(ReturnStatement<type::ast::Type>* return_statement) {
+    auto resolved_return = std::make_unique<ReturnStatement<type::TypeID>>(
+        std::move(return_statement->expression)
+    );
+
+    this->m_result_stack.emplace_back(std::move(resolved_return));
+}
 
 void ast::ResolveTypes::visit(IfStatement<type::ast::Type>* if_statement) {
     auto resolved_if = std::make_unique<IfStatement<type::TypeID>>(
