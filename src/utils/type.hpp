@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -41,6 +42,9 @@ private:
     explicit TypeID(const size_t id)
         : id(id) {}
 };
+
+constexpr TypeID TypeID::InvalidID = TypeID(std::numeric_limits<size_t>::max());
+
 enum class BuiltinType : std::uint8_t {
     I64,
     I32,
@@ -71,9 +75,10 @@ struct StructField {
 
 struct Struct {
     AtomIdentifier identifier{};
-    std::vector<StructField> fields{};
+    std::optional<std::vector<StructField>> fields{};
 
     std::string_view get_name() const;
+    [[nodiscard]] bool is_opaque() const { return this->fields.has_value(); }
 };
 
 struct Alias {
