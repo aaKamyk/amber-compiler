@@ -1,5 +1,5 @@
 fn main() -> void {
-    int x = 12;
+    let x: i32 = 12;
     if (x) {
         return x;
     } else {

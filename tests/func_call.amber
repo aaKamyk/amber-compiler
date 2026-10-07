@@ -1,8 +1,8 @@
-fn foo(int x) -> int {
+fn foo(x: i32) -> int {
     return x;
 }
 
 fn main() {
-    int x = 12;
+    let x: i32 = 12;
     foo(x);
 }

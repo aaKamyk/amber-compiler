@@ -1,9 +1,9 @@
 fn a() {}
 fn b() -> int {}
-fn c(int x) -> int {}
-fn d(int x, int y) -> int {}
+fn c(x: i32) -> int {}
+fn d(x: i32, y: i32) -> int {}
 
 fn a(,) {}
-fn b(int x,) {}
+fn b(x: i32,) {}
 fn c() -> {}
-fn d(int x int y) -> void {}
+fn d(x: i32 y: i32) -> void {}
