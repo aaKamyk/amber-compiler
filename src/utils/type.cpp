@@ -127,10 +127,10 @@ type::TypeRegistry::TypeRegistry() {
     this->register_type(Type{BuiltinType::I32});
     this->register_type(Type{BuiltinType::I64});
 
-    this->register_type(Type{BuiltinType::BOOL});
+    this->register_type(Type{BuiltinType::BOOLEAN});
 
-    this->register_type(Type{BuiltinType::VOID});
-    this->register_type(Type{BuiltinType::AUTO});
+    this->register_type(Type{BuiltinType::UNIT});
+    this->register_type(Type{BuiltinType::INFERRED});
 }
 
 type::TypeID type::i8() noexcept {
@@ -154,30 +154,32 @@ type::TypeID type::i64() noexcept {
 }
 
 type::TypeID type::boolean() noexcept {
-    static TypeID bool_id = TypeRegistry::instance().get_type_id(Type{BuiltinType::BOOL});
+    static TypeID bool_id =
+        TypeRegistry::instance().get_type_id(Type{BuiltinType::BOOLEAN});
     return bool_id;
 }
 
 type::TypeID type::unit() noexcept {
-    static TypeID void_id = TypeRegistry::instance().get_type_id(Type{BuiltinType::VOID});
+    static TypeID void_id = TypeRegistry::instance().get_type_id(Type{BuiltinType::UNIT});
     return void_id;
 }
 
 type::TypeID type::inferred() noexcept {
-    static TypeID auto_id = TypeRegistry::instance().get_type_id(Type{BuiltinType::AUTO});
+    static TypeID auto_id =
+        TypeRegistry::instance().get_type_id(Type{BuiltinType::INFERRED});
     return auto_id;
 }
 
-std::string to_string(const type::BuiltinType type) {
+std::string type::to_string(const BuiltinType type) {
     // clang-format off
     static const std::map<type::BuiltinType, const char*> type_strings = {
         {type::BuiltinType::I64, "i64"},
         {type::BuiltinType::I32, "i32"},
         {type::BuiltinType::I16, "i16"},
         {type::BuiltinType::I8, "i8"},
-        {type::BuiltinType::BOOL, "bool"},
-        {type::BuiltinType::VOID, "void"},
-        {type::BuiltinType::AUTO, "auto"},
+        {type::BuiltinType::BOOLEAN, "bool"},
+        {type::BuiltinType::UNIT, "unit"},
+        {type::BuiltinType::INFERRED, "auto"},
     };
     // clang-format on
     if (!type_strings.contains(type)) { throw std::runtime_error("Unknown type"); }

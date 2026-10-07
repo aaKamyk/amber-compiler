@@ -39,9 +39,9 @@ enum class BuiltinType : std::uint8_t {
     I32,
     I16,
     I8,
-    BOOL,
-    VOID,
-    AUTO,
+    BOOLEAN,
+    UNIT,
+    INFERRED,
 };
 
 namespace ast {

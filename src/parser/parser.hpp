@@ -150,8 +150,8 @@ struct ast::NodeParser<type::ast::Type> {
             {TokenType::I32, type::BuiltinType::I32},
             {TokenType::I16, type::BuiltinType::I16},
             {TokenType::I8, type::BuiltinType::I8},
-            {TokenType::BOOL, type::BuiltinType::BOOL},
-            {TokenType::VOID, type::BuiltinType::VOID},
+            {TokenType::BOOL, type::BuiltinType::BOOLEAN},
+            {TokenType::VOID, type::BuiltinType::UNIT},
         };
         // clang-format on
 
@@ -506,7 +506,7 @@ struct ast::NodeParser<ast::VariableDeclaration<type::ast::Type>> {
             }
         } else {
             /// implicit type inference
-            variable_declaration->type = type::BuiltinType::AUTO;
+            variable_declaration->type = type::BuiltinType::INFERRED;
         }
         if (ctx.expect(TokenType::SEMICOLON)) {
             variable_declaration->initializer = nullptr;
@@ -582,7 +582,7 @@ struct ast::NodeParser<ast::FunctionDeclaration<type::ast::Type>> {
             }
         } else {
             // implicit void return type
-            func_declaration->return_type = type::BuiltinType::VOID;
+            func_declaration->return_type = type::BuiltinType::UNIT;
         }
 
         if (!ctx.parse_into<BlockStatement<type::ast::Type>>(

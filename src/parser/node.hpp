@@ -156,7 +156,7 @@ struct Declaration : Node<TypeInfo> {};
 
 template <TypeMetadata TypeInfo>
 struct VariableDeclaration final : Declaration<TypeInfo> {
-    TypeInfo type{type::BuiltinType::VOID};
+    TypeInfo type{type::BuiltinType::UNIT};
     std::unique_ptr<AtomIdentifier> name{nullptr};
     std::unique_ptr<Expression> initializer{nullptr};
 
@@ -174,7 +174,7 @@ struct VariableDeclaration final : Declaration<TypeInfo> {
 
 template <TypeMetadata TypeInfo>
 struct FunctionParameter final : Declaration<TypeInfo> {
-    TypeInfo type{type::BuiltinType::VOID};
+    TypeInfo type{type::BuiltinType::UNIT};
     std::unique_ptr<AtomIdentifier> name{nullptr};
 
     void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
@@ -186,7 +186,7 @@ struct FunctionParameter final : Declaration<TypeInfo> {
 
 template <TypeMetadata TypeInfo>
 struct FunctionDeclaration final : Declaration<TypeInfo> {
-    TypeInfo return_type{type::BuiltinType::VOID};
+    TypeInfo return_type{type::BuiltinType::UNIT};
     std::unique_ptr<AtomIdentifier> name{nullptr};
     std::vector<std::unique_ptr<FunctionParameter<TypeInfo>>> arguments{};
     std::unique_ptr<BlockStatement<TypeInfo>> body{nullptr};
@@ -207,7 +207,7 @@ struct FunctionDeclaration final : Declaration<TypeInfo> {
 
 template <TypeMetadata TypeInfo>
 struct StructField final : Declaration<TypeInfo> {
-    TypeInfo type{type::BuiltinType::VOID};
+    TypeInfo type{type::BuiltinType::UNIT};
     std::unique_ptr<AtomIdentifier> name{nullptr};
 
     void accept(NodeVisitor<TypeInfo>* v) override { v->visit(this); }
