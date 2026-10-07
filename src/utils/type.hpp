@@ -41,6 +41,19 @@ private:
     explicit TypeID(const size_t id)
         : id(id) {}
 };
+enum class BuiltinType : std::uint8_t {
+    I64,
+    I32,
+    I16,
+    I8,
+    BOOL,
+    VOID,
+    AUTO,
+};
+
+namespace ast {
+using Type = std::variant<BuiltinType, AtomIdentifier>;
+}
 
 struct Function {
     AtomIdentifier identifier{};
@@ -95,6 +108,8 @@ class TypeRegistry {
 public:
     TypeRegistry(const TypeRegistry&) = delete;
     TypeRegistry& operator=(const TypeRegistry&) = delete;
+    TypeRegistry(TypeRegistry&&) = delete;
+    TypeRegistry& operator=(TypeRegistry&&) = delete;
 
     static TypeRegistry& instance();
     void register_type(Type type);
