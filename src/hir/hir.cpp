@@ -110,7 +110,7 @@ void hir::Hir::visit(ast::IfStatement<type::TypeID>* if_statement) {
                 return std::move(terminal_expr->value);
             }
             /// TODO change the type of the variable
-            auto cond_var = this->create_temporary_declaration("cond", type::i32());
+            auto cond_var = this->create_temporary_declaration("cond", type::boolean());
             auto instr_assign = std::make_unique<InstructionAssignment>(
                 cond_var->clone(), std::move(condition_expression)
             );
@@ -416,9 +416,8 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_declaration(
     auto atom = this->create_temporary_identifier(name);
     m_symbol_table.add_symbol(atom->name, {.type = type, .is_mut = false});
     this->current_scope().add(atom->name, atom->name);
-    auto temp_decl = std::make_unique<InstructionVariableDeclaration>(
-        type::i32(), atom->clone(), true
-    );
+    auto temp_decl =
+        std::make_unique<InstructionVariableDeclaration>(type, atom->clone(), true);
     this->append_to_active_func(std::move(temp_decl));
     return atom;
 }
