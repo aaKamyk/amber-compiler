@@ -1,6 +1,5 @@
 #include "lir.hpp"
 
-#include <iostream>
 #include <map>
 #include <ranges>
 
@@ -13,7 +12,7 @@ lir::Lir::Lir(hir::Program program)
 lir::Program lir::Lir::translate() {
     for (const auto& function : m_program.functions) { function->accept(this); };
 
-    return std::move(m_lir_program);
+    return std::move(this->m_lir_program);
 }
 
 void lir::Lir::visit(hir::Label* label) {
@@ -230,6 +229,42 @@ lir::FunctionDefinition* lir::Lir::get_active_func() const {
     return m_active_func;
 }
 
+std::unique_ptr<AtomIdentifier> lir::Lir::get_temporary_identifier(
+    const std::string& name
+) {
+    static std::map<std::string, size_t> counts;
+    std::string real_name = "__" + name + std::to_string(counts[name]++);
+    return std::make_unique<AtomIdentifier>(real_name);
+}
+
+void lir::Lir::allocate_parameter(const VariableInfo& info) const {
+    if (info.kind != VariableInfo::Kind::PARAMETER) {
+        throw std::logic_error("Attempting to allocate parameter on a non-parameter");
+    }
+    std::string ptr_name = info.identifier.name + ".addr";
+
+    /// allocate
+    auto alloca_instr = std::make_unique<AllocaInstruction>(
+        std::make_unique<AtomIdentifier>(ptr_name), info.type
+    );
+    this->get_active_func()->append(std::move(alloca_instr));
+
+    // store
+    auto store_instr = std::make_unique<StoreInstruction>();
+    store_instr->value = std::make_unique<AtomIdentifier>(info.identifier);
+    store_instr->destination = std::make_unique<AtomIdentifier>(ptr_name);
+    store_instr->type = info.type;
+    this->get_active_func()->append(std::move(store_instr));
+}
+
+void lir::Lir::set_last_value(std::unique_ptr<Atom> at) {
+    this->m_last_value = std::move(at);
+}
+
+void lir::Lir::set_target_value(std::unique_ptr<AtomIdentifier> at) {
+    this->m_target_value = std::move(at);
+}
+
 std::unique_ptr<Atom> lir::Lir::ensure_value(std::unique_ptr<Atom> at) {
     if (dynamic_cast<AtomIntegerLiteral*>(at.get())) { return at; }
     auto ident = dynamic_unique_cast<AtomIdentifier>(at);
@@ -274,42 +309,6 @@ std::unique_ptr<AtomIdentifier> lir::Lir::ensure_value(
     return identifier;
 }
 
-std::unique_ptr<AtomIdentifier> lir::Lir::get_temporary_identifier(
-    const std::string& name
-) {
-    static std::map<std::string, size_t> counts;
-    std::string real_name = "__" + name + std::to_string(counts[name]++);
-    return std::make_unique<AtomIdentifier>(real_name);
-}
-
-void lir::Lir::allocate_parameter(const VariableInfo& info) const {
-    if (info.kind != VariableInfo::Kind::PARAMETER) {
-        throw std::logic_error("Attempting to allocate parameter on a non-parameter");
-    }
-    std::string ptr_name = info.identifier.name + ".addr";
-
-    /// allocate
-    auto alloca_instr = std::make_unique<AllocaInstruction>(
-        std::make_unique<AtomIdentifier>(ptr_name), info.type
-    );
-    this->get_active_func()->append(std::move(alloca_instr));
-
-    // store
-    auto store_instr = std::make_unique<StoreInstruction>();
-    store_instr->value = std::make_unique<AtomIdentifier>(info.identifier);
-    store_instr->destination = std::make_unique<AtomIdentifier>(ptr_name);
-    store_instr->type = info.type;
-    this->get_active_func()->append(std::move(store_instr));
-}
-
-void lir::Lir::set_last_value(std::unique_ptr<Atom> at) {
-    this->m_last_value = std::move(at);
-}
-
-void lir::Lir::set_target_value(std::unique_ptr<AtomIdentifier> at) {
-    this->m_target_value = std::move(at);
-}
-
 std::unique_ptr<Atom> lir::Lir::get_last_value() {
     return std::move(m_last_value);
 }
@@ -329,6 +328,7 @@ std::unique_ptr<AtomIdentifier> lir::Lir::get_store_location(
     throw std::runtime_error("Use of undeclared variable");
 }
 
+namespace {
 struct LirPrinter final : lir::InstructionVisitor {
     static void print(const Atom* at, const bool local = true) {
         if (const auto* ident = dynamic_cast<const AtomIdentifier*>(at)) {
@@ -476,6 +476,7 @@ struct LirPrinter final : lir::InstructionVisitor {
         fmt::println("");
     }
 };
+}  // namespace
 
 lir::Program lir::translate(hir::Program program, CompilationContext& context) {
     Lir translator(std::move(program));
