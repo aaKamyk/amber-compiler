@@ -1,0 +1,27 @@
+fn get_foo() -> Foo {
+    let x: i32 = 10;
+}
+
+fn foo(n: i32) -> i32 {
+   let sum: i32 = 0;
+
+    if (sum + 2) {
+        return sum;
+    }
+
+   while (n + 2 > 0) {
+        sum = sum + n;
+        n = n - 1;
+   }
+   return sum;
+}
+
+struct Foo {
+    x: i32,
+    y: i32,
+}
+
+fn main() -> i32 {
+    let x= 5;
+    return foo(x);
+}
