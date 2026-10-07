@@ -22,7 +22,7 @@ std::string hir::Scope::get_unique_name(std::string_view name) const {
     throw std::out_of_range("Symbol not found");
 }
 
-hir::Hir::Hir(ast::Program program, CompilationContext& ctx)
+hir::Hir::Hir(ast::Program<type::TypeID> program, CompilationContext& ctx)
     : m_active_function(nullptr), m_ast_program(std::move(program)), m_ctx(ctx) {
     m_active_scopes.emplace_back(0);
     m_global_init.emplace_back(
@@ -40,13 +40,13 @@ bool hir::Hir::was_successful() const {
     return m_translated_successfully;
 }
 
-void hir::Hir::visit(ast::BlockStatement* block_statement) {
+void hir::Hir::visit(ast::BlockStatement<type::TypeID>* block_statement) {
     push_scope();
     for (auto& entry : block_statement->entries) { this->translate(std::move(entry)); }
     pop_scope();
 }
 
-void hir::Hir::visit(ast::AssignmentStatement* assignment_statement) {
+void hir::Hir::visit(ast::AssignmentStatement<type::TypeID>* assignment_statement) {
     auto unique_name = this->resolve_scope(*assignment_statement->identifier);
     if (!unique_name) {
         this->add_error(
@@ -76,7 +76,7 @@ void hir::Hir::visit(ast::AssignmentStatement* assignment_statement) {
     this->append_to_active_func(std::move(instruction_assignment));
 }
 
-void hir::Hir::visit(ast::ReturnStatement* return_statement) {
+void hir::Hir::visit(ast::ReturnStatement<type::TypeID>* return_statement) {
     if (return_statement->expression) {
         this->translate(std::move(return_statement->expression));
         auto last_expr = this->get_last_expression();
@@ -92,7 +92,7 @@ void hir::Hir::visit(ast::ReturnStatement* return_statement) {
     }
 }
 
-void hir::Hir::visit(ast::IfStatement* if_statement) {
+void hir::Hir::visit(ast::IfStatement<type::TypeID>* if_statement) {
     auto cond_branch = std::make_unique<InstructionBranchConditional>();
 
     this->translate(std::move(if_statement->condition));
@@ -110,7 +110,7 @@ void hir::Hir::visit(ast::IfStatement* if_statement) {
                 return std::move(terminal_expr->value);
             }
             /// TODO change the type of the variable
-            auto cond_var = this->create_temporary_declaration("cond", types::i32());
+            auto cond_var = this->create_temporary_declaration("cond", type::i32());
             auto instr_assign = std::make_unique<InstructionAssignment>(
                 cond_var->clone(), std::move(condition_expression)
             );
@@ -118,7 +118,7 @@ void hir::Hir::visit(ast::IfStatement* if_statement) {
             return cond_var;
         }();
         cond_branch->condition = std::make_unique<ComparisonExpression>(
-            types::bool_(), ComparisonOperator::NOT_EQUAL, std::move(atom),
+            type::boolean(), ComparisonOperator::NOT_EQUAL, std::move(atom),
             std::make_unique<AtomIntegerLiteral>(0ull)
         );
     }
@@ -153,7 +153,7 @@ void hir::Hir::visit(ast::IfStatement* if_statement) {
         this->append_to_active_func(std::make_unique<Label>(std::move(end_ident)));
     }
 }
-void hir::Hir::visit(ast::WhileStatement* while_statement) {
+void hir::Hir::visit(ast::WhileStatement<type::TypeID>* while_statement) {
     auto cond_branch = std::make_unique<InstructionBranchConditional>();
     auto while_cond = this->create_temporary_identifier("while_cond");
     auto while_body = this->create_temporary_identifier("while_body");
@@ -180,7 +180,7 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
                 return std::move(terminal_expr->value);
             }
             /// TODO change the default type
-            auto cond_var = this->create_temporary_declaration("cond", types::i32());
+            auto cond_var = this->create_temporary_declaration("cond", type::i32());
             auto instr_assign = std::make_unique<InstructionAssignment>(
                 cond_var->clone(), std::move(condition_expression)
             );
@@ -188,7 +188,7 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
             return cond_var;
         }();
         cond_branch->condition = std::make_unique<ComparisonExpression>(
-            types::bool_(), ComparisonOperator::NOT_EQUAL, std::move(atom),
+            type::boolean(), ComparisonOperator::NOT_EQUAL, std::move(atom),
             std::make_unique<AtomIntegerLiteral>(0ull)
         );
     }
@@ -200,7 +200,7 @@ void hir::Hir::visit(ast::WhileStatement* while_statement) {
     this->append_to_active_func(std::make_unique<Label>(std::move(while_end)));
 }
 
-void hir::Hir::visit(ast::ExpressionStatement* expression_statement) {
+void hir::Hir::visit(ast::ExpressionStatement<type::TypeID>* expression_statement) {
     this->translate(std::move(expression_statement->expression));
     auto expr = this->get_last_expression();
     if (dynamic_cast<CallExpression*>(expr.get())) {
@@ -211,14 +211,14 @@ void hir::Hir::visit(ast::ExpressionStatement* expression_statement) {
     /// TODO emit unused result of expression warning
 }
 
-void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
+void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaration) {
     /// check type against initializer expression
-    TypeID variable_type{types::void_()};
+    type::TypeID variable_type{type::unit()};
     if (variable_declaration->initializer) {
         this->translate(std::move(variable_declaration->initializer));
         const auto* expr = this->view_last_expression();
         variable_type = expr->result_type;
-        if (variable_declaration->type != types::auto_() &&
+        /*if (variable_declaration->type != types::auto_() &&
             variable_declaration->type != variable_type) {
             this->add_error(
                 variable_declaration,
@@ -227,19 +227,18 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
                     variable_declaration->type, expr->result_type
                 )
             );
-        }
+        }*/
     } else {
-        variable_type = variable_declaration->type;
+        // variable_type = variable_declaration->type;
     }
     /// gets the unique variable name and adds it to the symbol table
     auto& name = variable_declaration->name->name;
     auto unique_name = SymbolTable::get_unique_name(name);
     m_symbol_table.add_symbol(
-        unique_name,
-        SymbolMetadata{
-            .type = variable_type,
-            .is_mut = false,
-        }
+        unique_name, SymbolMetadata{
+                         .type = variable_type,
+                         .is_mut = false,
+                     }
     );
     /// add or shadow a new variable in the current scope
     this->current_scope().add(std::move(name), unique_name);
@@ -254,9 +253,9 @@ void hir::Hir::visit(ast::VariableDeclaration* variable_declaration) {
     this->append_to_active_func(std::move(instr_assign));
 }
 
-void hir::Hir::visit(ast::FunctionParameter* function_argument) {}
+void hir::Hir::visit(ast::FunctionParameter<type::TypeID>* function_argument) {}
 
-void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
+void hir::Hir::visit(ast::FunctionDeclaration<type::TypeID>* function_declaration) {
     if (current_scope().depth != 0) {
         /// TODO can only declare a function at global scope
         return;
@@ -271,11 +270,10 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
         auto& [type, identifier] = *param;
         auto unique_name = SymbolTable::get_unique_name(identifier->name);
         m_symbol_table.add_symbol(
-            unique_name,
-            SymbolMetadata{
-                .type = type,
-                .is_mut = false,
-            }
+            unique_name, SymbolMetadata{
+                             .type = type,
+                             .is_mut = false,
+                         }
         );
         this->current_scope().add(std::move(identifier->name), unique_name);
         func_decl->parameters.emplace_back(
@@ -289,6 +287,10 @@ void hir::Hir::visit(ast::FunctionDeclaration* function_declaration) {
     this->pop_scope();
     this->unset_active_function();
 }
+
+void hir::Hir::visit(ast::StructField<type::TypeID>* struct_field) {}
+
+void hir::Hir::visit(ast::StructDeclaration<type::TypeID>* struct_declaration) {}
 
 void hir::Hir::visit(ast::AtomExpression* atom_expression) {
     if (const auto* ident =
@@ -350,7 +352,7 @@ void hir::Hir::visit(ast::BinaryExpression* binary_expression) {
     if (const auto it = comparison_operators.find(binary_expression->op);
         it != comparison_operators.end()) {
         auto result = std::make_unique<ComparisonExpression>(
-            types::bool_(), it->second, std::move(left_atom), std::move(right_atom)
+            type::boolean(), it->second, std::move(left_atom), std::move(right_atom)
         );
         m_active_expressions.emplace_back(std::move(result));
     }
@@ -378,7 +380,7 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
         it != logical_operators.end()) {
         auto zero_lit = std::make_unique<AtomIntegerLiteral>(0);
         auto result = std::make_unique<ComparisonExpression>(
-            types::bool_(), it->second, std::move(atom), std::move(zero_lit)
+            type::boolean(), it->second, std::move(atom), std::move(zero_lit)
         );
         m_active_expressions.emplace_back(std::move(result));
     }
@@ -405,13 +407,13 @@ std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_identifier(
 }
 
 std::unique_ptr<AtomIdentifier> hir::Hir::create_temporary_declaration(
-    const std::string& name, const TypeID type
+    const std::string& name, const type::TypeID type
 ) {
     auto atom = this->create_temporary_identifier(name);
     m_symbol_table.add_symbol(atom->name, {.type = type, .is_mut = false});
     this->current_scope().add(atom->name, atom->name);
     auto temp_decl = std::make_unique<InstructionVariableDeclaration>(
-        types::i32(), atom->clone(), true
+        type::i32(), atom->clone(), true
     );
     this->append_to_active_func(std::move(temp_decl));
     return atom;
@@ -433,14 +435,14 @@ std::optional<std::string> hir::Hir::resolve_scope(const AtomIdentifier& atom) c
     return std::nullopt;
 }
 
-TypeID hir::Hir::resolve_type(const Atom& atom) const {
-    if (dynamic_cast<const AtomIntegerLiteral*>(&atom)) { return types::i32(); }
-    if (dynamic_cast<const AtomBooleanLiteral*>(&atom)) { return types::bool_(); }
+type::TypeID hir::Hir::resolve_type(const Atom& atom) const {
+    if (dynamic_cast<const AtomIntegerLiteral*>(&atom)) { return type::i32(); }
+    if (dynamic_cast<const AtomBooleanLiteral*>(&atom)) { return type::boolean(); }
     const auto& ident = dynamic_cast<const AtomIdentifier&>(atom);
     return this->m_symbol_table.get_metadata(ident.str()).type;
 }
 
-TypeID hir::Hir::resolve_type(const std::string& ident) const {
+type::TypeID hir::Hir::resolve_type(const std::string& ident) const {
     return this->m_symbol_table.get_metadata(ident).type;
 }
 
@@ -487,13 +489,15 @@ void hir::Hir::append_global_init_to_program() {
     auto ident = std::make_unique<AtomIdentifier>("global_init");
     auto entry_label = std::make_unique<Label>(ident->clone());
     auto global_init = std::make_unique<InstructionFunctionDeclaration>(
-        types::void_(), std::move(ident), std::move(entry_label),
+        type::unit(), std::move(ident), std::move(entry_label),
         std::vector<FunctionParameter>{}, std::move(m_global_init)
     );
     this->append_to_program(std::move(global_init));
 }
 
-void hir::Hir::add_error(const ast::Node* error_node, const std::string& msg) {
+void hir::Hir::add_error(
+    const ast::Node<type::TypeID>* error_node, const std::string& msg
+) {
     m_ctx.logic_errors().emplace_back(error_node->line, error_node->column, msg);
     m_translated_successfully = false;
 }
@@ -641,7 +645,7 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
     }
 };
 
-hir::Program hir::translate(ast::Program program, CompilationContext& ctx) {
+hir::Program hir::translate(ast::Program<type::TypeID> program, CompilationContext& ctx) {
     Hir translator(std::move(program), ctx);
     auto hir = translator.translate();
     if (!translator.was_successful()) {

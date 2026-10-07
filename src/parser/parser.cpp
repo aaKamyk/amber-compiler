@@ -5,22 +5,23 @@
 
 #include "pass.hpp"
 
-ast::Program ast::Parser::parse() {
-    Program program{};
+ast::Program<type::ast::Type> ast::Parser::parse() {
+    Program<type::ast::Type> program{};
 
     while (peek().type != TokenType::TOKEN_EOF) {
-        if (auto decl = try_parse<Declaration>()) {
+        if (auto decl = try_parse<Declaration<type::ast::Type>>()) {
             program.children.emplace_back(std::move(decl));
             continue;
         }
 
-        if (auto statement = try_parse<Statement>()) {
+        if (auto statement = try_parse<Statement<type::ast::Type>>()) {
             /// TODO Statements not allowed at global scope
             continue;
         }
         m_successfully_parsed = false;
         break;
     }
+
     return program;
 }
 
@@ -59,7 +60,7 @@ Token ast::Parser::current_token() const {
 }
 
 void ast::Parser::add_error(std::string message, const bool add_context) {
-    auto& errors = m_ctx.syntax_errors();
+    auto& errors = this->m_ctx.syntax_errors();
     const auto token = this->peek();
     if (!errors.empty() && errors.back().token_num == m_current_token) {
         errors.pop_back();
@@ -74,14 +75,26 @@ void ast::Parser::add_error(std::string message, const bool add_context) {
     errors.emplace_back(token.line, token.column, message, this->m_current_token);
 }
 
-ast::Program ast::parse(std::vector<Token> tokens, CompilationContext& ctx) {
+ast::Program<type::TypeID> ast::parse(
+    std::vector<Token> tokens, CompilationContext& ctx
+) {
     Parser parser(std::move(tokens), ctx);
     auto program = parser.parse();
     if (!parser.was_successful()) {
         for (const auto& error : parser.get_errors()) { error.print(&ctx); }
     }
+
+    /// Collect type information
+    CollectTypes type_collector(std::move(program));
+    program = type_collector.run();
+
+    /// Resolve types
+    ResolveTypes type_resolver(std::move(program));
+    auto resolved_program = type_resolver.run();
+
     /// run constant fold pass
-    ConstantFold constant_fold(std::move(program));
-    program = constant_fold.run();
-    return program;
+    ConstantFold constant_fold(std::move(resolved_program));
+    resolved_program = constant_fold.run();
+
+    return resolved_program;
 }

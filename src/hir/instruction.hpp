@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "expression.hpp"
-#include "instruction.hpp"
 #include "utils/type.hpp"
 
 namespace hir {
@@ -12,7 +11,7 @@ namespace hir {
 class InstructionVisitor;
 
 struct FunctionParameter {
-    TypeID type;
+    type::TypeID type;
     std::unique_ptr<AtomIdentifier> name;
 };
 
@@ -27,7 +26,7 @@ struct Label final : Instruction {
     explicit Label(std::unique_ptr<AtomIdentifier> identifier);
     void accept(InstructionVisitor*) override;
 
-    const std::string& get_name() const { return identifier->name; }
+    [[nodiscard]] const std::string& get_name() const { return identifier->name; }
 };
 
 struct InstructionDiscard final : Instruction {
@@ -46,7 +45,7 @@ struct InstructionAssignment final : Instruction {
     );
     void accept(InstructionVisitor*) override;
 
-    const std::string& get_name() const { return identifier->name; }
+    [[nodiscard]] const std::string& get_name() const { return identifier->name; }
 };
 
 /// value is set to nullptr if returning void
@@ -63,7 +62,7 @@ struct InstructionBranch final : Instruction {
     explicit InstructionBranch(std::unique_ptr<AtomIdentifier> destination);
     void accept(InstructionVisitor*) override;
 
-    const std::string& get_dest_name() const { return destination->name; }
+    [[nodiscard]] const std::string& get_dest_name() const { return destination->name; }
 };
 
 struct InstructionBranchConditional final : Instruction {
@@ -79,19 +78,20 @@ struct InstructionBranchConditional final : Instruction {
     );
     void accept(InstructionVisitor*) override;
 
-    const std::string& get_tcase_name() const { return true_case->name; };
-    const std::string& get_fcase_name() const { return false_case->name; };
+    [[nodiscard]] const std::string& get_tcase_name() const { return true_case->name; };
+    [[nodiscard]] const std::string& get_fcase_name() const { return false_case->name; };
 };
 
 struct InstructionDeclaration : Instruction {};
 
 struct InstructionVariableDeclaration final : InstructionDeclaration {
-    TypeID type{types::void_()};
+    type::TypeID type{type::unit()};
     std::unique_ptr<AtomIdentifier> identifier{nullptr};
     const bool is_temporary{false};
 
     explicit InstructionVariableDeclaration(
-        TypeID type, std::unique_ptr<AtomIdentifier> identifier, bool is_temporary = false
+        type::TypeID type, std::unique_ptr<AtomIdentifier> identifier,
+        bool is_temporary = false
     );
     void accept(InstructionVisitor*) override;
 
@@ -99,7 +99,7 @@ struct InstructionVariableDeclaration final : InstructionDeclaration {
 };
 
 struct InstructionFunctionDeclaration final : InstructionDeclaration {
-    TypeID return_type{types::void_()};
+    type::TypeID return_type{type::unit()};
     std::unique_ptr<AtomIdentifier> name{nullptr};
     std::unique_ptr<Label> entry_label{nullptr};
     std::vector<FunctionParameter> parameters{};
@@ -107,13 +107,13 @@ struct InstructionFunctionDeclaration final : InstructionDeclaration {
 
     explicit InstructionFunctionDeclaration() = default;
     explicit InstructionFunctionDeclaration(
-        TypeID return_type, std::unique_ptr<AtomIdentifier> name,
+        type::TypeID return_type, std::unique_ptr<AtomIdentifier> name,
         std::unique_ptr<Label> entry_label, std::vector<FunctionParameter> parameters,
         std::vector<std::unique_ptr<Instruction>> instructions
     );
     void accept(InstructionVisitor*) override;
 
-    const std::string& get_name() const { return name->name; }
+    [[nodiscard]] const std::string& get_name() const { return name->name; }
 };
 
 class InstructionVisitor {

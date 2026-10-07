@@ -26,7 +26,7 @@ public:
     explicit Parser(std::vector<Token> tokens, CompilationContext& context)
         : m_tokens(std::move(tokens)), m_ctx(context) {}
 
-    Program parse();
+    Program<type::ast::Type> parse();
     [[nodiscard]] bool was_successful() const { return m_successfully_parsed; }
     [[nodiscard]] const std::vector<SyntaxError>& get_errors() const {
         return m_ctx.syntax_errors();
@@ -78,7 +78,7 @@ private:
         const auto start = save();
         const auto current_token = this->current_token();
         if (auto parse_result = NodeParser<T>::parse(*this)) {
-            if constexpr (std::is_base_of_v<Node, T>) {
+            if constexpr (std::is_base_of_v<Node<type::ast::Type>, T>) {
                 parse_result->line = current_token.line;
                 parse_result->column = current_token.column;
             }
@@ -94,7 +94,7 @@ private:
 
     template <typename T>
         requires std::same_as<T, BinaryOperator> || std::same_as<T, UnaryOperator> ||
-                 std::same_as<T, TypeID>
+                 std::same_as<T, type::ast::Type>
     std::optional<T> try_parse() {
         const auto start = save();
         if (auto parse_result = NodeParser<T>::parse(*this)) {
@@ -138,27 +138,32 @@ private:
     }
 };
 
-Program parse(std::vector<Token> tokens, CompilationContext& ctx);
+Program<type::TypeID> parse(std::vector<Token> tokens, CompilationContext& ctx);
 }  // namespace ast
 
 template <>
-struct ast::NodeParser<TypeID> {
-    static std::optional<TypeID> parse(Parser& ctx) {
+struct ast::NodeParser<type::ast::Type> {
+    static std::optional<type::ast::Type> parse(Parser& ctx) {
         // clang-format off
-        static const std::map<TokenType, BuiltinType> built_in_types = {
-            {TokenType::I64, BuiltinType::I64},
-            {TokenType::I32, BuiltinType::I32},
-            {TokenType::I16, BuiltinType::I16},
-            {TokenType::I8, BuiltinType::I8},
-            {TokenType::BOOL, BuiltinType::BOOL},
-            {TokenType::VOID, BuiltinType::VOID},
+        static const std::map<TokenType, type::BuiltinType> built_in_types = {
+            {TokenType::I64, type::BuiltinType::I64},
+            {TokenType::I32, type::BuiltinType::I32},
+            {TokenType::I16, type::BuiltinType::I16},
+            {TokenType::I8, type::BuiltinType::I8},
+            {TokenType::BOOL, type::BuiltinType::BOOL},
+            {TokenType::VOID, type::BuiltinType::VOID},
         };
         // clang-format on
+
+        if (const auto token = ctx.peek(); token.type == TokenType::IDENTIFIER) {
+            ctx.consume(1);
+            return type::ast::Type{AtomIdentifier{std::get<std::string>(token.data)}};
+        }
 
         if (const auto it = built_in_types.find(ctx.peek().type);
             it != built_in_types.end()) {
             ctx.consume(1);
-            return TypeRegistry::instance().get_type_id(Type(it->second));
+            return type::ast::Type{it->second};
         }
 
         return std::nullopt;
@@ -366,9 +371,9 @@ inline std::unique_ptr<ast::Expression> ast::NodeParser<ast::Expression>::parse(
 }
 
 template <>
-struct ast::NodeParser<ast::BlockStatement> {
-    static std::unique_ptr<BlockStatement> parse(Parser& ctx) {
-        auto block_statement = std::make_unique<BlockStatement>();
+struct ast::NodeParser<ast::BlockStatement<type::ast::Type>> {
+    static std::unique_ptr<BlockStatement<type::ast::Type>> parse(Parser& ctx) {
+        auto block_statement = std::make_unique<BlockStatement<type::ast::Type>>();
         if (!ctx.expect(TokenType::CURLY_BRACE_START)) {
             const auto next_token = ctx.peek();
             ctx.add_error("Expected opening brace");
@@ -378,12 +383,12 @@ struct ast::NodeParser<ast::BlockStatement> {
             if (ctx.match(TokenType::CURLY_BRACE_END)) { break; }
             /// match declaration starts
             if (ctx.match_any(TokenType::FN, TokenType::LET)) {
-                if (auto decl = ctx.try_parse<Declaration>()) {
+                if (auto decl = ctx.try_parse<Declaration<type::ast::Type>>()) {
                     block_statement->entries.emplace_back(std::move(decl));
                 } else {
                     break;
                 }
-            } else if (auto statement = ctx.try_parse<Statement>()) {
+            } else if (auto statement = ctx.try_parse<Statement<type::ast::Type>>()) {
                 block_statement->entries.emplace_back(std::move(statement));
             } else {
                 break;
@@ -395,9 +400,10 @@ struct ast::NodeParser<ast::BlockStatement> {
 };
 
 template <>
-struct ast::NodeParser<ast::AssignmentStatement> {
-    static std::unique_ptr<AssignmentStatement> parse(Parser& ctx) {
-        auto assignment_statement = std::make_unique<AssignmentStatement>();
+struct ast::NodeParser<ast::AssignmentStatement<type::ast::Type>> {
+    static std::unique_ptr<AssignmentStatement<type::ast::Type>> parse(Parser& ctx) {
+        auto assignment_statement =
+            std::make_unique<AssignmentStatement<type::ast::Type>>();
         if (!ctx.parse_into<AtomIdentifier>(ctx, assignment_statement->identifier)) {
             return nullptr;
         }
@@ -412,18 +418,22 @@ struct ast::NodeParser<ast::AssignmentStatement> {
 };
 
 template <>
-struct ast::NodeParser<ast::IfStatement> {
-    static std::unique_ptr<IfStatement> parse(Parser& ctx) {
-        auto if_statement = std::make_unique<IfStatement>();
+struct ast::NodeParser<ast::IfStatement<type::ast::Type>> {
+    static std::unique_ptr<IfStatement<type::ast::Type>> parse(Parser& ctx) {
+        auto if_statement = std::make_unique<IfStatement<type::ast::Type>>();
         if (!ctx.expect(TokenType::IF, TokenType::PAREN_START)) { return nullptr; }
 
         if (!ctx.parse_into<Expression>(ctx, if_statement->condition)) { return nullptr; }
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
-        if (!ctx.parse_into<BlockStatement>(ctx, if_statement->true_case)) {
+        if (!ctx.parse_into<BlockStatement<type::ast::Type>>(
+                ctx, if_statement->true_case
+            )) {
             return nullptr;
         }
         if (ctx.expect(TokenType::ELSE)) {
-            if (!ctx.parse_into<BlockStatement>(ctx, if_statement->false_case)) {
+            if (!ctx.parse_into<BlockStatement<type::ast::Type>>(
+                    ctx, if_statement->false_case
+                )) {
                 return nullptr;
             }
             return if_statement;
@@ -434,15 +444,17 @@ struct ast::NodeParser<ast::IfStatement> {
 };
 
 template <>
-struct ast::NodeParser<ast::WhileStatement> {
-    static std::unique_ptr<WhileStatement> parse(Parser& ctx) {
-        auto while_statement = std::make_unique<WhileStatement>();
+struct ast::NodeParser<ast::WhileStatement<type::ast::Type>> {
+    static std::unique_ptr<WhileStatement<type::ast::Type>> parse(Parser& ctx) {
+        auto while_statement = std::make_unique<WhileStatement<type::ast::Type>>();
         if (!ctx.expect(TokenType::WHILE, TokenType::PAREN_START)) { return nullptr; }
         if (!ctx.parse_into<Expression>(ctx, while_statement->condition)) {
             return nullptr;
         }
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
-        if (!ctx.parse_into<BlockStatement>(ctx, while_statement->block)) {
+        if (!ctx.parse_into<BlockStatement<type::ast::Type>>(
+                ctx, while_statement->block
+            )) {
             return nullptr;
         }
         return while_statement;
@@ -450,9 +462,9 @@ struct ast::NodeParser<ast::WhileStatement> {
 };
 
 template <>
-struct ast::NodeParser<ast::ReturnStatement> {
-    static std::unique_ptr<ReturnStatement> parse(Parser& ctx) {
-        auto return_statement = std::make_unique<ReturnStatement>();
+struct ast::NodeParser<ast::ReturnStatement<type::ast::Type>> {
+    static std::unique_ptr<ReturnStatement<type::ast::Type>> parse(Parser& ctx) {
+        auto return_statement = std::make_unique<ReturnStatement<type::ast::Type>>();
         if (!ctx.expect(TokenType::RETURN)) { return nullptr; }
         ctx.parse_into<Expression>(ctx, return_statement->expression);
         if (!ctx.expect(TokenType::SEMICOLON)) { return nullptr; }
@@ -461,9 +473,10 @@ struct ast::NodeParser<ast::ReturnStatement> {
 };
 
 template <>
-struct ast::NodeParser<ast::ExpressionStatement> {
-    static std::unique_ptr<ExpressionStatement> parse(Parser& ctx) {
-        auto expression_statement = std::make_unique<ExpressionStatement>();
+struct ast::NodeParser<ast::ExpressionStatement<type::ast::Type>> {
+    static std::unique_ptr<ExpressionStatement<type::ast::Type>> parse(Parser& ctx) {
+        auto expression_statement =
+            std::make_unique<ExpressionStatement<type::ast::Type>>();
         if (!ctx.parse_into<Expression>(ctx, expression_statement->expression)) {
             return nullptr;
         }
@@ -473,9 +486,10 @@ struct ast::NodeParser<ast::ExpressionStatement> {
 };
 
 template <>
-struct ast::NodeParser<ast::VariableDeclaration> {
-    static std::unique_ptr<VariableDeclaration> parse(Parser& ctx) {
-        auto variable_declaration = std::make_unique<VariableDeclaration>();
+struct ast::NodeParser<ast::VariableDeclaration<type::ast::Type>> {
+    static std::unique_ptr<VariableDeclaration<type::ast::Type>> parse(Parser& ctx) {
+        auto variable_declaration =
+            std::make_unique<VariableDeclaration<type::ast::Type>>();
         if (!ctx.expect(TokenType::LET)) { return nullptr; }
         if (!ctx.parse_into<AtomIdentifier>(ctx, variable_declaration->name)) {
             ctx.add_error("Expected identifier");
@@ -484,7 +498,7 @@ struct ast::NodeParser<ast::VariableDeclaration> {
         if (ctx.match(TokenType::COLON)) {
             /// explicit type declaration
             ctx.consume(1);
-            if (const auto type = ctx.try_parse<TypeID>()) {
+            if (const auto type = ctx.try_parse<type::ast::Type>()) {
                 variable_declaration->type = *type;
             } else {
                 ctx.add_error("Expected type identifier");
@@ -492,15 +506,10 @@ struct ast::NodeParser<ast::VariableDeclaration> {
             }
         } else {
             /// implicit type inference
-            variable_declaration->type =
-                TypeRegistry::instance().get_type_id(Type{BuiltinType::AUTO});
+            variable_declaration->type = type::BuiltinType::AUTO;
         }
         if (ctx.expect(TokenType::SEMICOLON)) {
             variable_declaration->initializer = nullptr;
-            if (variable_declaration->type == types::auto_()) {
-                ctx.add_error("Cannot infer type if no initializer is present");
-                return nullptr;
-            }
             return variable_declaration;
         }
         if (ctx.expect(TokenType::EQUALS)) {
@@ -519,9 +528,9 @@ struct ast::NodeParser<ast::VariableDeclaration> {
 };
 
 template <>
-struct ast::NodeParser<ast::FunctionParameter> {
-    static std::unique_ptr<FunctionParameter> parse(Parser& ctx) {
-        auto arg = std::make_unique<FunctionParameter>();
+struct ast::NodeParser<ast::FunctionParameter<type::ast::Type>> {
+    static std::unique_ptr<FunctionParameter<type::ast::Type>> parse(Parser& ctx) {
+        auto arg = std::make_unique<FunctionParameter<type::ast::Type>>();
         if (!ctx.parse_into<AtomIdentifier>(ctx, arg->name)) {
             ctx.add_error("Expected identifier");
             return nullptr;
@@ -530,7 +539,7 @@ struct ast::NodeParser<ast::FunctionParameter> {
             ctx.add_error("Expected ':' before type identifier");
             return nullptr;
         }
-        if (!ctx.parse_into<TypeID>(ctx, arg->type)) {
+        if (!ctx.parse_into<type::ast::Type>(ctx, arg->type)) {
             ctx.add_error("Expected type");
             return nullptr;
         }
@@ -539,9 +548,9 @@ struct ast::NodeParser<ast::FunctionParameter> {
 };
 
 template <>
-struct ast::NodeParser<ast::FunctionDeclaration> {
-    static std::unique_ptr<FunctionDeclaration> parse(Parser& ctx) {
-        auto func_declaration = std::make_unique<FunctionDeclaration>();
+struct ast::NodeParser<ast::FunctionDeclaration<type::ast::Type>> {
+    static std::unique_ptr<FunctionDeclaration<type::ast::Type>> parse(Parser& ctx) {
+        auto func_declaration = std::make_unique<FunctionDeclaration<type::ast::Type>>();
         if (!ctx.expect(TokenType::FN)) { return nullptr; }
         if (!ctx.parse_into<AtomIdentifier>(ctx, func_declaration->name)) {
             ctx.add_error("Expected identifier");
@@ -551,7 +560,7 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
 
         // Function parameters
         while (ctx.peek().type != TokenType::PAREN_END) {
-            if (auto arg = ctx.try_parse<FunctionParameter>()) {
+            if (auto arg = ctx.try_parse<FunctionParameter<type::ast::Type>>()) {
                 func_declaration->arguments.emplace_back(std::move(arg));
             } else {
                 return nullptr;
@@ -567,16 +576,18 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
 
         if (!ctx.expect(TokenType::PAREN_END)) { return nullptr; }
         if (ctx.expect(TokenType::ARROW)) {
-            if (!ctx.parse_into<TypeID>(ctx, func_declaration->return_type)) {
+            if (!ctx.parse_into<type::ast::Type>(ctx, func_declaration->return_type)) {
                 ctx.add_error("Expected type");
                 return nullptr;
             }
         } else {
             // implicit void return type
-            func_declaration->return_type = types::void_();
+            func_declaration->return_type = type::BuiltinType::VOID;
         }
 
-        if (!ctx.parse_into<BlockStatement>(ctx, func_declaration->body)) {
+        if (!ctx.parse_into<BlockStatement<type::ast::Type>>(
+                ctx, func_declaration->body
+            )) {
             return nullptr;
         }
         return func_declaration;
@@ -584,14 +595,73 @@ struct ast::NodeParser<ast::FunctionDeclaration> {
 };
 
 template <>
-struct ast::NodeParser<ast::Declaration> {
-    static std::unique_ptr<Declaration> parse(Parser& ctx) {
+struct ast::NodeParser<ast::StructField<type::ast::Type>> {
+    static std::unique_ptr<StructField<type::ast::Type>> parse(Parser& ctx) {
+        auto field = std::make_unique<StructField<type::ast::Type>>();
+        if (!ctx.parse_into<AtomIdentifier>(ctx, field->name)) { return nullptr; }
+        if (!ctx.expect(TokenType::COLON)) { return nullptr; }
+        if (!ctx.parse_into<type::ast::Type>(ctx, field->type)) { return nullptr; }
+        return field;
+    }
+};
+
+template <>
+struct ast::NodeParser<ast::StructDeclaration<type::ast::Type>> {
+    static std::unique_ptr<StructDeclaration<type::ast::Type>> parse(Parser& ctx) {
+        auto struct_declaration = std::make_unique<StructDeclaration<type::ast::Type>>();
+        if (!ctx.expect(TokenType::STRUCT)) { return nullptr; }
+        if (!ctx.parse_into<AtomIdentifier>(ctx, struct_declaration->name)) {
+            ctx.add_error("Expected identifier");
+            return nullptr;
+        }
+
+        /// Struct Fields
+        if (ctx.match(TokenType::CURLY_BRACE_START)) {
+            ctx.consume(1);
+
+            bool had_preceding_comma{true};
+            while (!ctx.match(TokenType::CURLY_BRACE_END)) {
+                /// preceding comma flag starts off as true initially,
+                /// beacuse the first field doesnt need it
+                if (!had_preceding_comma) {
+                    ctx.add_error("Expected \',\'");
+                    return nullptr;
+                }
+
+                /// Reset the boolean flag for the next field
+                had_preceding_comma = false;
+
+                if (auto field = ctx.try_parse<StructField<type::ast::Type>>()) {
+                    struct_declaration->fields.emplace_back(std::move(field));
+                } else {
+                    return nullptr;
+                }
+
+                /// Set boolean flag to true after successfully matching the comma
+                if (ctx.match(TokenType::COMMA)) {
+                    ctx.consume(1);
+                    had_preceding_comma = true;
+                }
+            }
+        }
+        if (!ctx.expect(TokenType::CURLY_BRACE_END)) { return nullptr; }
+
+        return struct_declaration;
+    }
+};
+
+template <>
+struct ast::NodeParser<ast::Declaration<type::ast::Type>> {
+    static std::unique_ptr<Declaration<type::ast::Type>> parse(Parser& ctx) {
         switch (const auto token = ctx.peek(); token.type) {
             case TokenType::FN:
-                return ctx.try_parse<FunctionDeclaration>();
+                return ctx.try_parse<FunctionDeclaration<type::ast::Type>>();
 
             case TokenType::LET:
-                return ctx.try_parse<VariableDeclaration>();
+                return ctx.try_parse<VariableDeclaration<type::ast::Type>>();
+
+            case TokenType::STRUCT:
+                return ctx.try_parse<StructDeclaration<type::ast::Type>>();
 
             default: {
                 return nullptr;
@@ -601,28 +671,28 @@ struct ast::NodeParser<ast::Declaration> {
 };
 
 template <>
-struct ast::NodeParser<ast::Statement> {
-    static std::unique_ptr<Statement> parse(Parser& ctx) {
+struct ast::NodeParser<ast::Statement<type::ast::Type>> {
+    static std::unique_ptr<Statement<type::ast::Type>> parse(Parser& ctx) {
         switch (const auto token = ctx.peek(); token.type) {
             case TokenType::IF:
-                return ctx.try_parse<IfStatement>();
+                return ctx.try_parse<IfStatement<type::ast::Type>>();
 
             case TokenType::WHILE:
-                return ctx.try_parse<WhileStatement>();
+                return ctx.try_parse<WhileStatement<type::ast::Type>>();
 
             case TokenType::RETURN:
-                return ctx.try_parse<ReturnStatement>();
+                return ctx.try_parse<ReturnStatement<type::ast::Type>>();
 
             case TokenType::CURLY_BRACE_START:
-                return ctx.try_parse<BlockStatement>();
+                return ctx.try_parse<BlockStatement<type::ast::Type>>();
 
             case TokenType::IDENTIFIER: {
                 if (ctx.match(TokenType::EQUALS, 1)) {
-                    return ctx.try_parse<AssignmentStatement>();
+                    return ctx.try_parse<AssignmentStatement<type::ast::Type>>();
                 }
             }
             default:
-                return ctx.try_parse<ExpressionStatement>();
+                return ctx.try_parse<ExpressionStatement<type::ast::Type>>();
         }
     }
 };

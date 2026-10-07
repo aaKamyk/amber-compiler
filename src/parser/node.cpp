@@ -31,7 +31,7 @@ private:
         this->prefix = std::move(old_prefix);
     }
 
-    void print_node(const TypeID type, const bool is_last) const {
+    void print_node(const type::BuiltinType type, const bool is_last) const {
         fmt::println("{}{}Type: {}", this->prefix, is_last ? "\\- " : "|- ", type);
     }
 
