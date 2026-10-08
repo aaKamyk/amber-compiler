@@ -40,7 +40,7 @@ VariableInfo VariableInfo::from_argument(const hir::FunctionParameter& arg) {
 }
 
 FunctionDefinition::FunctionDefinition(
-    std::unique_ptr<AtomIdentifier> name, const lir::Type ret_type
+    std::unique_ptr<AtomIdentifier> name, const lir::PrimitiveType ret_type
 )
     : name(std::move(name)), return_type(ret_type) {}
 
@@ -89,13 +89,15 @@ bool FunctionDefinition::has_argument(const AtomIdentifier& ident) const {
 
 VariableInfo& FunctionDefinition::get_variable(const AtomIdentifier& ident) {
     if (const auto found = std::ranges::find_if(
-            this->arguments, [&ident](auto&& arg) { return arg.identifier == ident; }
+            this->arguments,
+            [&ident](auto&& arg) -> bool { return arg.identifier == ident; }
         );
         found != this->arguments.end()) {
         return *found;
     }
     if (const auto found = std::ranges::find_if(
-            this->variables, [&](auto&& var_info) { return var_info.identifier == ident; }
+            this->variables,
+            [&](auto&& var_info) -> bool { return var_info.identifier == ident; }
         );
         found != this->variables.end()) {
         return *found;

@@ -32,7 +32,7 @@ struct VariableInfo {
         LIR_TEMPORARY,
     };
     AtomIdentifier identifier;
-    Type type{Type::VOID};
+    Type type{PrimitiveType::VOID};
     Kind kind{Kind::LIR_TEMPORARY};
 
     static VariableInfo from_argument(const hir::FunctionParameter& arg);
@@ -40,13 +40,15 @@ struct VariableInfo {
 
 struct FunctionDefinition {
     std::unique_ptr<AtomIdentifier> name{nullptr};
-    Type return_type{Type::VOID};
+    Type return_type{PrimitiveType::VOID};
     std::vector<std::unique_ptr<BasicBlock>> blocks{};
     std::vector<VariableInfo> arguments{};
     std::vector<VariableInfo> variables{};
 
     explicit FunctionDefinition() = default;
-    explicit FunctionDefinition(std::unique_ptr<AtomIdentifier> name, Type ret_type);
+    explicit FunctionDefinition(
+        std::unique_ptr<AtomIdentifier> name, PrimitiveType ret_type
+    );
 
     [[nodiscard]] BasicBlock& current_block() const;
     [[nodiscard]] bool has_appendable_block() const;

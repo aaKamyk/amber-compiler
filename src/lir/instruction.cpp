@@ -2,10 +2,8 @@
 
 namespace lir {
 
-AllocaInstruction::AllocaInstruction(
-    std::unique_ptr<AtomIdentifier> result, const Type type
-)
-    : result(std::move(result)), type(type) {}
+AllocaInstruction::AllocaInstruction(std::unique_ptr<AtomIdentifier> result, Type type)
+    : result(std::move(result)), type(std::move(type)) {}
 
 void AllocaInstruction::accept(InstructionVisitor* v) {
     v->visit(this);
@@ -16,9 +14,9 @@ void StoreInstruction::accept(InstructionVisitor* v) {
 }
 
 LoadInstruction::LoadInstruction(
-    std::unique_ptr<AtomIdentifier> result, std::unique_ptr<Atom> source, const Type type
+    std::unique_ptr<AtomIdentifier> result, std::unique_ptr<Atom> source, Type type
 )
-    : result(std::move(result)), source(std::move(source)), type(type) {}
+    : result(std::move(result)), source(std::move(source)), type(std::move(type)) {}
 
 void LoadInstruction::accept(InstructionVisitor* v) {
     v->visit(this);

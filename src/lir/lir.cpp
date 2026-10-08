@@ -38,7 +38,7 @@ void lir::Lir::visit(hir::InstructionAssignment* instruction_assignment) {
     if (!this->get_active_func()->has_variable(*instruction_assignment->identifier)) {
         throw std::runtime_error("Use of undeclared variable");
     }
-    const auto var_info =
+    const auto& var_info =
         this->get_active_func()->get_variable(*instruction_assignment->identifier);
 
     if (var_info.kind == VariableInfo::Kind::HIR_TEMPORARY) {
@@ -50,7 +50,7 @@ void lir::Lir::visit(hir::InstructionAssignment* instruction_assignment) {
         instruction_store->value = this->get_last_value();
         instruction_store->destination =
             this->get_store_location(std::move(instruction_assignment->identifier));
-        instruction_store->type = Type::I32;
+        instruction_store->type = Type{PrimitiveType::I32};
 
         this->get_active_func()->append(std::move(instruction_store));
     }
@@ -60,11 +60,12 @@ void lir::Lir::visit(hir::InstructionReturn* instruction_return) {
     auto instruction = std::make_unique<ReturnInstruction>();
 
     if (instruction_return->value) {
-        instruction->type = Type::I32;
+        /// TODO lir instruction result type to result type of hir instruction
+        instruction->type = Type{PrimitiveType::I32};
         instruction->value =
             this->ensure_value(std::move(instruction_return->value->value));
     } else {
-        instruction->type = Type::VOID;
+        instruction->type = Type{PrimitiveType::VOID};
     }
 
     this->get_active_func()->append(std::move(instruction));
@@ -159,7 +160,8 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
     binary_instruction->result = result_ident->clone();
     binary_instruction->lhs = this->ensure_value(std::move(binary_expression->left));
     binary_instruction->rhs = this->ensure_value(std::move(binary_expression->right));
-    binary_instruction->operand_type = Type::I32;
+    /// TODO
+    binary_instruction->operand_type = Type{PrimitiveType::I32};
     binary_instruction->op = mapping.at(binary_expression->op);
 
     this->get_active_func()->append(std::move(binary_instruction));
@@ -189,7 +191,8 @@ void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
         this->ensure_value(std::move(comparison_expression->left));
     comparison_instruction->rhs =
         this->ensure_value(std::move(comparison_expression->right));
-    comparison_instruction->compared_type = Type::I32;
+    /// TODO
+    comparison_instruction->compared_type = Type{PrimitiveType::I32};
     comparison_instruction->op = mapping.at(comparison_expression->op);
 
     this->get_active_func()->append(std::move(comparison_instruction));
@@ -211,11 +214,11 @@ void lir::Lir::visit(hir::CallExpression* call_expression) {
     call_instruction->callee = std::move(call_expression->callee);
     for (auto& arg : call_expression->arguments) {
         call_instruction->arguments.push_back(
-            {this->ensure_value(std::move(arg)), Type::I32}
+            {this->ensure_value(std::move(arg)), PrimitiveType::I32}
         );
     }
     /// TODO match type to the function type
-    call_instruction->type = Type::I32;
+    call_instruction->type = Type{PrimitiveType::I32};
 
     this->get_active_func()->append(std::move(call_instruction));
     if (!this->m_discard_value) { this->set_last_value(std::move(result_ident)); }
@@ -451,7 +454,7 @@ struct LirPrinter final : lir::InstructionVisitor {
 
     void visit(lir::ReturnInstruction* return_instruction) override {
         fmt::print("ret {}", return_instruction->type);
-        if (return_instruction->type == lir::Type::VOID) {
+        if (return_instruction->type == lir::Type{lir::PrimitiveType::VOID}) {
             fmt::println("");
             return;
         }
