@@ -16,7 +16,7 @@ struct Instruction {
     virtual ~Instruction() = default;
 };
 
-/// @code %ptr = alloca i32
+/// @code %ptr = alloca i32 @endcode
 struct AllocaInstruction final : Instruction {
     std::unique_ptr<AtomIdentifier> result;
     Type type;
@@ -25,7 +25,7 @@ struct AllocaInstruction final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
-/// @code store i32 3, ptr %dest
+/// @code store i32 3, ptr %dest @endcode
 struct StoreInstruction final : Instruction {
     std::unique_ptr<Atom> value;
     std::unique_ptr<AtomIdentifier> destination;
@@ -34,7 +34,7 @@ struct StoreInstruction final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
-/// @code %result = load i32, ptr %source
+/// @code %result = load i32, ptr %source @endcode
 struct LoadInstruction final : Instruction {
     std::unique_ptr<AtomIdentifier> result;
     std::unique_ptr<Atom> source;
@@ -48,7 +48,7 @@ struct LoadInstruction final : Instruction {
 
 /// result is set to nullptr if return value is meant to be ignored \n
 /// @code %result = call i32, @foo(%arg1, %arg2, ...) @endcode \n
-/// @code call void @void_func()
+/// @code call void @void_func()                      @endcode
 struct CallInstruction final : Instruction {
     struct Argument {
         std::unique_ptr<Atom> value;
@@ -69,21 +69,21 @@ struct BinaryInstruction : Instruction {
     Type operand_type;
 };
 
-/// @code %result = add i32, %lhs, %rhs
+/// @code %result = add i32, %lhs, %rhs @endcode
 struct BinaryIntegerInstruction final : BinaryInstruction {
     BinaryIntegerOperator op;
 
     void accept(InstructionVisitor*) override;
 };
 
-/// @code %result = fadd float, %lhs, %rhs
+/// @code %result = fadd float, %lhs, %rhs @endcode
 struct BinaryFloatingPointInstruction final : BinaryInstruction {
     BinaryFloatingPointOperator op;
 
     void accept(InstructionVisitor*) override;
 };
 
-/// @code %result = and i32, %lhs, %rhs
+/// @code %result = and i32, %lhs, %rhs @endcode
 struct BinaryBitwiseInstruction final : BinaryInstruction {
     BinaryBitwiseOperator op;
 
@@ -97,14 +97,14 @@ struct ComparisonInstruction : Instruction {
     Type compared_type;
 };
 
-/// @code %result = icmp eq i32 4, 5
+/// @code %result = icmp eq i32 4, 5 @endcode
 struct IntegerComparisonInstruction final : ComparisonInstruction {
     IntegerComparisonOperator op;
 
     void accept(InstructionVisitor*) override;
 };
 
-/// @code %result = fcmp oeq float 4.0, 5.0
+/// @code %result = fcmp oeq float 4.0, 5.0 @endcode
 struct FloatingPointComparisonInstruction final : ComparisonInstruction {
     FloatingPointComparisonOperator op;
 
@@ -115,7 +115,7 @@ struct TerminatorInstruction : Instruction {};
 
 /// value is set to nullptr if return type is void \n
 /// @code ret i32 %x @endcode \n
-/// @code ret void
+/// @code ret void   @endcode
 struct ReturnInstruction final : TerminatorInstruction {
     std::unique_ptr<Atom> value;
     Type type;
@@ -126,7 +126,7 @@ struct ReturnInstruction final : TerminatorInstruction {
 /// if branch is unconditional condition is set to nullptr and true_case holds the
 /// destination \n
 /// @code br i1 %condition, label %if_true, label %if_false @endcode \n
-/// @code br label %destination
+/// @code br label %destination                             @endcode
 struct BranchInstruction final : TerminatorInstruction {
     std::unique_ptr<Atom> condition{nullptr};
     std::unique_ptr<AtomIdentifier> true_case{nullptr};
