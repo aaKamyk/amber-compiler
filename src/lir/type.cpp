@@ -19,25 +19,6 @@ lir::Type lir::type_from(const type::TypeID type) {
     return Type{mapping.at(type)};
 }
 
-constexpr bool lir::Type::operator==(const Type& other) {
-    if (this->data.index() != other.data.index()) { return false; }
-
-    if (this->is<PrimitiveType>() && other.is<PrimitiveType>()) {
-        return this->get<PrimitiveType>() == other.get<PrimitiveType>();
-    }
-
-    if (this->is<PointerType>() && other.is<PointerType>()) {
-        return this->get<PointerType>().underlying == other.get<PointerType>().underlying;
-    }
-
-    if (this->is<StructureType>() && other.is<StructureType>()) {
-        return this->get<StructureType>().identifier ==
-               other.get<StructureType>().identifier;
-    }
-
-    return false;
-}
-
 std::string to_string(const lir::PrimitiveType type) {
     static const std::map<lir::PrimitiveType, const char*> type_strings = {
         // integer types

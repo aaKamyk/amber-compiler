@@ -1,7 +1,5 @@
 #include "pass.hpp"
 
-#include <iostream>
-
 #include "fmt/core.h"
 
 void lir::ValidateBlocks::run(Program& program) {
@@ -60,7 +58,7 @@ bool lir::ValidateBlocks::FunctionValidator::validate_block(const BasicBlock& bb
     const auto& instructions = bb.instructions;
     // trailing instructions check
     for (size_t i = 0; i < instructions.size() - 1; ++i) {
-        if (dynamic_cast<TerminatorInstruction*>(instructions[i].get())) {
+        if (dynamic_cast<TerminatorInstruction*>(instructions[i].get()) != nullptr) {
             valid = false;
             this->add_error(
                 diagnostic_message +

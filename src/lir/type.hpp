@@ -81,7 +81,25 @@ struct Type {
         return std::holds_alternative<T>(data);
     }
 
-    constexpr bool operator==(const Type& other);
+    constexpr bool operator==(const Type& other) {
+        if (this->data.index() != other.data.index()) { return false; }
+
+        if (this->is<PrimitiveType>() && other.is<PrimitiveType>()) {
+            return this->get<PrimitiveType>() == other.get<PrimitiveType>();
+        }
+
+        if (this->is<PointerType>() && other.is<PointerType>()) {
+            return this->get<PointerType>().underlying ==
+                   other.get<PointerType>().underlying;
+        }
+
+        if (this->is<StructureType>() && other.is<StructureType>()) {
+            return this->get<StructureType>().identifier ==
+                   other.get<StructureType>().identifier;
+        }
+
+        return false;
+    }
 };
 
 class TypeRegistry {
