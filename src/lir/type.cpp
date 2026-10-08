@@ -10,7 +10,7 @@ lir::Type lir::type_from(const type::TypeID type) {
         {type::i32(), PrimitiveType::I32},
         {type::i16(), PrimitiveType::I16},
         {type::i8(), PrimitiveType::I8},
-        {type::i16(), PrimitiveType::I1},
+        {type::boolean(), PrimitiveType::I1},
         {type::unit(), PrimitiveType::VOID},
     };
     // clang-format on
