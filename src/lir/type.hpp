@@ -81,7 +81,7 @@ struct Type {
         return std::holds_alternative<T>(data);
     }
 
-    constexpr bool operator==(const Type& other) {
+    constexpr bool operator==(const Type& other) const {
         if (this->data.index() != other.data.index()) { return false; }
 
         if (this->is<PrimitiveType>() && other.is<PrimitiveType>()) {
