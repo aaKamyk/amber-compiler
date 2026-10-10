@@ -1,6 +1,8 @@
 #include "type.hpp"
 
+#include <algorithm>
 #include <map>
+#include <ranges>
 #include <stdexcept>
 
 std::string type::TypeID::get_name() const {
@@ -83,15 +85,15 @@ type::TypeRegistry& type::TypeRegistry::instance() {
 }
 
 void type::TypeRegistry::register_type(Type type) {
-    if (std::ranges::find(types, type) != types.end()) {
+    if (std::ranges::find(this->types, type) != types.end()) {
         throw std::runtime_error("Type already registered");
     }
     types.emplace_back(std::move(type));
 }
 
 const type::Type& type::TypeRegistry::get_type(const TypeID id) const {
-    if (id.id >= types.size()) { throw std::runtime_error("Type not found"); }
-    return types[id.id];
+    if (id.id >= this->types.size()) { throw std::runtime_error("Type not found"); }
+    return this->types[id.id];
 }
 
 type::TypeID type::TypeRegistry::get_type_id(const Type& type) const {
@@ -118,6 +120,15 @@ type::TypeID type::TypeRegistry::get_type_id(const ast::Type& type) const {
 
     const auto& ident = std::get<AtomIdentifier>(type);
     return this->get_type_id(ident.name);
+}
+
+std::vector<type::TypeID> type::TypeRegistry::type_ids() const {
+    auto id_view = std::views::iota(this->types.begin(), this->types.end()) |
+                   std::views::transform([this](auto&& iter) -> TypeID {
+                       return TypeID(std::distance(this->types.begin(), iter));
+                   });
+
+    return {id_view.begin(), id_view.end()};
 }
 
 type::TypeRegistry::TypeRegistry() {

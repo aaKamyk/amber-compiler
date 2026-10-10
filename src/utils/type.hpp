@@ -87,7 +87,7 @@ struct Pointer {
 
 using TypeVariant = std::variant<BuiltinType, Function, Struct, Alias, Pointer>;
 template <typename T>
-concept TypeVariantMember = meta::is_variant_member<std::decay_t<T>, TypeVariant>::value;
+concept TypeVariantMember = meta::variant_member<TypeVariant, T>;
 
 struct Type : TypeVariant {
     [[nodiscard]] bool same_as(const Type& other) const;
@@ -116,6 +116,7 @@ public:
     [[nodiscard]] TypeID get_type_id(const Type& type) const;
     [[nodiscard]] TypeID get_type_id(std::string_view name) const;
     [[nodiscard]] TypeID get_type_id(const ast::Type& type) const;
+    [[nodiscard]] std::vector<TypeID> type_ids() const;
 
 private:
     TypeRegistry();
