@@ -95,6 +95,16 @@ struct Type : TypeVariant {
 
     [[nodiscard]] std::string to_string() const;
 
+    template <TypeVariantMember T>
+    [[nodiscard]] constexpr bool is() const {
+        return std::holds_alternative<T>(this);
+    }
+
+    template <TypeVariantMember T>
+    [[nodiscard]] constexpr T get() const {
+        return std::get<T>(this);
+    }
+
 private:
     [[nodiscard]] bool same_as(BuiltinType t) const;
     [[nodiscard]] bool same_as(const Function& f) const;
