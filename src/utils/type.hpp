@@ -87,7 +87,7 @@ struct Pointer {
 
 using TypeVariant = std::variant<BuiltinType, Function, Struct, Alias, Pointer>;
 template <typename T>
-concept TypeVariantMember = meta::variant_member<TypeVariant, T>;
+concept TypeVariantMember = meta::variant_member<T, TypeVariant>;
 
 struct Type : TypeVariant {
     [[nodiscard]] bool same_as(const Type& other) const;
