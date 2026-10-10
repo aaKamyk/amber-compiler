@@ -17,14 +17,16 @@ struct Expression {
     explicit Expression(const type::TypeID result_type)
         : result_type(result_type) {}
     explicit Expression() = default;
-    virtual void accept(ExpressionVisitor* v) = 0;
     virtual ~Expression() = default;
+
+    virtual void accept(ExpressionVisitor* v) = 0;
 };
 
 struct TerminalExpression final : Expression {
     std::unique_ptr<Atom> value;
 
     explicit TerminalExpression(type::TypeID type, std::unique_ptr<Atom> value);
+
     void accept(ExpressionVisitor* v) override;
 };
 
@@ -37,6 +39,7 @@ struct BinaryExpression final : Expression {
         type::TypeID type, BinaryOperator op, std::unique_ptr<Atom> left,
         std::unique_ptr<Atom> right
     );
+
     void accept(ExpressionVisitor* v) override;
 };
 
@@ -45,6 +48,7 @@ struct UnaryExpression final : Expression {
     std::unique_ptr<Atom> operand;
 
     UnaryExpression(type::TypeID type, UnaryOperator op, std::unique_ptr<Atom> operand);
+
     void accept(ExpressionVisitor* v) override;
 };
 
@@ -57,6 +61,7 @@ struct ComparisonExpression final : Expression {
         type::TypeID type, ComparisonOperator op, std::unique_ptr<Atom> left,
         std::unique_ptr<Atom> right
     );
+
     void accept(ExpressionVisitor* v) override;
 };
 
@@ -69,6 +74,7 @@ struct CallExpression final : Expression {
         type::TypeID type, std::vector<std::unique_ptr<Atom>> arguments,
         std::unique_ptr<AtomIdentifier> callee
     );
+
     void accept(ExpressionVisitor* v) override;
 };
 
