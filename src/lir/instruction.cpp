@@ -21,6 +21,11 @@ LoadInstruction::LoadInstruction(
 void LoadInstruction::accept(InstructionVisitor* v) {
     v->visit(this);
 }
+
+void GetElementPtrInstruction::accept(InstructionVisitor* v) {
+    v->visit(this);
+}
+
 void CallInstruction::accept(InstructionVisitor* v) {
     v->visit(this);
 }

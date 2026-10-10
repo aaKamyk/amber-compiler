@@ -46,6 +46,19 @@ struct LoadInstruction final : Instruction {
     void accept(InstructionVisitor*) override;
 };
 
+/// @code %struct.Foo = type { i32, f32 }                             @endcode
+/// @code %result = getelementptr %struct.Foo, ptr %ptr, i32 0, i32 0 @endcode
+/// Here the first i32 0 indexes into the pointer yielding a %struct.Foo
+/// type and the second i32 0 indexes into the struct yielding an i32 type
+struct GetElementPtrInstruction final : Instruction {
+    std::unique_ptr<AtomIdentifier> result;
+    std::unique_ptr<Atom> source;
+    std::vector<std::unique_ptr<Atom>> indices;
+    Type type;
+
+    void accept(InstructionVisitor*) override;
+};
+
 /// result is set to nullptr if return value is meant to be ignored \n
 /// @code %result = call i32, @foo(%arg1, %arg2, ...) @endcode \n
 /// @code call void @void_func()                      @endcode
@@ -140,6 +153,7 @@ public:
     virtual void visit(AllocaInstruction*) = 0;
     virtual void visit(StoreInstruction*) = 0;
     virtual void visit(LoadInstruction*) = 0;
+    virtual void visit(GetElementPtrInstruction*) = 0;
     virtual void visit(CallInstruction*) = 0;
 
     virtual void visit(BinaryIntegerInstruction*) = 0;

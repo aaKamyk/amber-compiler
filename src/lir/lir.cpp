@@ -393,6 +393,19 @@ struct LirPrinter final : lir::InstructionVisitor {
         fmt::println("");
     }
 
+    void visit(lir::GetElementPtrInstruction* get_element_ptr_instruction) override {
+        print(get_element_ptr_instruction->result.get());
+        fmt::print(" = getelementptr {}, ptr ", get_element_ptr_instruction->type);
+        print(get_element_ptr_instruction->source.get());
+        fmt::print(", ");
+        for (const auto& idx : get_element_ptr_instruction->indices) {
+            fmt::print("i32 ");
+            print(idx.get());
+            fmt::print(", ");
+        }
+        fmt::println("");
+    }
+
     void visit(lir::CallInstruction* call_instruction) override {
         if (call_instruction->result) {
             print(call_instruction->result.get());
