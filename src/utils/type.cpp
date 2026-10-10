@@ -197,6 +197,6 @@ std::string type::to_string(const BuiltinType type) {
     return type_strings.at(type);
 }
 
-std::string to_string(const type::TypeID id) {
+std::string type::to_string(const TypeID id) {
     return std::string{id.get_name()};
 }
