@@ -215,7 +215,8 @@ void hir::Hir::visit(ast::ExpressionStatement<type::TypeID>* expression_statemen
 void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaration) {
     /// check type against initializer expression
     type::TypeID variable_type{type::unit()};
-    if (variable_declaration->initializer) {
+    const bool has_initializer = variable_declaration->initializer != nullptr;
+    if (has_initializer) {
         this->translate(std::move(variable_declaration->initializer));
         const auto* expr = this->view_last_expression();
         variable_type = expr->result_type;
@@ -252,10 +253,12 @@ void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaratio
     this->append_to_active_func(std::move(var_decl));
 
     /// create assignment instruction
-    auto instr_assign = std::make_unique<InstructionAssignment>(
-        std::move(name_atom), this->get_last_expression()
-    );
-    this->append_to_active_func(std::move(instr_assign));
+    if (has_initializer) {
+        auto instr_assign = std::make_unique<InstructionAssignment>(
+            std::move(name_atom), this->get_last_expression()
+        );
+        this->append_to_active_func(std::move(instr_assign));
+    }
 }
 
 void hir::Hir::visit(ast::FunctionParameter<type::TypeID>* function_argument) {}
