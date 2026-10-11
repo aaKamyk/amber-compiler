@@ -6,7 +6,7 @@
 #include "parser/parser.hpp"
 #include "program_arguments.hpp"
 
-void runCompiler(const int argc, const char** argv) {
+static void runCompiler(const int argc, const char** argv) {
     const auto args = parseArguments(std::span(argv, static_cast<size_t>(argc)));
     const auto input = getInputFromFile(args);
     CompilationContext ctx;
@@ -15,7 +15,6 @@ void runCompiler(const int argc, const char** argv) {
     auto tokens = lxr::lex(*input, ctx);
     auto ast = ast::parse(std::move(tokens), ctx);
     auto hir = hir::translate(std::move(ast), ctx);
-    hir::print_program(hir);
     const auto lir = lir::translate(std::move(hir), ctx);
     lir::print_program(lir);
 }
