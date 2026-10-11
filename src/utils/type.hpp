@@ -97,12 +97,12 @@ struct Type : TypeVariant {
 
     template <TypeVariantMember T>
     [[nodiscard]] constexpr bool is() const {
-        return std::holds_alternative<T>(this);
+        return std::holds_alternative<T>(*this);
     }
 
     template <TypeVariantMember T>
     [[nodiscard]] constexpr T get() const {
-        return std::get<T>(this);
+        return std::get<T>(*this);
     }
 
 private:
