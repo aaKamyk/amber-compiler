@@ -62,6 +62,6 @@ public:
 };
 
 Program translate(hir::Program program, CompilationContext& context);
-void print_program(const Program& program);
+void print_program(const Program& program, std::ostream& out);
 
 }  // namespace lir

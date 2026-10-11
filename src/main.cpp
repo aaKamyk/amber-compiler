@@ -16,7 +16,7 @@ static void runCompiler(const int argc, const char** argv) {
     auto ast = ast::parse(std::move(tokens), ctx);
     auto hir = hir::translate(std::move(ast), ctx);
     const auto lir = lir::translate(std::move(hir), ctx);
-    lir::print_program(lir);
+    lir::print_program(lir, std::cout);
 }
 
 int main(const int argc, const char** argv) {

@@ -1,9 +1,11 @@
 #include "lir.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <map>
 #include <ranges>
 
+#include "fmt/ostream.h"
 #include "pass.hpp"
 #include "utils/util.hpp"
 
@@ -359,18 +361,20 @@ std::unique_ptr<AtomIdentifier> lir::Lir::get_store_location(
 
 namespace {
 struct LirPrinter final : lir::InstructionVisitor {
-    static void print(const Atom* at, const bool local = true) {
+    std::ostream& out{std::cout};
+
+    void print(const Atom* at, const bool local = true) const {
         if (const auto* ident = dynamic_cast<const AtomIdentifier*>(at)) {
-            fmt::print("{}{}", local ? '%' : '@', ident->name);
+            fmt::print(this->out, "{}{}", local ? '%' : '@', ident->name);
         } else if (const auto* lit = dynamic_cast<const AtomIntegerLiteral*>(at)) {
-            fmt::print("{}", lit->value);
+            fmt::print(this->out, "{}", lit->value);
         }
     }
 
     void print(const std::unique_ptr<lir::BasicBlock>& bb) {
-        fmt::println("{}:", bb->get_label());
+        fmt::println(this->out, "{}:", bb->get_label());
         for (const auto& instr : bb->instructions) {
-            fmt::print("    ");
+            fmt::print(this->out, "    ");
             instr->accept(this);
         }
     }
@@ -378,91 +382,95 @@ struct LirPrinter final : lir::InstructionVisitor {
     void print(const lir::Program& program) {
         /// Print definitions
         for (const auto& function : program.functions) {
-            fmt::print("define {} @{}(", function.return_type, function.get_name());
+            fmt::print(
+                this->out, "define {} @{}(", function.return_type, function.get_name()
+            );
             if (const auto& args = function.arguments; !args.empty()) {
                 for (const auto& [ident, type, kind] :
                      args | std::views::take(args.size() - 1)) {
-                    fmt::print("{} %{}, ", type, ident.name);
+                    fmt::print(this->out, "{} %{}, ", type, ident.name);
                 }
                 const auto& [ident, type, kind] = args.back();
-                fmt::print("{} %{}", type, ident.name);
+                fmt::print(this->out, "{} %{}", type, ident.name);
             }
-            fmt::println(") {{");
+            fmt::println(this->out, ") {{");
             if (const auto& blocks = function.blocks; !blocks.empty()) {
                 for (const auto& bb : blocks | std::views::take(blocks.size() - 1)) {
                     print(bb);
-                    fmt::println("");
+                    fmt::println(this->out, "");
                 }
                 print(blocks.back());
             }
-            fmt::print("}}\n\n");
+            fmt::print(this->out, "}}\n\n");
         }
     }
 
     void visit(lir::AllocaInstruction* alloca_instruction) override {
         print(alloca_instruction->result.get());
-        fmt::println(" = alloca {}", alloca_instruction->type);
+        fmt::println(this->out, " = alloca {}", alloca_instruction->type);
     }
 
     void visit(lir::StoreInstruction* store_instruction) override {
-        fmt::print("store {} ", store_instruction->type);
+        fmt::print(this->out, "store {} ", store_instruction->type);
         print(store_instruction->value.get());
-        fmt::print(", ptr ");
+        fmt::print(this->out, ", ptr ");
         print(store_instruction->destination.get());
-        fmt::println("");
+        fmt::println(this->out, "");
     }
 
     void visit(lir::LoadInstruction* load_instruction) override {
         print(load_instruction->result.get());
-        fmt::print(" = load {}, ptr ", load_instruction->type);
+        fmt::print(this->out, " = load {}, ptr ", load_instruction->type);
         print(load_instruction->source.get());
-        fmt::println("");
+        fmt::println(this->out, "");
     }
 
     void visit(lir::GetElementPtrInstruction* get_element_ptr_instruction) override {
         print(get_element_ptr_instruction->result.get());
-        fmt::print(" = getelementptr {}, ptr ", get_element_ptr_instruction->type);
+        fmt::print(
+            this->out, " = getelementptr {}, ptr ", get_element_ptr_instruction->type
+        );
         print(get_element_ptr_instruction->source.get());
-        fmt::print(", ");
+        fmt::print(this->out, ", ");
         for (const auto& idx : get_element_ptr_instruction->indices) {
-            fmt::print("i32 ");
+            fmt::print(this->out, "i32 ");
             print(idx.get());
-            fmt::print(", ");
+            fmt::print(this->out, ", ");
         }
-        fmt::println("");
+        fmt::println(this->out, "");
     }
 
     void visit(lir::CallInstruction* call_instruction) override {
         if (call_instruction->result) {
             print(call_instruction->result.get());
-            fmt::print(" = ");
+            fmt::print(this->out, " = ");
         }
-        fmt::print("call {} ", call_instruction->type);
+        fmt::print(this->out, "call {} ", call_instruction->type);
         print(call_instruction->callee.get(), false);
-        fmt::print("(");
+        fmt::print(this->out, "(");
         if (const auto& args = call_instruction->arguments; !args.empty()) {
             for (const auto& [arg, type] : args | std::views::take(args.size() - 1)) {
-                fmt::print("{} ", type);
+                fmt::print(this->out, "{} ", type);
                 print(arg.get());
-                fmt::print(", ");
+                fmt::print(this->out, ", ");
             }
             const auto& [arg, type] = args.back();
-            fmt::print("{} ", type);
+            fmt::print(this->out, "{} ", type);
             print(arg.get());
         }
-        fmt::println(")");
+        fmt::println(this->out, ")");
     }
 
     void visit(lir::BinaryIntegerInstruction* binary_integer_instruction) override {
         print(binary_integer_instruction->result.get());
         fmt::print(
-            " = {} {} ", binary_integer_instruction->op,
+            this->out, " = {} {} ", binary_integer_instruction->op,
             binary_integer_instruction->operand_type
         );
         print(binary_integer_instruction->lhs.get());
-        fmt::print(", ");
+        fmt::print(this->out, ", ");
         print(binary_integer_instruction->rhs.get());
-        fmt::println("");
+        fmt::println(this->out, "");
     }
 
     void visit(lir::BinaryFloatingPointInstruction*) override {}
@@ -471,52 +479,55 @@ struct LirPrinter final : lir::InstructionVisitor {
     void visit(lir::IntegerComparisonInstruction* comparison_instruction) override {
         print(comparison_instruction->result.get());
         fmt::print(
-            " = icmp {} {} ", comparison_instruction->op,
+            this->out, " = icmp {} {} ", comparison_instruction->op,
             comparison_instruction->compared_type
         );
         print(comparison_instruction->lhs.get());
-        fmt::print(", ");
+        fmt::print(this->out, ", ");
         print(comparison_instruction->rhs.get());
-        fmt::println("");
+        fmt::println(this->out, "");
     }
 
     void visit(lir::FloatingPointComparisonInstruction* comparison_instruction) override {
         fmt::print(
-            " = fcmp {} {} ", comparison_instruction->op,
+            this->out, " = fcmp {} {} ", comparison_instruction->op,
             comparison_instruction->compared_type
         );
         print(comparison_instruction->lhs.get());
-        fmt::print(", ");
+        fmt::print(this->out, ", ");
         print(comparison_instruction->rhs.get());
-        fmt::println("");
+        fmt::println(this->out, "");
     }
 
     void visit(lir::ReturnInstruction* return_instruction) override {
-        fmt::print("ret {}", return_instruction->type);
+        fmt::print(this->out, "ret {}", return_instruction->type);
         if (return_instruction->type == lir::Type{lir::PrimitiveType::VOID}) {
-            fmt::println("");
+            fmt::println(this->out, "");
             return;
         }
-        fmt::print(" ");
+        fmt::print(this->out, " ");
         print(return_instruction->value.get());
-        fmt::println("");
+        fmt::println(this->out, "");
     }
 
     void visit(lir::BranchInstruction* branch_instruction) override {
-        fmt::print("br ");
+        fmt::print(this->out, "br ");
         if (branch_instruction->condition) {
-            fmt::print("i1 ");
+            fmt::print(this->out, "i1 ");
             print(branch_instruction->condition.get());
-            fmt::print(", label ");
+            fmt::print(this->out, ", label ");
             print(branch_instruction->true_case.get());
-            fmt::print(", label ");
+            fmt::print(this->out, ", label ");
             print(branch_instruction->false_case.get());
         } else {
-            fmt::print("label ");
+            fmt::print(this->out, "label ");
             print(branch_instruction->true_case.get());
         }
-        fmt::println("");
+        fmt::println(this->out, "");
     }
+
+    explicit LirPrinter(std::ostream& out)
+        : out{out} {};
 };
 }  // namespace
 
@@ -527,8 +538,7 @@ lir::Program lir::translate(hir::Program program, CompilationContext& context) {
     return lir_program;
 }
 
-void lir::print_program(const Program& program) {
-    fmt::println("========== LIR ==========");
-    LirPrinter printer{};
+void lir::print_program(const Program& program, std::ostream& out) {
+    LirPrinter printer{out};
     printer.print(program);
 }
