@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <ranges>
 
 #include "utils/type.hpp"
 
@@ -31,34 +32,26 @@ struct PointerType {
     std::unique_ptr<Type> underlying{nullptr};
 
     PointerType() = default;
-    PointerType(const PointerType& other)
-        : underlying(std::make_unique<Type>(*other.underlying)) {}
+    PointerType(const PointerType& other);
     PointerType(PointerType&& other) noexcept = default;
-    PointerType& operator=(const PointerType& other) {
-        if (this == &other) { return *this; }
-
-        this->underlying = std::make_unique<Type>(*other.underlying);
-        return *this;
-    };
+    PointerType& operator=(const PointerType& other);
     PointerType& operator=(PointerType&& other) noexcept = default;
 };
 
 struct StructureType {
     std::unique_ptr<AtomIdentifier> identifier{nullptr};
-    std::vector<PrimitiveType> fields{};
+    std::vector<std::unique_ptr<Type>> fields{};
     bool is_packed{false};
 
     StructureType() = default;
-    StructureType(const StructureType& other)
-        : identifier{other.identifier->clone()}, fields{other.fields} {}
+    StructureType(
+        std::unique_ptr<AtomIdentifier> identifier,
+        std::vector<std::unique_ptr<Type>> fields
+    )
+        : identifier(std::move(identifier)), fields(std::move(fields)) {}
+    StructureType(const StructureType& other);
     StructureType(StructureType&& other) noexcept = default;
-    StructureType& operator=(const StructureType& other) {
-        if (this == &other) { return *this; }
-
-        this->identifier = other.identifier->clone();
-        this->fields = other.fields;
-        return *this;
-    }
+    StructureType& operator=(const StructureType& other);
     StructureType& operator=(StructureType&& other) noexcept = default;
 };
 
