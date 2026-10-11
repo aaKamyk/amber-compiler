@@ -102,13 +102,13 @@ struct Type {
     }
 };
 
-class TypeRegistry {
-public:
+struct TypeRegistry {
     static StructureType& get_definition(std::string_view name);
 
-private:
-    static std::map<std::string, StructureType> definitions;
-};
+    static void register_struct(type::Struct struct_type);
+
+    inline static std::map<std::string, StructureType> definitions{};
+};  // namespace lir
 
 }  // namespace lir
 

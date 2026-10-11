@@ -1,5 +1,6 @@
 #include "lir.hpp"
 
+#include <algorithm>
 #include <map>
 #include <ranges>
 
@@ -10,6 +11,31 @@ lir::Lir::Lir(hir::Program program)
     : m_program(std::move(program)), m_active_func(nullptr) {}
 
 lir::Program lir::Lir::translate() {
+    /// Register struct types
+    for (const auto& [identifier, fields] :
+         type::TypeRegistry::instance().type_ids() |
+             std::views::transform([](const type::TypeID id) {
+                 return type::TypeRegistry::instance().get_type(id);
+             }) |
+             std::views::filter([](const type::Type& type) {
+                 return type.is<type::Struct>();
+             }) |
+             std::views::transform([](const type::Type& strct) {
+                 return strct.get<type::Struct>();
+             })) {
+        std::vector<std::unique_ptr<Type>> lir_fields{};
+        lir_fields.reserve(fields.has_value() ? fields->size() : 0);
+        std::ranges::transform(
+            fields.value_or(std::vector<type::StructField>{}),
+            std::back_inserter(lir_fields), [](const type::StructField& field) {
+                return std::make_unique<Type>(type_from(field.type));
+            }
+        );
+
+        StructureType lir_struct = {identifier.clone(), std::move(lir_fields)};
+        TypeRegistry::definitions.insert({identifier.name, std::move(lir_struct)});
+    }
+
     for (const auto& function : m_program.functions) { function->accept(this); };
 
     return std::move(this->m_lir_program);
