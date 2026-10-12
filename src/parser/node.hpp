@@ -241,5 +241,5 @@ struct Program {
     std::vector<std::unique_ptr<Declaration<TypeInfo>>> children{};
 };
 
-void print_program(Program<type::TypeID>& program);
+void print_program(Program<type::TypeID>& program, std::ostream& out);
 }  // namespace ast
