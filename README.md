@@ -64,7 +64,7 @@ Example command for compiling a source file
    act source.amber -o source.ll
    ```
 
-If no output path is provided ./a.out is used
+If no output path is provided ./input_path_name.ll is used
 
 <!-- LICENSE -->
 

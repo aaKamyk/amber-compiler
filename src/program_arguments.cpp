@@ -12,7 +12,9 @@ Arguments parseArguments(const std::span<const char*> args) {
     }
     Arguments parsed_args = {
         .input_path = fs::path(args[1]),
+        .output_path = fs::path(args[1]).replace_extension("ll")
     };
+
     if (!fs::exists(parsed_args.input_path)) {
         throw std::runtime_error(
             fmt::format(
@@ -21,6 +23,7 @@ Arguments parseArguments(const std::span<const char*> args) {
             )
         );
     }
+
     if (args.size() > 2) {
         if (strcmp(args[2], "-o") != 0) {
             throw std::runtime_error(
@@ -42,8 +45,26 @@ std::unique_ptr<std::istream> getInputFromFile(const Arguments& args) {
         std::make_unique<std::ifstream>(args.input_path, std::ios::in | std::ios::binary);
     if (!file->is_open()) {
         throw std::runtime_error(
-            "[Arguments Parser] Could not open input file: " + args.input_path.string()
+            fmt::format(
+                "[Arguments Parser] Could not open input file: {}",
+                args.input_path.string()
+            )
         );
     }
+    return file;
+}
+
+std::unique_ptr<std::ostream> getOutputFromFile(const Arguments& args) {
+    auto file = std::make_unique<std::ofstream>(args.output_path);
+
+    if (!file->is_open()) {
+        throw std::runtime_error(
+            fmt::format(
+                "[Arguments Parser] Could not open output file: {}",
+                args.output_path.string()
+            )
+        );
+    }
+
     return file;
 }
