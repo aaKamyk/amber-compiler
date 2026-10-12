@@ -6,6 +6,7 @@
 #include <ranges>
 
 #include "fmt/core.h"
+#include "fmt/ostream.h"
 #include "utils/symbolTable.hpp"
 #include "utils/util.hpp"
 
@@ -540,96 +541,102 @@ hir::Instruction& hir::Hir::get_last_instruction() const {
     return *m_global_init.back();
 }
 
+namespace {
 struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
+    std::ostream& out{std::cout};
+
     void print(const hir::Program& program) {
         for (const auto& declaration : program.functions) { declaration->accept(this); }
     }
 
-    void visit(hir::Label* label) override { fmt::println("{}:", label->get_name()); };
+    void visit(hir::Label* label) override {
+        fmt::println(this->out, "{}:", label->get_name());
+    };
 
     void visit(hir::InstructionDiscard* instruction_discard) override {
         instruction_discard->expression->accept(this);
-        fmt::println(";");
+        fmt::println(this->out, ";");
     };
 
     void visit(hir::InstructionAssignment* instruction_assignment) override {
-        fmt::print("{} = ", instruction_assignment->get_name());
+        fmt::print(this->out, "{} = ", instruction_assignment->get_name());
         instruction_assignment->value->accept(this);
-        fmt::println(";");
+        fmt::println(this->out, ";");
     }
 
     void visit(hir::InstructionReturn* instruction_return) override {
-        fmt::print("return ");
+        fmt::print(this->out, "return ");
         if (instruction_return->value) {
             instruction_return->value->accept(this);
         } else {
-            fmt::print("void");
+            fmt::print(this->out, "void");
         }
-        fmt::println(";");
+        fmt::println(this->out, ";");
     }
 
     void visit(hir::InstructionBranch* instruction_branch) override {
-        fmt::println("goto {};", instruction_branch->get_dest_name());
+        fmt::println(this->out, "goto {};", instruction_branch->get_dest_name());
     }
 
     void visit(
         hir::InstructionBranchConditional* instruction_branch_conditional
     ) override {
-        fmt::print("goto if ");
+        fmt::print(this->out, "goto if ");
         instruction_branch_conditional->condition->accept(this);
         fmt::println(
-            " {} : {};", instruction_branch_conditional->get_tcase_name(),
+            this->out, " {} : {};", instruction_branch_conditional->get_tcase_name(),
             instruction_branch_conditional->get_fcase_name()
         );
     }
 
     void visit(hir::InstructionVariableDeclaration* instruction_declaration) override {
         fmt::println(
-            "{} {};", instruction_declaration->type, instruction_declaration->get_name()
+            this->out, "{} {};", instruction_declaration->type,
+            instruction_declaration->get_name()
         );
     }
 
     void visit(hir::InstructionFunctionDeclaration* instruction_declaration) override {
-        fmt::print("fn {}(", instruction_declaration->get_name());
+        fmt::print(this->out, "fn {}(", instruction_declaration->get_name());
         if (const auto& params = instruction_declaration->parameters; !params.empty()) {
             for (const auto& [type, ident] :
                  params | std::views::take(params.size() - 1)) {
-                fmt::print("{} {}, ", type, ident->name);
+                fmt::print(this->out, "{} {}, ", type, ident->name);
             }
             const auto& [type, ident] = params.back();
-            fmt::print("{} {}", type, ident->name);
+            fmt::print(this->out, "{} {}", type, ident->name);
         }
-        fmt::println(") -> {}", instruction_declaration->return_type);
-        fmt::println("{}:", instruction_declaration->entry_label->get_name());
+        fmt::println(this->out, ") -> {}", instruction_declaration->return_type);
+        fmt::println(this->out, "{}:", instruction_declaration->entry_label->get_name());
         for (const auto& instr : instruction_declaration->instructions) {
-            if (!dynamic_cast<hir::Label*>(instr.get())) { fmt::print("  "); }
+            if (!dynamic_cast<hir::Label*>(instr.get())) { fmt::print(this->out, "  "); }
             instr->accept(this);
         }
-        fmt::println("");
+        fmt::println(this->out, "");
     }
 
     void visit(hir::BinaryExpression* binary_expression) override {
         print(binary_expression->left.get());
-        fmt::print(" {} ", binary_expression->op);
+        fmt::print(this->out, " {} ", binary_expression->op);
         print(binary_expression->right.get());
     }
 
     void visit(hir::UnaryExpression* unary_expression) override {
-        fmt::print("{}", unary_expression->op);
+        fmt::print(this->out, "{}", unary_expression->op);
         print(unary_expression->operand.get());
     }
 
     void visit(hir::ComparisonExpression* comparison_expression) override {
         print(comparison_expression->left.get());
-        fmt::print(" {} ", comparison_expression->op);
+        fmt::print(this->out, " {} ", comparison_expression->op);
         print(comparison_expression->right.get());
     }
 
     void visit(hir::CallExpression* call_expression) override {
-        fmt::print("call ");
+        fmt::print(this->out, "call ");
         print(call_expression->callee.get());
         for (const auto& arg : call_expression->arguments) {
-            fmt::print(" ");
+            fmt::print(this->out, " ");
             print(arg.get());
         }
     }
@@ -638,18 +645,22 @@ struct HirPrinter final : hir::ExpressionVisitor, hir::InstructionVisitor {
         print(terminal_expression->value.get());
     }
 
-    static void print(const Atom* at) {
+    void print(const Atom* at) const {
         if (const auto* ident = dynamic_cast<const AtomIdentifier*>(at)) {
-            fmt::print("{}", ident->name);
+            fmt::print(this->out, "{}", ident->name);
         }
         if (const auto* int_lit = dynamic_cast<const AtomIntegerLiteral*>(at)) {
-            fmt::print("{}", int_lit->value);
+            fmt::print(this->out, "{}", int_lit->value);
         }
         if (const auto* bool_lit = dynamic_cast<const AtomBooleanLiteral*>(at)) {
-            fmt::print("{}", bool_lit->value);
+            fmt::print(this->out, "{}", bool_lit->value);
         }
     }
+
+    explicit HirPrinter(std::ostream& out)
+        : out(out) {};
 };
+}  // namespace
 
 hir::Program hir::translate(ast::Program<type::TypeID> program, CompilationContext& ctx) {
     Hir translator(std::move(program), ctx);
@@ -663,8 +674,7 @@ hir::Program hir::translate(ast::Program<type::TypeID> program, CompilationConte
     return hir;
 }
 
-void hir::print_program(const Program& program) {
-    fmt::println("========== HIR ==========");
-    HirPrinter printer{};
+void hir::print_program(const Program& program, std::ostream& out) {
+    HirPrinter printer{out};
     printer.print(program);
 }

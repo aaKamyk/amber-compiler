@@ -93,6 +93,6 @@ private:
 };
 
 Program translate(ast::Program<type::TypeID>, CompilationContext& ctx);
-void print_program(const Program&);
+void print_program(const Program&, std::ostream& out);
 
 }  // namespace hir
