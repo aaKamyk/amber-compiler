@@ -16,14 +16,14 @@ lir::Program lir::Lir::translate() {
     /// Register struct types
     for (const auto& [identifier, fields] :
          type::TypeRegistry::instance().type_ids() |
-             std::views::transform([](const type::TypeID id) {
+             std::views::transform([](const type::TypeID id) -> type::Type {
                  return type::TypeRegistry::instance().get_type(id);
              }) |
-             std::views::filter([](const type::Type& type) {
+             std::views::filter([](const type::Type& type) -> bool {
                  return type.is<type::Struct>();
              }) |
-             std::views::transform([](const type::Type& strct) {
-                 return strct.get<type::Struct>();
+             std::views::transform([](const type::Type& struct_type) -> type::Struct {
+                 return struct_type.get<type::Struct>();
              })) {
         std::vector<std::unique_ptr<Type>> lir_fields{};
         lir_fields.reserve(fields.has_value() ? fields->size() : 0);
@@ -88,8 +88,7 @@ void lir::Lir::visit(hir::InstructionReturn* instruction_return) {
     auto instruction = std::make_unique<ReturnInstruction>();
 
     if (instruction_return->value) {
-        /// TODO lir instruction result type to result type of hir instruction
-        instruction->type = Type{PrimitiveType::I32};
+        instruction->type = type_from(instruction_return->value->result_type);
         instruction->value =
             this->ensure_value(std::move(instruction_return->value->value));
     } else {
@@ -188,8 +187,7 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
     binary_instruction->result = result_ident->clone();
     binary_instruction->lhs = this->ensure_value(std::move(binary_expression->left));
     binary_instruction->rhs = this->ensure_value(std::move(binary_expression->right));
-    /// TODO
-    binary_instruction->operand_type = Type{PrimitiveType::I32};
+    binary_instruction->operand_type = type_from(binary_expression->result_type);
     binary_instruction->op = mapping.at(binary_expression->op);
 
     this->get_active_func()->append(std::move(binary_instruction));
@@ -219,8 +217,7 @@ void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
         this->ensure_value(std::move(comparison_expression->left));
     comparison_instruction->rhs =
         this->ensure_value(std::move(comparison_expression->right));
-    /// TODO
-    comparison_instruction->compared_type = Type{PrimitiveType::I32};
+    comparison_instruction->compared_type = type_from(comparison_expression->result_type);
     comparison_instruction->op = mapping.at(comparison_expression->op);
 
     this->get_active_func()->append(std::move(comparison_instruction));
@@ -245,8 +242,8 @@ void lir::Lir::visit(hir::CallExpression* call_expression) {
             {this->ensure_value(std::move(arg)), PrimitiveType::I32}
         );
     }
-    /// TODO match type to the function type
-    call_instruction->type = Type{PrimitiveType::I32};
+
+    call_instruction->type = type_from(call_expression->result_type);
 
     this->get_active_func()->append(std::move(call_instruction));
     if (!this->m_discard_value) { this->set_last_value(std::move(result_ident)); }
