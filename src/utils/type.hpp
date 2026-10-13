@@ -32,6 +32,16 @@ public:
     static const TypeID InvalidID;
 };
 
+TypeID i8() noexcept;
+TypeID i16() noexcept;
+TypeID i32() noexcept;
+TypeID i64() noexcept;
+
+TypeID boolean() noexcept;
+
+TypeID unit() noexcept;
+TypeID inferred() noexcept;
+
 constexpr TypeID TypeID::InvalidID = TypeID(std::numeric_limits<size_t>::max());
 
 enum class BuiltinType : std::uint8_t {
@@ -51,6 +61,7 @@ using Type = std::variant<BuiltinType, AtomIdentifier>;
 struct Function {
     AtomIdentifier identifier{};
     std::vector<TypeID> parameters{};
+    TypeID return_type{unit()};
 
     [[nodiscard]] std::string to_string() const;
 };
@@ -144,16 +155,6 @@ private:
 
     std::deque<Type> types;
 };
-
-TypeID i8() noexcept;
-TypeID i16() noexcept;
-TypeID i32() noexcept;
-TypeID i64() noexcept;
-
-TypeID boolean() noexcept;
-
-TypeID unit() noexcept;
-TypeID inferred() noexcept;
 
 template <TypeVariantMember Type>
 std::string to_string(Type&& type) {
