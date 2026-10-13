@@ -421,7 +421,8 @@ struct LirPrinter final : lir::InstructionVisitor {
                 fmt::println(this->out, "}}");
             }
         }
-        fmt::println(this->out, "");
+
+        if (!program.structures.empty()) { fmt::println(this->out, ""); }
 
         /// Print function definitions
         for (const auto& function : program.functions) {
