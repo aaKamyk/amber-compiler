@@ -96,6 +96,11 @@ const type::Type& type::TypeRegistry::get_type(const TypeID id) const {
     return this->types[id.id];
 }
 
+type::Type& type::TypeRegistry::get_type(const TypeID id) {
+    if (id.id >= this->types.size()) { throw std::runtime_error("Type not found"); }
+    return this->types[id.id];
+}
+
 type::TypeID type::TypeRegistry::get_type_id(const Type& type) const {
     const auto it = std::ranges::find(this->types, type);
     if (it == this->types.end()) { throw std::runtime_error("Type not found"); }

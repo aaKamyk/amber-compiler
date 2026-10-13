@@ -123,6 +123,7 @@ public:
     static TypeRegistry& instance();
     void register_type(Type type);
     [[nodiscard]] const Type& get_type(TypeID id) const;
+    [[nodiscard]] Type& get_type(TypeID id);
     [[nodiscard]] TypeID get_type_id(const Type& type) const;
     [[nodiscard]] TypeID get_type_id(std::string_view name) const;
     [[nodiscard]] TypeID get_type_id(const ast::Type& type) const;
