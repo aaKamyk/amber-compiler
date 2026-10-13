@@ -398,6 +398,13 @@ void hir::Hir::visit(ast::UnaryExpression* unary_expression) {
 
 void hir::Hir::visit(ast::CallExpression* call_expression) {
     auto call_expr = std::make_unique<CallExpression>();
+
+    const auto function_id =
+        type::TypeRegistry::instance().get_type_id(call_expression->function->name);
+    const auto function_type =
+        type::TypeRegistry::instance().get_type(function_id).get<type::Function>();
+
+    call_expr->result_type = function_type.return_type;
     call_expr->callee = std::move(call_expression->function);
     for (auto& arg : call_expression->arguments) {
         this->translate(std::move(arg));
