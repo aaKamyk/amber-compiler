@@ -9,6 +9,7 @@
 namespace lir {
 
 struct Program {
+    std::vector<StructureType> structures;
     std::vector<FunctionDefinition> functions;
 };
 

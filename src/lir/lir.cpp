@@ -38,6 +38,10 @@ lir::Program lir::Lir::translate() {
         TypeRegistry::definitions.insert({identifier.name, std::move(lir_struct)});
     }
 
+    for (const auto& structure : TypeRegistry::definitions | std::views::values) {
+        this->m_lir_program.structures.emplace_back(structure);
+    }
+
     for (const auto& function : m_program.functions) { function->accept(this); };
 
     return std::move(this->m_lir_program);
@@ -385,7 +389,25 @@ struct LirPrinter final : lir::InstructionVisitor {
     }
 
     void print(const lir::Program& program) {
-        /// Print definitions
+        /// Print type definitions
+        for (const auto& structure : program.structures) {
+            fmt::print(this->out, "%struct_{} = type {{ ", structure.identifier->name);
+            for (const auto& field :
+                 structure.fields | std::views::take(structure.fields.size() - 1)) {
+                this->print(*field);
+                fmt::print(this->out, ", ");
+            }
+
+            if (!structure.fields.empty()) {
+                this->print(*structure.fields.back());
+                fmt::println(this->out, " }}");
+            } else {
+                fmt::println(this->out, "}}");
+            }
+        }
+        fmt::println(this->out, "");
+
+        /// Print function definitions
         for (const auto& function : program.functions) {
             fmt::print(this->out, "define ");
             this->print(function.return_type);
