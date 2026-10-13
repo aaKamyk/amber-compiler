@@ -110,8 +110,10 @@ void hir::Hir::visit(ast::IfStatement<type::TypeID>* if_statement) {
                     dynamic_cast<TerminalExpression*>(condition_expression.get())) {
                 return std::move(terminal_expr->value);
             }
-            /// TODO change the type of the variable
-            auto cond_var = this->create_temporary_declaration("cond", type::boolean());
+
+            auto cond_var = this->create_temporary_declaration(
+                "cond", condition_expression->result_type
+            );
             auto instr_assign = std::make_unique<InstructionAssignment>(
                 cond_var->clone(), std::move(condition_expression)
             );
