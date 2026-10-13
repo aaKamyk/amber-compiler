@@ -391,7 +391,7 @@ struct LirPrinter final : lir::InstructionVisitor {
     void print(const lir::Program& program) {
         /// Print type definitions
         for (const auto& structure : program.structures) {
-            fmt::print(this->out, "%struct_{} = type {{ ", structure.identifier->name);
+            fmt::print(this->out, "%{} = type {{ ", structure.identifier->name);
             for (const auto& field :
                  structure.fields | std::views::take(structure.fields.size() - 1)) {
                 this->print(*field);
