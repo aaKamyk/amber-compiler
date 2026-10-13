@@ -130,6 +130,7 @@ void ast::CollectTypes::visit(BlockStatement<type::ast::Type>* block_statement) 
 }
 
 void ast::CollectTypes::visit(StructDeclaration<type::ast::Type>* struct_declaration) {
+    /// Leave struct as opaque to be resolved later
     type::Struct struct_type = {
         .identifier = *struct_declaration->name,
         .fields = std::nullopt,
@@ -272,6 +273,21 @@ void ast::ResolveTypes::visit(StructDeclaration<type::ast::Type>* struct_declara
             this->transform<StructField<type::TypeID>>(field.get())
         );
     }
+
+    /// Obrain current registered struct from type registry
+    const auto id =
+        type::TypeRegistry::instance().get_type_id(struct_declaration->name->name);
+    auto struct_type = type::TypeRegistry::instance().get_type(id).get<type::Struct>();
+
+    /// Fill out all the fields in the new type
+    struct_type.fields = std::vector<type::StructField>{};
+    struct_type.fields->reserve(resolved_fields.size());
+    for (const auto& resolved_field : resolved_fields) {
+        struct_type.fields->emplace_back(*resolved_field->name, resolved_field->type);
+    }
+
+    /// Update the type registry struct
+    type::TypeRegistry::instance().update_type(id, std::move(struct_type));
 
     this->m_result_stack.emplace_back(
         std::make_unique<StructDeclaration<type::TypeID>>(
