@@ -69,7 +69,7 @@ public:
 
     void visit(VariableDeclaration<type::ast::Type>* variable_declaration) override {}
     void visit(FunctionParameter<type::ast::Type>* function_argument) override {}
-    void visit(FunctionDeclaration<type::ast::Type>* function_declaration) override {}
+    void visit(FunctionDeclaration<type::ast::Type>* function_declaration) override;
     void visit(StructField<type::ast::Type>* struct_field) override {}
     void visit(StructDeclaration<type::ast::Type>* struct_declaration) override;
 

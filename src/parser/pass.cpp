@@ -129,6 +129,17 @@ void ast::CollectTypes::visit(BlockStatement<type::ast::Type>* block_statement) 
     for (const auto& entry : block_statement->entries) { entry->accept(this); }
 }
 
+void ast::CollectTypes::visit(
+    FunctionDeclaration<type::ast::Type>* function_declaration
+) {
+    /// Leave function as a symbol to be resolved later
+    type::Function function_type = {
+        .identifier = *function_declaration->name,
+    };
+
+    type::TypeRegistry::instance().register_type(type::Type{function_type});
+}
+
 void ast::CollectTypes::visit(StructDeclaration<type::ast::Type>* struct_declaration) {
     /// Leave struct as opaque to be resolved later
     type::Struct struct_type = {
@@ -248,6 +259,22 @@ void ast::ResolveTypes::visit(
     auto resolved_body =
         this->transform<BlockStatement<type::TypeID>>(function_declaration->body.get());
 
+    /// Obtain current registered function from type registry
+    const auto id =
+        type::TypeRegistry::instance().get_type_id(function_declaration->name->name);
+    auto function_type =
+        type::TypeRegistry::instance().get_type(id).get<type::Function>();
+
+    /// Fill out the fields in the new type
+    function_type.return_type = return_type_id;
+    function_type.parameters.reserve(resolved_args.size());
+    for (const auto& resolved_arg : resolved_args) {
+        function_type.parameters.emplace_back(resolved_arg->type);
+    }
+
+    /// Update the registry function entry
+    type::TypeRegistry::instance().update_type(id, std::move(function_type));
+
     this->m_result_stack.emplace_back(
         std::make_unique<FunctionDeclaration<type::TypeID>>(
             return_type_id, std::move(function_declaration->name),
@@ -286,7 +313,7 @@ void ast::ResolveTypes::visit(StructDeclaration<type::ast::Type>* struct_declara
         struct_type.fields->emplace_back(*resolved_field->name, resolved_field->type);
     }
 
-    /// Update the type registry struct
+    /// Update the type registry struct entry
     type::TypeRegistry::instance().update_type(id, std::move(struct_type));
 
     this->m_result_stack.emplace_back(
