@@ -80,13 +80,19 @@ void hir::Hir::visit(ast::AssignmentStatement<type::TypeID>* assignment_statemen
 void hir::Hir::visit(ast::ReturnStatement<type::TypeID>* return_statement) {
     if (return_statement->expression) {
         this->translate(std::move(return_statement->expression));
-        auto last_expr = this->get_last_expression();
-        auto atom = this->ensure_atom(std::move(last_expr));
-        auto return_instruction =
-            std::make_unique<InstructionReturn>(std::make_unique<TerminalExpression>(
-                this->resolve_type(*atom), std ::move(atom)
-            ));
-        this->append_to_active_func(std::move(return_instruction));
+
+        if (auto last_expr = this->get_last_expression();
+            last_expr->result_type == type::unit()) {
+            auto return_instruction = std::make_unique<InstructionReturn>(nullptr);
+            this->append_to_active_func(std::move(return_instruction));
+        } else {
+            auto atom = this->ensure_atom(std::move(last_expr));
+            auto return_instruction =
+                std::make_unique<InstructionReturn>(std::make_unique<TerminalExpression>(
+                    this->resolve_type(*atom), std::move(atom)
+                ));
+            this->append_to_active_func(std::move(return_instruction));
+        }
     } else {
         auto return_instruction = std::make_unique<InstructionReturn>(nullptr);
         this->append_to_active_func(std::move(return_instruction));
@@ -534,6 +540,7 @@ std::unique_ptr<Atom> hir::Hir::ensure_atom(std::unique_ptr<Expression> expr) {
     if (auto* terminal = dynamic_cast<TerminalExpression*>(expr.get())) {
         return std::move(terminal->value);
     }
+
     auto temp = this->create_temporary_declaration("v", expr->result_type);
     auto assignment =
         std::make_unique<InstructionAssignment>(temp->clone(), std::move(expr));
