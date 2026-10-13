@@ -129,6 +129,16 @@ public:
     [[nodiscard]] TypeID get_type_id(const ast::Type& type) const;
     [[nodiscard]] std::vector<TypeID> type_ids() const;
 
+    template <TypeVariantMember Type>
+    void update_type(const TypeID id, Type new_type) {
+        auto& type = this->types[static_cast<std::size_t>(id)];
+        if (!type.is<Type>()) {
+            throw std::runtime_error("Cannot override type with a new kind");
+        }
+
+        type = type::Type{std::move(new_type)};
+    }
+
 private:
     TypeRegistry();
 
