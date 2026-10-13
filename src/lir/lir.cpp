@@ -201,6 +201,18 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
 void lir::Lir::visit(hir::UnaryExpression* unary_expression) {}
 
 void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
+    static auto get_type = [this](Atom* atom) {
+        if (dynamic_cast<AtomIntegerLiteral*>(atom)) {
+            return Type{.data = PrimitiveType::I32};
+        }
+        if (dynamic_cast<AtomBooleanLiteral*>(atom)) {
+            return Type{.data = PrimitiveType::I1};
+        }
+        if (const auto* ident = dynamic_cast<AtomIdentifier*>(atom)) {
+            return this->get_active_func()->get_variable(*ident).type;
+        }
+    };
+
     static const std::map<hir::ComparisonOperator, lir::IntegerComparisonOperator>
         mapping = {
             {hir::ComparisonOperator::EQUAL, lir::IntegerComparisonOperator::EQ},
@@ -215,13 +227,17 @@ void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
         this->m_target_value ? this->get_target_value()
                              : Lir::get_temporary_identifier("t");
 
+    /// TODO ensure both sides are of same type
+    const auto compared_types = get_type(comparison_expression->left.get());
+
+    /// Fill out comparison instruction
     auto comparison_instruction = std::make_unique<IntegerComparisonInstruction>();
     comparison_instruction->result = result_ident->clone();
     comparison_instruction->lhs =
         this->ensure_value(std::move(comparison_expression->left));
     comparison_instruction->rhs =
         this->ensure_value(std::move(comparison_expression->right));
-    comparison_instruction->compared_type = type_from(comparison_expression->result_type);
+    comparison_instruction->compared_type = compared_types;
     comparison_instruction->op = mapping.at(comparison_expression->op);
 
     this->get_active_func()->append(std::move(comparison_instruction));
