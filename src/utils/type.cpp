@@ -52,8 +52,7 @@ bool type::Type::same_as(const BuiltinType t) const {
 
 bool type::Type::same_as(const Function& f) const {
     if (const auto* func = std::get_if<Function>(this)) {
-        /// TODO function equality resolution
-        return true;
+        return func->identifier == f.identifier;
     }
     return false;
 }
