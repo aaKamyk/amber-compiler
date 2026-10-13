@@ -1,0 +1,9 @@
+struct Foo {
+    x: i32,
+    y: i32,
+}
+
+fn get_foo() -> Foo {
+    let foo: Foo;
+    return foo;
+}
