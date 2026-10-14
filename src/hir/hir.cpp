@@ -505,11 +505,15 @@ void hir::Hir::append_to_program(std::unique_ptr<InstructionFunctionDeclaration>
 }
 
 void hir::Hir::append_global_init_to_program() {
+    /// Add a return instruction at the end of the function
+    auto return_instruction = std::make_unique<InstructionReturn>(nullptr);
+    this->m_global_init.emplace_back(std::move(return_instruction));
+
     auto ident = std::make_unique<AtomIdentifier>("global_init");
     auto entry_label = std::make_unique<Label>(ident->clone());
     auto global_init = std::make_unique<InstructionFunctionDeclaration>(
         type::unit(), std::move(ident), std::move(entry_label),
-        std::vector<FunctionParameter>{}, std::move(m_global_init)
+        std::vector<FunctionParameter>{}, std::move(this->m_global_init)
     );
     this->append_to_program(std::move(global_init));
 }
