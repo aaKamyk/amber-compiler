@@ -201,7 +201,7 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
 void lir::Lir::visit(hir::UnaryExpression* unary_expression) {}
 
 void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
-    static auto get_type = [this](Atom* atom) {
+    static auto get_type = [this](Atom* atom) -> lir::Type {
         if (dynamic_cast<AtomIntegerLiteral*>(atom)) {
             return Type{.data = PrimitiveType::I32};
         }
@@ -211,6 +211,8 @@ void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
         if (const auto* ident = dynamic_cast<AtomIdentifier*>(atom)) {
             return this->get_active_func()->get_variable(*ident).type;
         }
+
+        return lir::Type{PrimitiveType::VOID};
     };
 
     static const std::map<hir::ComparisonOperator, lir::IntegerComparisonOperator>
@@ -255,7 +257,7 @@ void lir::Lir::visit(hir::CallExpression* call_expression) {
         this->m_discard_value  ? nullptr
         : this->m_target_value ? this->get_target_value()
                                : Lir::get_temporary_identifier("t");
-    call_instruction->result = result_ident->clone();
+    call_instruction->result = result_ident != nullptr ? result_ident->clone() : nullptr;
     call_instruction->callee = std::move(call_expression->callee);
     for (auto& arg : call_expression->arguments) {
         call_instruction->arguments.push_back(
