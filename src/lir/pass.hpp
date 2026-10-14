@@ -24,8 +24,8 @@ void run_passes(Program& program, Passes... passes) {
 class ValidateBlocks final : Pass {
 public:
     void run(Program& program) override;
-    bool success() const { return is_valid; }
-    const std::vector<std::string>& get_diagnostics() const;
+    [[nodiscard]] bool success() const { return is_valid; }
+    [[nodiscard]] const std::vector<std::string>& get_diagnostics() const;
 
 private:
     bool is_valid{true};
