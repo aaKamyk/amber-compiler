@@ -5,4 +5,8 @@ fn main() -> void {
     } else {
         return 2 * x;
     }
+
+    /* TODO add exhaustiveness check to if statements
+     * TODO so compiler doesn't complain about missing return statement */
+    return 0;
 }
