@@ -198,7 +198,22 @@ void lir::Lir::visit(hir::BinaryExpression* binary_expression) {
     this->set_last_value(std::move(result_ident));
 }
 
-void lir::Lir::visit(hir::UnaryExpression* unary_expression) {}
+void lir::Lir::visit(hir::UnaryExpression* unary_expression) {
+    /// TODO type checking for operators
+    std::unique_ptr<AtomIdentifier> result_ident =
+        this->m_target_value ? this->get_target_value()
+                             : Lir::get_temporary_identifier("t");
+
+    auto negation_instruction = std::make_unique<BinaryIntegerInstruction>();
+    negation_instruction->result = result_ident->clone();
+    negation_instruction->lhs = std::make_unique<AtomIntegerLiteral>(0ull);
+    negation_instruction->rhs = this->ensure_value(std::move(unary_expression->operand));
+    negation_instruction->operand_type = type_from(unary_expression->result_type);
+    negation_instruction->op = lir::BinaryIntegerOperator::SUB;
+
+    this->get_active_func()->append(std::move(negation_instruction));
+    this->set_last_value(std::move(result_ident));
+}
 
 void lir::Lir::visit(hir::ComparisonExpression* comparison_expression) {
     static auto get_type = [this](Atom* atom) -> lir::Type {
