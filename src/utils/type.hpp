@@ -160,6 +160,7 @@ template <TypeVariantMember Type>
 std::string to_string(Type&& type) {
     return type.to_string();
 }
+std::string to_string(const Type& type);
 std::string to_string(BuiltinType type);
 std::string to_string(TypeID id);
 

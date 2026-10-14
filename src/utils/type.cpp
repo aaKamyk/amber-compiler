@@ -5,6 +5,8 @@
 #include <ranges>
 #include <stdexcept>
 
+#include "fmt/format.h"
+
 std::string type::TypeID::get_name() const {
     const auto& type = TypeRegistry::instance().get_type(*this);
     if (const auto* t = std::get_if<BuiltinType>(&type)) { return to_string(*t); }
@@ -91,18 +93,24 @@ void type::TypeRegistry::register_type(Type type) {
 }
 
 const type::Type& type::TypeRegistry::get_type(const TypeID id) const {
-    if (id.id >= this->types.size()) { throw std::runtime_error("Type not found"); }
+    if (id.id >= this->types.size()) {
+        throw std::runtime_error(fmt::format("Type not found, id: {}", id));
+    }
     return this->types[id.id];
 }
 
 type::Type& type::TypeRegistry::get_type(const TypeID id) {
-    if (id.id >= this->types.size()) { throw std::runtime_error("Type not found"); }
+    if (id.id >= this->types.size()) {
+        throw std::runtime_error(fmt::format("Type not found id: {}", id));
+    }
     return this->types[id.id];
 }
 
 type::TypeID type::TypeRegistry::get_type_id(const Type& type) const {
     const auto it = std::ranges::find(this->types, type);
-    if (it == this->types.end()) { throw std::runtime_error("Type not found"); }
+    if (it == this->types.end()) {
+        throw std::runtime_error(fmt::format("Type not found: {}", to_string(type)));
+    }
 
     return TypeID(std::distance(this->types.begin(), it));
 }
@@ -112,7 +120,9 @@ type::TypeID type::TypeRegistry::get_type_id(std::string_view name) const {
         return t.to_string() == name;
     });
 
-    if (it == this->types.end()) { throw std::runtime_error("Type not found"); }
+    if (it == this->types.end()) {
+        throw std::runtime_error(fmt::format("Type not found: {}", name));
+    }
     return TypeID(std::distance(this->types.begin(), it));
 }
 
@@ -183,6 +193,10 @@ type::TypeID type::inferred() noexcept {
     static TypeID auto_id =
         TypeRegistry::instance().get_type_id(Type{BuiltinType::INFERRED});
     return auto_id;
+}
+
+std::string type::to_string(const Type& type) {
+    return type.to_string();
 }
 
 std::string type::to_string(const BuiltinType type) {
