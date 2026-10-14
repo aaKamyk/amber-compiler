@@ -105,7 +105,7 @@ void lir::diagnostic_pass(Program& program) {
     validator.run(program);
     if (!validator.success()) {
         for (const auto& msg : validator.get_diagnostics()) { fmt::println("{}", msg); }
-        std::abort();
+        std::exit(1);
     }
 }
 
