@@ -2,7 +2,6 @@
 
 - Continue working on lowering into llvm ir
 - A proper logging / error system
-- Add function signatures to symbol table
 - Fix lexer issue with long identifiers
 
 ### Language features
@@ -25,8 +24,10 @@
     3. Usage:
 
 ```
-impl A { fn foo() -> void {}
-static fn bar() -> void {} }
+impl A { 
+    fn foo() -> void {}
+    static fn bar() -> void {} 
+}
 ```
 
 2. Enums
@@ -48,8 +49,13 @@ static fn bar() -> void {} }
 2. Usage:
 
 ```
-namespace A { fn foo() -> void {} }
-namespace B { fn foo() -> void { A::foo(); }
+namespace A { 
+    fn foo() -> void {} 
+}
+
+namespace B { 
+    fn foo() -> void { A::foo(); 
+}
 ```
 
 - Compile time code
@@ -58,7 +64,10 @@ namespace B { fn foo() -> void { A::foo(); }
 2. Usage:
 
 ```
-struct is_float<T> { pub comptime bool value = same_as<T, float>; };
+struct is_float<T> { 
+    pub comptime bool value = same_as<T, float>; 
+};
+
 struct is_int<T> { 
     pub comptime { 
         bool a = same_as<T, int>;
