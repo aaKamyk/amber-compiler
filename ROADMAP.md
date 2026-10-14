@@ -23,59 +23,72 @@
     2. Methods `impl` keyword
     3. Usage:
 
-```
-impl A { 
-    fn foo() -> void {}
-    static fn bar() -> void {} 
-}
-```
+    ```
+    impl A { 
+        fn foo() -> void {}
+        static fn bar() -> void {} 
+    }
+    ```
 
 2. Enums
     1. Tagged by default, option to make untagged
     2. Declaration: `enum A { X(int), Y(float), Z }`
-    3. Implicitly generate a custom type that allows for interacting \
+    3. Implicitly generate a custom type that allows for \
        interacting with the field names
 
 - Generics:
 
 1. Usage: `fn foo<T>(T obj) {}` / `struct bar<T> { T field; };`
-2. Enforce properties: `constraint` keyword, \
-   usage: `constraint foo { fn bar() -> void; }` \
-   enforcing:`fn process<T>(T obj) where T: processable {}`
+2. Define properties: `constraint` and `requires` keyword, \
+   constraints are compile time constants provided by the compiler, \
+   usage:
+
+    ```
+    constraint<T> foo requires { 
+        T::fn foo() -> void; 
+    }
+    
+    constraint<T> bar = same_as<T, Bar>
+    
+    constraint<T> foo_or_bar = foo<T> || bar<T>
+    ```
+
+3. Enforce properties: `where` keyword, \
+   usage: `fn process<T>(T obj) where T: processable {}`
 
 - Namespaces:
 
 1. `namespace` keyword
 2. Usage:
 
-```
-namespace A { 
-    fn foo() -> void {} 
-}
-
-namespace B { 
-    fn foo() -> void { A::foo(); 
-}
-```
+    ```
+    namespace A { 
+        fn foo() -> void {} 
+    }
+    
+    namespace B { 
+        fn foo() -> void { A::foo(); 
+    }
+    ```
 
 - Compile time code
 
 1. `comptime` keyword
 2. Usage:
 
-```
-struct is_float<T> { 
-    pub comptime bool value = same_as<T, float>; 
-};
-
-struct is_int<T> { 
-    pub comptime { 
-        bool a = same_as<T, int>;
-        bool b = size_of<T> == 16;
+    ```
+    struct is_float<T> { 
+        pub comptime bool value = same_as<T, float>; 
+    };
+    
+    struct is_int<T> { 
+        pub comptime { 
+            bool a = same_as<T, int>;
+            bool b = size_of<T> == 16;
+        }
+    };
+    
+    fn process<T>(T val) 
+        where is_float<T>::value {
     }
-};
-
-fn process<T>(T val) 
-    where is_float<T>::value {
-}
-```
+    ```
