@@ -1,0 +1,4 @@
+fn a(,) {}
+fn b(x: i32,) {}
+fn c() -> {}
+fn d(x: i32 y: i32) -> void {}
