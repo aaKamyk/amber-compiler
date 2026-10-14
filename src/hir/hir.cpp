@@ -26,9 +26,6 @@ std::string hir::Scope::get_unique_name(std::string_view name) const {
 hir::Hir::Hir(ast::Program<type::TypeID> program, CompilationContext& ctx)
     : m_active_function(nullptr), m_ast_program(std::move(program)), m_ctx(ctx) {
     m_active_scopes.emplace_back(0);
-    m_global_init.emplace_back(
-        std::make_unique<Label>(std::make_unique<AtomIdentifier>("global_init"))
-    );
 }
 
 hir::Program hir::Hir::translate() {
