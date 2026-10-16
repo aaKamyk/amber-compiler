@@ -1,0 +1,14 @@
+fn foo(n: i32) -> i32 {
+    let sum: i32 = 0;
+
+    while (n + 2 > 0) {
+        sum = sum + n;
+        n = n - 1;
+    }
+    return sum;
+}
+
+fn main() -> i32 {
+    let x= 5;
+    return foo(x);
+}
