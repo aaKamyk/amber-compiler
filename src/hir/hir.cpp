@@ -220,14 +220,25 @@ void hir::Hir::visit(ast::ExpressionStatement<type::TypeID>* expression_statemen
 
 void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaration) {
     /// check type against initializer expression
-    type::TypeID variable_type{type::unit()};
+    type::TypeID initializer_type{type::unit()};
     const bool has_initializer = variable_declaration->initializer != nullptr;
     if (has_initializer) {
         this->translate(std::move(variable_declaration->initializer));
         const auto* expr = this->view_last_expression();
-        variable_type = expr->result_type;
+
+        if (const auto* term = dynamic_cast<const TerminalExpression*>(expr);
+            term != nullptr &&
+            dynamic_cast<const AtomIntegerLiteral*>(term->value.get()) &&
+            variable_declaration->type != type::inferred()) {
+            /// narrow the type of the integer literal if variable explicitly declared
+            /// with narrower type
+            initializer_type = variable_declaration->type;
+        } else {  /// assign the initializer type the result of the expression
+            initializer_type = expr->result_type;
+        }
+
         if (variable_declaration->type != type::inferred() &&
-            variable_declaration->type != variable_type) {
+            variable_declaration->type != initializer_type) {
             this->add_error(
                 variable_declaration,
                 fmt::format(
@@ -237,14 +248,14 @@ void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaratio
             );
         }
     } else {
-        variable_type = variable_declaration->type;
+        initializer_type = variable_declaration->type;
     }
     /// gets the unique variable name and adds it to the symbol table
     auto& name = variable_declaration->name->name;
     auto unique_name = SymbolTable::get_unique_name(name);
     m_symbol_table.add_symbol(
         unique_name, SymbolMetadata{
-                         .type = variable_type,
+                         .type = initializer_type,
                          .is_mut = false,
                      }
     );
@@ -254,7 +265,7 @@ void hir::Hir::visit(ast::VariableDeclaration<type::TypeID>* variable_declaratio
 
     /// create declaration instruction
     auto var_decl = std::make_unique<InstructionVariableDeclaration>(
-        variable_type, name_atom->clone()
+        initializer_type, name_atom->clone()
     );
     this->append_to_active_func(std::move(var_decl));
 
