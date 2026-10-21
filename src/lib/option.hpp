@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <exception>
 #include <functional>
 #include <memory>
@@ -9,9 +8,14 @@
 namespace lib::option {
 
 struct NoneType {};
+struct UnitType {};
 inline constexpr NoneType None{};
+inline constexpr UnitType Unit{};
 
 struct BadOptionAccess : std::exception {};
+
+template <typename>
+class Option;
 
 template <typename TOption, typename TExpected>
 concept OptionType = requires(TOption option) {
@@ -19,9 +23,6 @@ concept OptionType = requires(TOption option) {
     { option.get() } -> std::same_as<TExpected&>;
     { option.has_some() } -> std::same_as<bool>;
 };
-
-template <typename>
-class Option;
 
 namespace detail {
 
@@ -306,8 +307,11 @@ public:
 template <typename T, typename Derived>
 class OptionPointerImpl : public OptionImpl<T*, Derived> {
 public:
-    constexpr OptionPointerImpl() = default;
-    explicit constexpr OptionPointerImpl(T* value)
+    // Default and none constructors
+    OptionPointerImpl() = default;
+    constexpr explicit OptionPointerImpl(NoneType)
+        : OptionPointerImpl(nullptr) {}
+    constexpr explicit OptionPointerImpl(T* value)
         : m_value(value) {}
 
     [[nodiscard]] constexpr bool has_some() const { return this->m_value != nullptr; }
@@ -328,6 +332,15 @@ protected:
     T* m_value{nullptr};
 };
 
+template <typename>
+class OptionEmptyImpl {
+public:
+    [[nodiscard]] constexpr bool has_some() const noexcept { return this->m_has_some; }
+
+private:
+    bool m_has_some{false};
+};
+
 }  // namespace detail
 
 template <typename T>
@@ -338,72 +351,146 @@ class Option : public detail::OptionImpl<T, Option<T>> {
     );
 
 public:
-    constexpr Option() = default;
+    // Default & None constructors
+    constexpr Option() noexcept
+        : m_has_some(false) {};
+    constexpr explicit Option(NoneType) noexcept
+        : m_has_some(false) {};
 
-    constexpr explicit Option(NoneType) {};
+    // Copy constructor
+    Option(const Option&)
+        requires std::is_trivially_copy_constructible_v<T>
+    = default;
 
-    constexpr Option(const Option& other) {
-        if (!other.has_some()) { return; }
-
-        std::construct_at(std::addressof(this->m_value), other.get());
-        this->m_has_some = true;
+    constexpr Option(
+        const Option& other
+    ) noexcept(std::is_nothrow_copy_constructible_v<T>)
+        requires std::is_copy_constructible_v<T>
+        : m_has_some(other.m_has_some) {
+        if (other.has_some()) {
+            std::construct_at(std::addressof(this->m_value), other.get());
+        }
     }
 
-    constexpr Option(Option&& other) noexcept(std::is_nothrow_move_constructible_v<T>) {
-        if (!other.has_some()) { return; }
+    // Move constructor
+    Option(Option&&)
+        requires std::is_trivially_move_constructible_v<T>
+    = default;
 
-        std::construct_at(std::addressof(this->m_value), other.take());
-        this->m_has_some = true;
+    constexpr Option(Option&& other) noexcept(std::is_nothrow_move_constructible_v<T>)
+        requires std::is_move_constructible_v<T>
+        : m_has_some(other.m_has_some) {
+        if (other.has_some()) {
+            std::construct_at(std::addressof(this->m_value), other.take());
+        }
     }
 
-    constexpr explicit Option(const T& value) {
+    // Value copy constructor
+    constexpr explicit Option(
+        const T& value
+    ) noexcept(std::is_nothrow_copy_constructible_v<T>)
+        requires std::is_copy_constructible_v<T>
+        : m_has_some(true) {
         std::construct_at(std::addressof(this->m_value), value);
-        this->m_has_some = true;
     }
 
-    constexpr explicit Option(T&& value) {
+    // Value move constructor
+    constexpr explicit Option(T&& value) noexcept(std::is_nothrow_move_constructible_v<T>)
+        requires std::is_move_constructible_v<T>
+        : m_has_some(true) {
         std::construct_at(std::addressof(this->m_value), std::move(value));
-        this->m_has_some = true;
     }
 
+    // Value inplace constructor
     template <typename... Args>
         requires(
             std::is_constructible_v<T, Args...> &&
             !(sizeof...(Args) == 1 &&
               (detail::is_option_v<std::remove_cvref_t<Args>> || ...))
         )
-    explicit constexpr Option(Args&&... args) {
+    explicit constexpr Option(
+        Args&&... args
+    ) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+        : m_has_some(true) {
         std::construct_at(std::addressof(this->m_value), std::forward<Args>(args)...);
-        this->m_has_some = true;
     }
 
-    constexpr ~Option() { this->reset(); }
+    // Destructor
+    ~Option()
+        requires std::is_trivially_destructible_v<T>
+    = default;
 
-    [[nodiscard]] constexpr bool has_some() const { return this->m_has_some; }
+    constexpr ~Option() noexcept(std::is_nothrow_destructible_v<T>) { this->reset(); }
 
-    [[nodiscard]] constexpr T take() {
+    // Copy assignment operator
+    Option& operator=(const Option&)
+        requires std::is_trivially_copy_assignable_v<T> &&
+                     std::is_trivially_copy_constructible_v<T> &&
+                     std::is_trivially_destructible_v<T>
+    = default;
+
+    constexpr Option& operator=(const Option& other) noexcept(
+        std::is_nothrow_copy_assignable_v<T> && std::is_nothrow_copy_constructible_v<T>
+    ) {
+        if (std::addressof(other) == this) [[unlikely]] { return *this; }
+
+        if (this->has_some() && other.has_some()) {
+            this->m_value = other.get();
+        } else if (this->has_some() && !other.has_some()) {
+            this->reset();
+        } else if (!this->has_some() && other.has_some()) {
+            std::construct_at(std::addressof(this->m_value), other.get());
+            this->m_has_some = true;
+        }
+        return *this;
+    }
+
+    // Move assignment operator
+    Option& operator=(Option&&)
+        requires std::is_trivially_move_assignable_v<T> &&
+                     std::is_trivially_move_constructible_v<T> &&
+                     std::is_trivially_destructible_v<T>
+    = default;
+
+    constexpr Option& operator=(Option&& other) noexcept(
+        std::is_nothrow_move_assignable_v<T> && std::is_nothrow_move_constructible_v<T>
+    ) {
+        if (std::addressof(other) == this) [[unlikely]] { return *this; }
+
+        if (this->has_some() && other.has_some()) {
+            this->m_value = other.take();
+        } else if (this->has_some() && !other.has_some()) {
+            this->reset();
+        } else if (!this->has_some() && other.has_some()) {
+            std::construct_at(std::addressof(this->m_value), other.take());
+            this->m_has_some = true;
+        }
+        return *this;
+    }
+
+    [[nodiscard]] constexpr bool has_some() const noexcept { return this->m_has_some; }
+
+    [[nodiscard]] constexpr T take() noexcept(std::is_nothrow_destructible_v<T>) {
         T val = std::move(this->m_value);
         this->reset();
         return val;
     }
 
-    [[nodiscard]] constexpr T& get() & { return this->m_value; }
+    [[nodiscard]] constexpr T& get() & noexcept { return this->m_value; }
 
-    [[nodiscard]] constexpr const T& get() const& { return this->m_value; }
+    [[nodiscard]] constexpr const T& get() const& noexcept { return this->m_value; }
 
-    constexpr void reset() {
+    constexpr void reset() noexcept(std::is_nothrow_destructible_v<T>) {
         if (!this->has_some()) { return; }
-
         std::destroy_at(std::addressof(m_value));
         this->m_has_some = false;
     }
 
 private:
     union {
-        std::byte m_empty;
         T m_value;
     };
-    bool m_has_some{false};
+    bool m_has_some;
 };
 
 template <typename T>
@@ -440,6 +527,16 @@ public:
         : detail::OptionPointerImpl<T, Option<T*>>() {}
 };
 
+template <>
+class Option<void> : detail::OptionEmptyImpl<void> {
+    using detail::OptionEmptyImpl<void>::OptionEmptyImpl;
+};
+
+template <>
+class Option<UnitType> : public detail::OptionEmptyImpl<UnitType> {
+    using detail::OptionEmptyImpl<UnitType>::OptionEmptyImpl;
+};
+
 template <typename T>
 Option<T> some(const T& value) {
     return Option<T>(value);
@@ -452,7 +549,7 @@ Option<T> some(T&& value) {
 
 template <typename T>
 Option<T> none() {
-    return Option<T>(None);
+    return Option<T>{None};
 }
 
 };  // namespace lib::option
