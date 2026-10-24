@@ -1,12 +1,11 @@
-#include "program_arguments.hpp"
-
 #include <cstring>
 #include <fstream>
 #include <memory>
 
+#include "args.hpp"
 #include "fmt/core.h"
 
-Arguments parseArguments(const std::span<const char*> args) {
+Arguments parse_arguments(const std::span<const char*> args) {
     if (args.size() < 2) {
         throw std::runtime_error("[Arguments Parser] Usage: act <input_path>");
     }
@@ -40,7 +39,7 @@ Arguments parseArguments(const std::span<const char*> args) {
     return parsed_args;
 }
 
-std::unique_ptr<std::istream> getInputFromFile(const Arguments& args) {
+std::unique_ptr<std::istream> get_input_from_file(const Arguments& args) {
     auto file =
         std::make_unique<std::ifstream>(args.input_path, std::ios::in | std::ios::binary);
     if (!file->is_open()) {
@@ -54,7 +53,7 @@ std::unique_ptr<std::istream> getInputFromFile(const Arguments& args) {
     return file;
 }
 
-std::unique_ptr<std::ostream> getOutputFromFile(const Arguments& args) {
+std::unique_ptr<std::ostream> get_output_from_file(const Arguments& args) {
     auto file = std::make_unique<std::ofstream>(args.output_path);
 
     if (!file->is_open()) {

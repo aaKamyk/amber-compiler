@@ -1,12 +1,11 @@
-add_executable(act
-        main.cpp
-        program_arguments.cpp
-)
+add_executable(act main.cpp)
 
 target_include_directories(act PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+add_subdirectory(driver)
+add_subdirectory(source-prep)
 add_subdirectory(lexer)
 add_subdirectory(parser)
 add_subdirectory(hir)
