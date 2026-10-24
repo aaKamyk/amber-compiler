@@ -92,9 +92,9 @@ ast::Program<type::TypeID> ast::parse(
     ResolveTypes type_resolver(std::move(program));
     auto resolved_program = type_resolver.run();
 
-    /// run constant fold pass
+    /// Run constant fold pass
     ConstantFold constant_fold(std::move(resolved_program));
-    resolved_program = constant_fold.run();
+    auto folded_program = constant_fold.run();
 
-    return resolved_program;
+    return folded_program;
 }
