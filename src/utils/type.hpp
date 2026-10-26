@@ -10,7 +10,7 @@
 
 #include "atom.hpp"
 #include "fmt/base.h"
-#include "meta.hpp"
+#include "lib/meta.hpp"
 
 namespace type {
 
