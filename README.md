@@ -35,6 +35,7 @@ These are the required programs to build and run this project
 ### Dependencies
 
 * the fmt C++ library [https://github.com/fmtlib/fmt]()
+* the cpp_result C++ library [https://github.com/Jarsop/cpp_result]()
 
 ### Installation
 
