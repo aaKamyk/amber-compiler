@@ -7,7 +7,7 @@
 #include "lir/lir.hpp"
 #include "parser/parser.hpp"
 
-Result<int> run_compiler(const int argc, const char** argv) {
+Result<ReturnCode> run_compiler(const int argc, const char** argv) {
     try {
         const auto args = parse_arguments(std::span(argv, static_cast<size_t>(argc)));
         const auto input = get_input_from_file(args);
@@ -25,7 +25,7 @@ Result<int> run_compiler(const int argc, const char** argv) {
         lir::print_program(lir, *output);
         fmt::println("Output written to: {}", args.output_path.string());
 
-    } catch (const std::exception& ex) { return Result<int>::Err({ex.what()}); }
+    } catch (const std::exception& ex) { return Result<ReturnCode>::Err({ex.what()}); }
 
-    return Result<int>::Ok(0);
+    return Result<ReturnCode>::Ok(SUCCESS_CODE);
 }
