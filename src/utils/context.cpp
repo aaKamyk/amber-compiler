@@ -8,8 +8,6 @@
 
 void CompilerError::print(CompilationContext* ctx) const {
     if (!ctx) { return; }
-    static const std::string RED = "\033[1;31m";
-    static const std::string RESET = "\033[0m";
 
     fmt::println(
         "{}:{}:{} error: {}", ctx->get_path(), this->line, this->column, this->message
