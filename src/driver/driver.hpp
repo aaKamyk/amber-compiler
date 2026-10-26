@@ -1,3 +1,5 @@
 #pragma once
 
-void run_compiler(int argc, const char** argv);
+#include "utils/util.hpp"
+
+Result<int> run_compiler(int argc, const char** argv);

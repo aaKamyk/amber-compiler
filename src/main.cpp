@@ -3,10 +3,9 @@
 #include "driver/driver.hpp"
 
 int main(const int argc, const char** argv) {
-    try {
-        run_compiler(argc, argv);
-    } catch (const std::exception& e) {
-        std::cerr << "Fatal error: " << e.what() << '\n';
-        return 1;
-    }
+    const auto res = run_compiler(argc, argv);
+    return res.unwrap_or_else([&res]() -> int {
+        std::cerr << res.err()->message << std::endl;
+        return -1;
+    });
 }
