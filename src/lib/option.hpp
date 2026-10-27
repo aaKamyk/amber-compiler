@@ -19,7 +19,6 @@ struct BadOptionAccess : std::runtime_error {
     explicit BadOptionAccess(const char* msg)
         : runtime_error(msg) {}
 };
-
 template <typename>
 class Option;
 
@@ -570,6 +569,12 @@ Option<T> some(const T& value) {
 template <typename T>
 Option<T> some(T&& value) {
     return Option<T>(std::forward<T>(value));
+}
+
+template <typename T, typename... Args>
+    requires std::is_constructible_v<T, Args...>
+Option<T> some(Args&&... args) {
+    return Option<T>(std::forward<Args>(args)...);
 }
 
 template <typename T>
