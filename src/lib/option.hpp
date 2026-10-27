@@ -1,6 +1,5 @@
 #pragma once
 
-#include <exception>
 #include <functional>
 #include <memory>
 #include <utility>
@@ -12,7 +11,14 @@ struct UnitType {};
 inline constexpr NoneType None{};
 inline constexpr UnitType Unit{};
 
-struct BadOptionAccess : std::exception {};
+inline constexpr auto BAD_ACCESS_MESSAGE = "called 'Option::unwrap()' on a 'None' value";
+
+struct BadOptionAccess : std::runtime_error {
+    explicit BadOptionAccess(const std::string& msg)
+        : runtime_error(msg) {}
+    explicit BadOptionAccess(const char* msg)
+        : runtime_error(msg) {}
+};
 
 template <typename>
 class Option;
@@ -38,11 +44,11 @@ inline constexpr bool is_option_v = is_option<T>::value;
 template <typename T, typename Derived>
 class OptionImpl {
 public:
-    [[nodiscard]] constexpr T expect()
+    [[nodiscard]] constexpr T expect(const char* message) &&
         requires OptionType<Derived, T>
     {
         auto& self = *static_cast<Derived*>(this);
-        if (!self.has_some()) { throw BadOptionAccess{}; }
+        if (!self.has_some()) { throw BadOptionAccess{message}; }
 
         return self.take();
     }
@@ -51,7 +57,7 @@ public:
         requires OptionType<Derived, T>
     {
         auto& self = *static_cast<Derived*>(this);
-        if (!self.has_some()) { throw BadOptionAccess{}; }
+        if (!self.has_some()) { throw BadOptionAccess{BAD_ACCESS_MESSAGE}; }
 
         return self.take();
     }
@@ -309,7 +315,7 @@ class OptionPointerImpl : public OptionImpl<T*, Derived> {
 public:
     // Default and none constructors
     OptionPointerImpl() = default;
-    constexpr explicit OptionPointerImpl(NoneType)
+    constexpr OptionPointerImpl(NoneType)
         : OptionPointerImpl(nullptr) {}
     constexpr explicit OptionPointerImpl(T* value)
         : m_value(value) {}
@@ -354,7 +360,7 @@ public:
     // Default & None constructors
     constexpr Option() noexcept
         : m_has_some(false) {};
-    constexpr explicit Option(NoneType) noexcept
+    constexpr Option(NoneType) noexcept
         : m_has_some(false) {};
 
     // Copy constructor
@@ -471,14 +477,33 @@ public:
     [[nodiscard]] constexpr bool has_some() const noexcept { return this->m_has_some; }
 
     [[nodiscard]] constexpr T take() noexcept(std::is_nothrow_destructible_v<T>) {
+        if (!this->has_some()) { throw BadOptionAccess{BAD_ACCESS_MESSAGE}; }
+        return this->take_unchecked();
+    }
+
+    [[nodiscard]] constexpr T& get() & {
+        if (!this->has_some()) { throw BadOptionAccess{BAD_ACCESS_MESSAGE}; }
+        return this->get_unchecked();
+    }
+
+    [[nodiscard]] constexpr const T& get() const& {
+        if (!this->has_some()) { throw BadOptionAccess{BAD_ACCESS_MESSAGE}; }
+        return this->get_unchecked();
+    }
+
+    [[nodiscard]] constexpr T& get_unchecked() & noexcept { return this->m_value; }
+
+    [[nodiscard]] constexpr const T& get_unchecked() const& noexcept {
+        return this->m_value;
+    }
+
+    [[nodiscard]] constexpr T take_unchecked() noexcept(
+        std::is_nothrow_destructible_v<T>
+    ) {
         T val = std::move(this->m_value);
         this->reset();
         return val;
     }
-
-    [[nodiscard]] constexpr T& get() & noexcept { return this->m_value; }
-
-    [[nodiscard]] constexpr const T& get() const& noexcept { return this->m_value; }
 
     constexpr void reset() noexcept(std::is_nothrow_destructible_v<T>) {
         if (!this->has_some()) { return; }
@@ -500,7 +525,7 @@ public:
 
     constexpr Option()
         : detail::OptionPointerImpl<T, Option<T&>>() {}
-    constexpr explicit Option(NoneType)
+    constexpr Option(NoneType)
         : detail::OptionPointerImpl<T, Option<T&>>() {}
     constexpr explicit Option(T& value)
         : detail::OptionPointerImpl<T, Option<T&>>(&value) {}
@@ -523,7 +548,7 @@ public:
 
     constexpr Option()
         : detail::OptionPointerImpl<T, Option<T*>>() {}
-    constexpr explicit Option(NoneType)
+    constexpr Option(NoneType)
         : detail::OptionPointerImpl<T, Option<T*>>() {}
 };
 
