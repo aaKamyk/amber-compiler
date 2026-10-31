@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <vector>
 
+#include "source-prep/source_map.hpp"
+
 class CompilationContext;
 
 struct CompilerError {
@@ -29,20 +31,12 @@ struct LogicError final : CompilerError {
 
 class CompilationContext {
 public:
-    [[nodiscard]] std::string get_line(std::size_t line_num) const;
-    [[nodiscard]] std::string get_path() const;
+    SourceMap source_map;
+
     [[nodiscard]] auto& syntax_errors() { return m_syntax_errors; }
     [[nodiscard]] auto& logic_errors() { return m_logic_errors; }
 
-    void new_line(std::streampos offset);
-    void set_path(const std::filesystem::path& path);
-    void set_stream(std::istream& stream);
-
 private:
-    std::filesystem::path input_path{};
-    std::istream* input_stream{nullptr};
-    std::vector<std::streampos> line_offsets{0};
-
     std::vector<SyntaxError> m_syntax_errors{};
     std::vector<LogicError> m_logic_errors{};
 };
