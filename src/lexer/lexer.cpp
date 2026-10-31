@@ -18,14 +18,12 @@ std::vector<Token> lxr::Lexer::lex() {
                 if (this->peek() == '\n') { this->consume(); }
                 m_column = 0;
                 m_line++;
-                m_ctx.new_line(m_buffer.consumed);
                 break;
             }
             case '\n': {
                 this->consume();
                 m_column = 0;
                 m_line++;
-                m_ctx.new_line(m_buffer.consumed);
                 break;
             }
             // --- simple braces & punctuation ---
@@ -149,19 +147,28 @@ std::vector<Token> lxr::Lexer::lex() {
             default: {
                 if (is_digit(cur)) {
                     const auto digit_len = get_digit_len();
-                    const auto digit_string = m_buffer.get_view(digit_len);
+                    const auto digit_span = this->get_view(digit_len).expect(
+                        "Expected digit_len to be less than size of file"
+                    );
+                    auto digit_string =
+                        this->m_source_file.get_string(digit_span).unwrap();
                     emit_token(
-                        TokenType::INTEGER_LITERAL, digit_len, std::string(digit_string)
+                        TokenType::INTEGER_LITERAL, digit_len, std::move(digit_string)
                     );
                     break;
                 }
                 if (is_identifier_start(cur)) {
-                    const auto ident_len = get_identifier_len();
-                    const auto ident_name = m_buffer.get_view(ident_len);
-                    const auto type = get_keyword(ident_name);
+                    const auto ident_len = this->get_identifier_len();
+                    const auto ident_span = this->get_view(ident_len).expect(
+                        "Expected ident_len to be less than size of file"
+                    );
+                    const auto type = Lexer::get_keyword(
+                        this->m_source_file.get_string_view(ident_span).unwrap()
+                    );
                     if (type == TokenType::IDENTIFIER) {
                         emit_token(
-                            TokenType::IDENTIFIER, ident_len, std::string(ident_name)
+                            TokenType::IDENTIFIER, ident_len,
+                            this->m_source_file.get_string(ident_span).unwrap()
                         );
                         break;
                     }
@@ -182,39 +189,6 @@ std::vector<Token> lxr::Lexer::lex() {
     return std::move(m_tokens);
 }
 
-std::string_view lxr::Lexer::PeekBuffer::get_view(const size_t n) {
-    if (const size_t chars_left = count - current_pos; n > chars_left) {
-        throw std::runtime_error("Attempted to get view past end of buffer");
-    }
-    return {&buffer[current_pos], n};
-}
-
-char lxr::Lexer::PeekBuffer::peek(const size_t offset) const {
-    if (const size_t chars_left = count - current_pos; offset >= chars_left) {
-        throw std::runtime_error("Attempted to look past the end of buffer");
-    }
-    return buffer[current_pos + offset];
-}
-
-void lxr::Lexer::PeekBuffer::consume(const size_t n) {
-    const size_t chars_left = count - current_pos;
-    const size_t consume = std::min(n, chars_left);
-    current_pos += consume;
-    consumed += consume;
-    if (current_pos == count) {
-        current_pos = 0;
-        count = 0;
-        empty = true;
-    }
-}
-
-void lxr::Lexer::PeekBuffer::read_from(std::istream& input) {
-    assert(empty);
-    current_pos = 0;
-    count = input.read(buffer.data(), BUFFER_SIZE).gcount();
-    empty = (count == 0);
-}
-
 void lxr::Lexer::emit_token(
     const TokenType type, const std::optional<int> size, const TokenData& data
 ) {
@@ -226,40 +200,51 @@ void lxr::Lexer::emit_token(
     }
 }
 
-int lxr::Lexer::peek(const size_t offset) {
-    if (m_buffer.empty) {
-        m_buffer.read_from(m_input_stream);
-        if (m_buffer.empty) { return EOF; }
-    }
-    return static_cast<unsigned char>(m_buffer.peek(offset));
+int lxr::Lexer::peek(const size_t offset) const {
+    const std::size_t current = this->m_remaining.start;
+    const std::size_t target = current + offset;
+
+    if (target >= this->m_source_file.size()) { return EOF; }
+    return static_cast<int>(this->m_source_file.bytes()[target]);
 }
+
+Option<SourceSpan> lxr::Lexer::get_view(const std::size_t len) const {
+    using namespace lib;
+
+    const std::size_t current = this->m_remaining.start;
+    if (const std::size_t end = current + len; end >= this->m_source_file.size()) {
+        return option::none<SourceSpan>();
+    }
+    return option::some(SourceSpan{.start = current, .size = len});
+}
+
 void lxr::Lexer::consume(const size_t n) {
     this->m_column += static_cast<int>(n);
-    m_buffer.consume(n);
+    this->m_remaining.advance(n);
 }
 
 size_t lxr::Lexer::get_digit_len() const {
     size_t digit_len = 0;
-    while (is_digit(m_buffer.peek(digit_len))) { digit_len++; }
+    while (is_digit(this->peek(digit_len))) { digit_len++; }
     return digit_len;
 }
 
 size_t lxr::Lexer::get_whitespace_len() const {
     size_t whitespace_len = 0;
-    while (is_whitespace_char(m_buffer.peek(whitespace_len))) { whitespace_len++; }
+    while (is_whitespace_char(this->peek(whitespace_len))) { whitespace_len++; }
     return whitespace_len;
 }
 
 size_t lxr::Lexer::get_identifier_len() const {
     size_t identifier_len = 0;
-    if (!is_identifier_start(m_buffer.peek(identifier_len))) { return identifier_len; }
-    while (is_identifier_char(m_buffer.peek(identifier_len))) { identifier_len++; }
+    if (!is_identifier_start(this->peek(identifier_len))) { return identifier_len; }
+    while (is_identifier_char(this->peek(identifier_len))) { identifier_len++; }
     return identifier_len;
 }
 
 size_t lxr::Lexer::get_comment_len() const {
     size_t comment_len = 0;
-    while (m_buffer.peek(comment_len) != '\r' && m_buffer.peek(comment_len) != '\n') {
+    while (this->peek(comment_len) != '\r' && this->peek(comment_len) != '\n') {
         comment_len++;
     }
     return comment_len;
@@ -293,7 +278,7 @@ TokenType lxr::Lexer::get_keyword(const std::string_view name) {
     return keywords.at(name);
 }
 
-std::vector<Token> lxr::lex(std::istream& input, CompilationContext& ctx) {
+std::vector<Token> lxr::lex(const SourceFile& input, CompilationContext& ctx) {
     Lexer lexer(input, ctx);
     return lexer.lex();
 }
