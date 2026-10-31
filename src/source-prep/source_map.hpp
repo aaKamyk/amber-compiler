@@ -13,7 +13,6 @@ public:
 
     static Option<SourceMap> from_args(const Arguments& args);
 
-    bool insert_new(const fs::path& path);
     [[nodiscard]] const SourceFile& get_root_file() const;
     [[nodiscard]] fs::path get_root_file_path() const;
 
