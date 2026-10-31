@@ -56,6 +56,8 @@ std::string Token::to_string() const {
         {TokenType::LOGICAL_AND, "&&"},
         {TokenType::LOGICAL_OR, "||"},
         {TokenType::LOGICAL_NOT, "!"},
+        // --- cast operator ---
+        {TokenType::AS, "as"},
     };
     switch (this->type) {
         case TokenType::IDENTIFIER:
