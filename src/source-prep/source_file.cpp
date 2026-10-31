@@ -2,8 +2,6 @@
 
 #include <fstream>
 
-#include "fmt/base.h"
-
 using namespace lib;
 
 Option<SourceFile> SourceFile::from_path(const fs::path& path) {
@@ -12,13 +10,30 @@ Option<SourceFile> SourceFile::from_path(const fs::path& path) {
     return Option{SourceFile{std::move(storage)}};
 }
 
-Option<std::span<const std::byte>> SourceFile::bytes() const {
-    if (!this->storage.buffer) { return option::None; }
 std::span<const std::byte> SourceFile::bytes() const {
     return std::span<const std::byte>{this->storage.buffer.get(), this->storage.size};
 }
+
+Option<std::string> SourceFile::get_string(const SourceSpan span) const {
+    using namespace lib;
+    const auto bytes = this->bytes();
+
+    if (span.start + span.size >= this->size()) { return option::none<std::string>(); }
     return option::some(
-        std::span<const std::byte>{this->storage.buffer.get(), this->storage.size}
+        std::string(reinterpret_cast<const char*>(&bytes[span.start]), span.size)
+    );
+}
+
+Option<std::string_view> SourceFile::get_string_view(const SourceSpan span) const {
+    using namespace lib;
+    const auto bytes = this->bytes();
+
+    if (span.start + span.size >= this->size()) {
+        return option::none<std::string_view>();
+    }
+
+    return Option<std::string_view>(
+        reinterpret_cast<const char*>(&bytes[span.start]), span.size
     );
 }
 

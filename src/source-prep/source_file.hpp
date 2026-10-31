@@ -32,6 +32,8 @@ public:
 
     [[nodiscard]] std::span<const std::byte> bytes() const;
     [[nodiscard]] std::size_t size() const { return storage.size; }
+    [[nodiscard]] Option<std::string> get_string(SourceSpan span) const;
+    [[nodiscard]] Option<std::string_view> get_string_view(SourceSpan span) const;
 
 private:
     explicit SourceFile(FixedBuffer<std::byte> buffer);
