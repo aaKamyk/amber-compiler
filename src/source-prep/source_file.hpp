@@ -30,7 +30,7 @@ public:
     SourceFile(const SourceFile&) = delete;
     SourceFile() = delete;
 
-    [[nodiscard]] Option<std::span<const std::byte>> bytes() const;
+    [[nodiscard]] std::span<const std::byte> bytes() const;
     [[nodiscard]] std::size_t size() const { return storage.size; }
 
 private:

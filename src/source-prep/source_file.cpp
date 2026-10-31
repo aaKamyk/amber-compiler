@@ -14,6 +14,9 @@ Option<SourceFile> SourceFile::from_path(const fs::path& path) {
 
 Option<std::span<const std::byte>> SourceFile::bytes() const {
     if (!this->storage.buffer) { return option::None; }
+std::span<const std::byte> SourceFile::bytes() const {
+    return std::span<const std::byte>{this->storage.buffer.get(), this->storage.size};
+}
     return option::some(
         std::span<const std::byte>{this->storage.buffer.get(), this->storage.size}
     );
