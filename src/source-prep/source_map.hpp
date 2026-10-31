@@ -5,11 +5,18 @@
 
 class SourceMap {
 public:
+    struct FileData {
+        fs::path path;
+        SourceFile source;
+        SourceSpan span;
+    };
+
     static Option<SourceMap> from_args(const Arguments& args);
+
     bool insert_new(const fs::path& path);
+    [[nodiscard]] const SourceFile& get_root_file() const;
+    [[nodiscard]] fs::path get_root_file_path() const;
 
 private:
-    using FileSpanTuple = std::pair<SourceFile, SourceSpan>;
-
-    std::vector<FileSpanTuple> source_files{};
+    std::vector<FileData> source_files{};
 };
