@@ -15,6 +15,13 @@ struct FixedBuffer {
     std::size_t size{0ull};
 };
 
+struct SourceSpan {
+    std::size_t start;
+    std::size_t size;
+
+    constexpr void advance(const std::size_t n) { this->start += n; }
+};
+
 class SourceFile {
 public:
     static Option<SourceFile> from_path(const fs::path& path);
