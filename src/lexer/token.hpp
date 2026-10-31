@@ -51,7 +51,7 @@ enum class TokenType : uint8_t {
     LESS_THAN,
     GREATER_EQUAL_THAN,
     LESS_EQUAL_THAN,
-    // bitwise operators ---
+    // --- bitwise operators ---
     BIT_AND,
     BIT_OR,
     BIT_XOR,
@@ -61,7 +61,11 @@ enum class TokenType : uint8_t {
     LOGICAL_OR,
     LOGICAL_NOT,
     // --- cast operator ---
-    AS
+    AS,
+    // --- comments & ignorable ---
+    WHITESPACE,
+    COMMENT,
+    BLOCK_COMMENT,
 };
 // clang-format on
 
