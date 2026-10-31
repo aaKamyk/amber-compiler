@@ -475,7 +475,7 @@ public:
 
     [[nodiscard]] constexpr bool has_some() const noexcept { return this->m_has_some; }
 
-    [[nodiscard]] constexpr T take() noexcept(std::is_nothrow_destructible_v<T>) {
+    [[nodiscard]] constexpr T take() {
         if (!this->has_some()) { throw BadOptionAccess{BAD_ACCESS_MESSAGE}; }
         return this->take_unchecked();
     }
