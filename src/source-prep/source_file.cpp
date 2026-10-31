@@ -41,7 +41,7 @@ SourceFile::SourceFile(FixedBuffer<std::byte> buffer)
     : storage(std::move(buffer)) {}
 
 FixedBuffer<std::byte> SourceFile::load_file(const fs::path& path) {
-    std::ifstream file(path, std::ios::binary);
+    std::ifstream file{path, std::ios::binary | std::ios::ate};
     if (!file.is_open()) { return {.buffer = nullptr, .size = 0ull}; }
 
     const auto file_size = file.tellg();
