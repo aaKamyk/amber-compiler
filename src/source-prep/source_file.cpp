@@ -40,11 +40,12 @@ Option<std::string_view> SourceFile::get_string_view(const SourceSpan span) cons
 }
 
 SourceSpan SourceFile::enclosing_line(const SourceSpan span) const {
-    /// TODO
-    for (const auto line : this->lines) {
-        if (line.start >= span.start) { return line; }
+    std::size_t i = 0;
+    for (; i < this->lines.size(); i++) {
+        if (this->lines[i].start > span.size) { break; }
     }
-    return {.start = 0, .size = this->storage.size};
+
+    return this->lines[i - 1];
 }
 
 SourceFile::SourceFile(Slice<std::byte> buffer, std::vector<SourceSpan> lines)
