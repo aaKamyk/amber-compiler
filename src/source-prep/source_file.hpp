@@ -41,6 +41,7 @@ public:
     [[nodiscard]] std::size_t size() const { return storage.size; }
     [[nodiscard]] Option<std::string> get_string(SourceSpan span) const;
     [[nodiscard]] Option<std::string_view> get_string_view(SourceSpan span) const;
+    [[nodiscard]] SourceSpan enclosing_line(SourceSpan span) const;
 
 private:
     explicit SourceFile(Slice<std::byte> buffer, std::vector<SourceSpan> lines);
