@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <span>
 
+#include "lib/assert.hpp"
 #include "lib/option.hpp"
 
 namespace fs = std::filesystem;
@@ -20,6 +21,12 @@ struct SourceSpan {
     std::size_t size;
 
     constexpr void advance(const std::size_t n) { this->start += n; }
+    [[nodiscard]] constexpr SourceSpan subspan(
+        const std::size_t offset, const std::size_t len
+    ) const {
+        lib::assert(offset + len < this->size, "offset + len goes past the end of span");
+        return SourceSpan{.start = this->start + offset, .size = len};
+    }
 };
 
 class SourceFile {
