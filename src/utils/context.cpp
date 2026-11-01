@@ -7,13 +7,18 @@
 void CompilerError::print(CompilationContext* ctx) const {
     if (!ctx) { return; }
 
+    const auto& file = ctx->source_map.get_root_file();
+    const auto line_span = file.enclosing_line(this->span);
+    const auto line = file.get_string_view(line_span).expect(
+        "Expected parser to provide correct source span"
+    );
+
     fmt::println(
         "{}:{}:{} error: {}", ctx->source_map.get_root_file_path().string(),
-        this->span.size, this->span.size, this->message
+        this->span.start, this->span.size, this->message
     );
-    // fmt::println("{}", ctx->get_line(this->line));
-    // TODO
-    fmt::println("{: <{}}^", "", 0);
+    fmt::println("{}", line);
+    fmt::println("{: <{}}{:^^{}}", "", span.start - line_span.start, "", span.size);
 }
 
 CompilerError::CompilerError(const SourceSpan span, std::string message)
