@@ -19,19 +19,27 @@ public:
     std::vector<Token> lex();
 
 private:
-    void emit_token(
-        TokenType type, std::optional<int> size = std::nullopt,
-        const TokenData& data = std::monostate{}
+    [[nodiscard]] Token next_token();
+    [[nodiscard]] Token consume_token(
+        TokenType type, TokenData data = std::monostate{}, std::size_t len = 1
     );
+
+    [[nodiscard]] Token comment_token();
+    [[nodiscard]] Token block_comment_token();
+
     [[nodiscard]] int peek(size_t offset = 0) const;
-    [[nodiscard]] Option<SourceSpan> get_view(std::size_t len) const;
+    [[nodiscard]] int previous() const;
+    [[nodiscard]] int current() const { return this->peek(0); }
+    [[nodiscard]] int next() const { return this->peek(1); }
     void consume(size_t n = 1);
 
     [[nodiscard]] std::size_t get_digit_len() const;
     [[nodiscard]] std::size_t get_whitespace_len() const;
     [[nodiscard]] std::size_t get_identifier_len() const;
     [[nodiscard]] std::size_t get_comment_len() const;
+    [[nodiscard]] std::size_t get_block_comment_len() const;
 
+    [[nodiscard]] Option<SourceSpan> get_view(std::size_t len) const;
     [[nodiscard]] static TokenType get_keyword(std::string_view name);
     [[nodiscard]] static bool is_identifier_start(const int chr) {
         return std::isalpha(chr) != 0;
@@ -47,8 +55,6 @@ private:
     std::vector<Token> m_tokens;
     const SourceFile& m_source_file;
     SourceSpan m_remaining{};
-    int m_line{1};
-    int m_column{0};
     CompilationContext& m_ctx;
 };
 
