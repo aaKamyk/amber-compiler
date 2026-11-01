@@ -39,10 +39,10 @@ Option<std::string_view> SourceFile::get_string_view(const SourceSpan span) cons
     );
 }
 
-SourceFile::SourceFile(FixedBuffer<std::byte> buffer, std::vector<SourceSpan> lines)
+SourceFile::SourceFile(Slice<std::byte> buffer, std::vector<SourceSpan> lines)
     : storage(std::move(buffer)), lines(std::move(lines)) {}
 
-FixedBuffer<std::byte> SourceFile::load_file(const fs::path& path) {
+Slice<std::byte> SourceFile::load_file(const fs::path& path) {
     std::ifstream file{path, std::ios::binary | std::ios::ate};
     if (!file.is_open()) { return {.buffer = nullptr, .size = 0ull}; }
 
@@ -62,7 +62,7 @@ FixedBuffer<std::byte> SourceFile::load_file(const fs::path& path) {
     return {.buffer = std::move(buffer), .size = size};
 }
 
-std::vector<SourceSpan> SourceFile::get_lines(const FixedBuffer<std::byte>& buffer) {
+std::vector<SourceSpan> SourceFile::get_lines(const Slice<std::byte>& buffer) {
     std::vector<SourceSpan> lines;
     const std::string_view file{
         reinterpret_cast<const char*>(buffer.buffer.get()), buffer.size

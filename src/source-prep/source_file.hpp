@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 using lib::option::Option;
 
 template <typename T>
-struct FixedBuffer {
+struct Slice {
     std::unique_ptr<T[]> buffer;
     std::size_t size{0ull};
 };
@@ -43,11 +43,11 @@ public:
     [[nodiscard]] Option<std::string_view> get_string_view(SourceSpan span) const;
 
 private:
-    explicit SourceFile(FixedBuffer<std::byte> buffer, std::vector<SourceSpan> lines);
+    explicit SourceFile(Slice<std::byte> buffer, std::vector<SourceSpan> lines);
 
-    static FixedBuffer<std::byte> load_file(const fs::path& path);
-    static std::vector<SourceSpan> get_lines(const FixedBuffer<std::byte>& buffer);
+    static Slice<std::byte> load_file(const fs::path& path);
+    static std::vector<SourceSpan> get_lines(const Slice<std::byte>& buffer);
 
-    FixedBuffer<std::byte> storage;
+    Slice<std::byte> storage;
     std::vector<SourceSpan> lines;
 };
