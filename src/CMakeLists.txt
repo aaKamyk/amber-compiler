@@ -4,6 +4,10 @@ target_include_directories(act PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+target_compile_definitions(act PRIVATE
+        $<$<CONFIG:Debug>:ACT_DEBUG>
+)
+
 add_subdirectory(driver)
 add_subdirectory(source-prep)
 add_subdirectory(lexer)
