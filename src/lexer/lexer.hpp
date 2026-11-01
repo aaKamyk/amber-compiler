@@ -44,15 +44,17 @@ private:
     [[nodiscard]] static bool is_identifier_start(const int chr) {
         return std::isalpha(chr) != 0;
     }
-    [[nodiscard]] static bool is_identifier_char(const int chr) {
+    [[nodiscard]] static constexpr bool is_identifier_char(const int chr) {
         return std::isalnum(chr) != 0 || chr == '_';
     }
-    [[nodiscard]] static bool is_whitespace_char(const int chr) {
+    [[nodiscard]] static constexpr bool is_whitespace_char(const int chr) {
         return chr == ' ' || chr == '\t';
     }
-    [[nodiscard]] static bool is_digit(const int chr) { return std::isdigit(chr) != 0; }
     [[nodiscard]] static constexpr bool is_vertical_whitespace_char(const int chr) {
         return chr == '\n' || chr == '\r';
+    }
+    [[nodiscard]] static constexpr bool is_digit(const int chr) {
+        return std::isdigit(chr) != 0;
     }
 
     std::vector<Token> m_tokens;
