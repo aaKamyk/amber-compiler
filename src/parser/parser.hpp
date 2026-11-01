@@ -79,8 +79,9 @@ private:
         const auto current_token = this->current_token();
         if (auto parse_result = NodeParser<T>::parse(*this)) {
             if constexpr (std::is_base_of_v<Node<type::ast::Type>, T>) {
-                parse_result->line = current_token.line;
-                parse_result->column = current_token.column;
+                /// TODO
+                parse_result->line = 0;
+                parse_result->column = 0;
             }
             while (!m_ctx.syntax_errors().empty() &&
                    m_ctx.syntax_errors().back().token_num < m_current_token) {

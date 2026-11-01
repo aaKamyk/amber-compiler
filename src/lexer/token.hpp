@@ -4,6 +4,8 @@
 #include <string>
 #include <variant>
 
+#include "source-prep/source_file.hpp"
+
 // clang-format off
 enum class TokenType : uint8_t {
     // --- special ---
@@ -74,8 +76,7 @@ using TokenData = std::variant<std::monostate, std::string>;
 struct Token {
     TokenData data{std::monostate{}};
     TokenType type{};
-    int line{};
-    int column{};
+    SourceSpan span{};
 
     [[nodiscard]] std::string to_string() const;
     [[nodiscard]] constexpr bool is_ignorable() const;

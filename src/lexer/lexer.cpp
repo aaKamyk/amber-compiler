@@ -151,9 +151,9 @@ Token lxr::Lexer::next_token() {
 Token lxr::Lexer::consume_token(
     const TokenType type, TokenData data, const std::size_t len
 ) {
-    /// TODO
+    const auto token_span = this->m_remaining.subspan(0, len);
     this->consume(len);
-    return Token{.data = std::move(data), .type = type, .line = 0, .column = 0};
+    return Token{.data = std::move(data), .type = type, .span = token_span};
 }
 
 Token lxr::Lexer::comment_token() {
