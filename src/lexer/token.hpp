@@ -78,4 +78,10 @@ struct Token {
     int column{};
 
     [[nodiscard]] std::string to_string() const;
+    [[nodiscard]] constexpr bool is_ignorable() const;
 };
+
+constexpr bool Token::is_ignorable() const {
+    return this->type == TokenType::WHITESPACE || this->type == TokenType::COMMENT ||
+           this->type == TokenType::BLOCK_COMMENT;
+}
