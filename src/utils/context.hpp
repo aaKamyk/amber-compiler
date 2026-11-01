@@ -8,25 +8,24 @@
 class CompilationContext;
 
 struct CompilerError {
-    int line;
-    int column;
+    SourceSpan span;
     std::string message;
 
     virtual ~CompilerError() = default;
     virtual void print(CompilationContext* ctx) const;
-    CompilerError(int line, int column, std::string message);
+    CompilerError(SourceSpan span, std::string message);
 };
 
 struct SyntaxError final : CompilerError {
     size_t token_num{};
 
     // void print(CompilationContext* ctx) const override;
-    SyntaxError(int line, int column, const std::string& message, size_t token_num);
+    SyntaxError(SourceSpan span, const std::string& message, size_t token_num);
 };
 
 struct LogicError final : CompilerError {
     // void print(CompilationContext* ctx) const override;
-    LogicError(int line, int column, const std::string& message);
+    LogicError(SourceSpan span, const std::string& message);
 };
 
 class CompilationContext {

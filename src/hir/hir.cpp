@@ -532,7 +532,8 @@ void hir::Hir::append_global_init_to_program() {
 void hir::Hir::add_error(
     const ast::Node<type::TypeID>* error_node, const std::string& msg
 ) {
-    m_ctx.logic_errors().emplace_back(error_node->line, error_node->column, msg);
+    /// TODO
+    m_ctx.logic_errors().emplace_back(SourceSpan{.start = 0, .size = 0}, msg);
     m_translated_successfully = false;
 }
 
