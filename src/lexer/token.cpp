@@ -64,6 +64,11 @@ std::string Token::to_string() const {
         case TokenType::INTEGER_LITERAL: {
             return std::get<std::string>(this->data);
         }
+        case TokenType::WHITESPACE:
+        case TokenType::COMMENT:
+        case TokenType::BLOCK_COMMENT: {
+            return "";
+        }
         default: {
             if (const auto it = token_strings.find(this->type);
                 it != token_strings.end()) {
