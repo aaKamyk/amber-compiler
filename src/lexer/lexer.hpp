@@ -51,6 +51,9 @@ private:
         return chr == ' ' || chr == '\t';
     }
     [[nodiscard]] static bool is_digit(const int chr) { return std::isdigit(chr) != 0; }
+    [[nodiscard]] static constexpr bool is_vertical_whitespace_char(const int chr) {
+        return chr == '\n' || chr == '\r';
+    }
 
     std::vector<Token> m_tokens;
     const SourceFile& m_source_file;
