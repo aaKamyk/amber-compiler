@@ -43,9 +43,11 @@ public:
     [[nodiscard]] Option<std::string_view> get_string_view(SourceSpan span) const;
 
 private:
-    explicit SourceFile(FixedBuffer<std::byte> buffer);
+    explicit SourceFile(FixedBuffer<std::byte> buffer, std::vector<SourceSpan> lines);
 
     static FixedBuffer<std::byte> load_file(const fs::path& path);
+    static std::vector<SourceSpan> get_lines(const FixedBuffer<std::byte>& buffer);
 
     FixedBuffer<std::byte> storage;
+    std::vector<SourceSpan> lines;
 };

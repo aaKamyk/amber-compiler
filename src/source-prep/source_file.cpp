@@ -7,7 +7,9 @@ using namespace lib;
 Option<SourceFile> SourceFile::from_path(const fs::path& path) {
     auto storage = SourceFile::load_file(path);
     if (!storage.buffer) { return option::None; }
-    return Option{SourceFile{std::move(storage)}};
+    auto lines = SourceFile::get_lines(storage);
+
+    return Option{SourceFile{std::move(storage), std::move(lines)}};
 }
 
 std::span<const std::byte> SourceFile::bytes() const {
@@ -37,8 +39,8 @@ Option<std::string_view> SourceFile::get_string_view(const SourceSpan span) cons
     );
 }
 
-SourceFile::SourceFile(FixedBuffer<std::byte> buffer)
-    : storage(std::move(buffer)) {}
+SourceFile::SourceFile(FixedBuffer<std::byte> buffer, std::vector<SourceSpan> lines)
+    : storage(std::move(buffer)), lines(std::move(lines)) {}
 
 FixedBuffer<std::byte> SourceFile::load_file(const fs::path& path) {
     std::ifstream file{path, std::ios::binary | std::ios::ate};
@@ -58,4 +60,29 @@ FixedBuffer<std::byte> SourceFile::load_file(const fs::path& path) {
     }
 
     return {.buffer = std::move(buffer), .size = size};
+}
+
+std::vector<SourceSpan> SourceFile::get_lines(const FixedBuffer<std::byte>& buffer) {
+    std::vector<SourceSpan> lines;
+    const std::string_view file{
+        reinterpret_cast<const char*>(buffer.buffer.get()), buffer.size
+    };
+    std::size_t current = 0;
+
+    while (current < buffer.size) {
+        const auto line_end = file.find('\n', current);
+
+        // Last line without a trailing newline
+        if (line_end == std::string_view::npos) {
+            lines.emplace_back(current, buffer.size - current);
+            break;
+        }
+
+        // Add a span [start, end] span and advance to end + 1
+        lines.emplace_back(current, line_end - current);
+        current = line_end + 1;
+        if (current >= buffer.size) { break; }
+    }
+
+    return lines;
 }
