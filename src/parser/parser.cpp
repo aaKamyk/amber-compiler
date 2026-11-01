@@ -72,7 +72,8 @@ void ast::Parser::add_error(std::string message, const bool add_context) {
             message += " before \'" + token.to_string() + '\'';
         }
     }
-    errors.emplace_back(token.line, token.column, message, this->m_current_token);
+
+    errors.emplace_back(token.span, message, this->m_current_token);
 }
 
 ast::Program<type::TypeID> ast::parse(
